@@ -11,6 +11,7 @@ from importlib.metadata import version as _version
 
 from harnessweaver import errors
 from harnessweaver.contracts import API_VERSION
+from harnessweaver.core.context import RunContext, current_run
 from harnessweaver.core.decisions import (
     Decision,
     DecisionKind,
@@ -58,16 +59,35 @@ from harnessweaver.core.messages import (
     ToolSpec,
     Usage,
 )
+from harnessweaver.core.middleware import MiddlewareDef, middleware
 from harnessweaver.core.outcomes import Block, Continue, Escalate, Outcome, Retry, Suspend
+from harnessweaver.core.plugins import (
+    CONTRACT_VERSION,
+    RESERVED_NAMESPACES,
+    Plugin,
+    adapter,
+    decider,
+    provider,
+    runner,
+)
+from harnessweaver.core.results import RunEvent, RunResult
 from harnessweaver.core.retrieval import Acl, ContextItem
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest, RunStatus
 from harnessweaver.core.tools import Risk, SideEffect, ToolInfo, ToolResult
+from harnessweaver.core.trace import RunTrace, TraceEvent, TraceKind
+from harnessweaver.harness import Harness
+from harnessweaver.session import Session
 from harnessweaver.spec import EffectiveSpec, HarnessSpec, Level, ProfileSpec, load_spec
 
 __version__: str = _version("harnessweaver")
 
+load = Harness.load
+"""Load ``harness.yaml`` and build a :class:`Harness` (same as ``Harness.load``)."""
+
 __all__ = [
     "API_VERSION",
+    "CONTRACT_VERSION",
+    "RESERVED_NAMESPACES",
     "Acl",
     "ApprovalDecision",
     "ApprovalRequest",
@@ -91,6 +111,7 @@ __all__ = [
     "Finding",
     "GuardAction",
     "GuardResult",
+    "Harness",
     "HarnessSpec",
     "HookEvent",
     "HookPoint",
@@ -98,12 +119,14 @@ __all__ = [
     "Labels",
     "Level",
     "Message",
+    "MiddlewareDef",
     "ModelRequest",
     "ModelRequestEvent",
     "ModelResponse",
     "ModelResponseEvent",
     "Outcome",
     "OutputEvent",
+    "Plugin",
     "PolicyEffect",
     "Principal",
     "ProfileSpec",
@@ -111,10 +134,15 @@ __all__ = [
     "Risk",
     "Role",
     "RouteEvent",
+    "RunContext",
     "RunEndEvent",
     "RunErrorEvent",
+    "RunEvent",
+    "RunResult",
     "RunStartEvent",
     "RunStatus",
+    "RunTrace",
+    "Session",
     "SideEffect",
     "StreamChunk",
     "StreamChunkEvent",
@@ -126,11 +154,20 @@ __all__ = [
     "ToolResult",
     "ToolResultEvent",
     "ToolSpec",
+    "TraceEvent",
+    "TraceKind",
     "Usage",
     "__version__",
+    "adapter",
+    "current_run",
+    "decider",
     "errors",
     "format_duration",
+    "load",
     "load_spec",
+    "middleware",
     "parse_duration",
+    "provider",
+    "runner",
     "tighten",
 ]

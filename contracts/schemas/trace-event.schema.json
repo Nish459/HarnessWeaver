@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:trace-event",
+  "title": "TraceEvent",
+  "$defs": {
+    "Band": {
+      "description": "Middleware priority bands, outermost first.\n\nThe spec assigns bands; a plugin can't place itself in ``baseline`` (S8).",
+      "enum": [
+        "baseline",
+        "platform",
+        "app",
+        "task"
+      ],
+      "title": "Band",
+      "type": "string"
+    },
+    "HookPoint": {
+      "description": "A named moment in the run lifecycle. The set is fixed and versioned (R11).",
+      "enum": [
+        "run.start",
+        "input.before",
+        "route.decide",
+        "context.after",
+        "model.before",
+        "model.after",
+        "stream.chunk",
+        "tool.before",
+        "tool.after",
+        "output.before",
+        "approval.resolved",
+        "run.error",
+        "run.end"
+      ],
+      "title": "HookPoint",
+      "type": "string"
+    },
+    "JsonValue": {},
+    "OutcomeKind": {
+      "enum": [
+        "continue",
+        "retry",
+        "escalate",
+        "suspend",
+        "block"
+      ],
+      "title": "OutcomeKind",
+      "type": "string"
+    },
+    "TraceKind": {
+      "description": "What a trace event records.",
+      "enum": [
+        "hook",
+        "outcome",
+        "failure",
+        "note"
+      ],
+      "title": "TraceKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One entry in a :class:`RunTrace`.",
+  "properties": {
+    "seq": {
+      "description": "Position in the run's trace, from 0.",
+      "minimum": 0,
+      "title": "Seq",
+      "type": "integer"
+    },
+    "at": {
+      "format": "date-time",
+      "title": "At",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/TraceKind"
+    },
+    "source": {
+      "description": "Middleware name, or 'harness.<area>'.",
+      "minLength": 1,
+      "title": "Source",
+      "type": "string"
+    },
+    "hook": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HookPoint"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "band": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Band"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "outcome": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/OutcomeKind"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "modified": {
+      "default": false,
+      "description": "The middleware changed the payload.",
+      "title": "Modified",
+      "type": "boolean"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    },
+    "code": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Code"
+    },
+    "details": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "Details",
+      "type": "object"
+    }
+  },
+  "required": [
+    "seq",
+    "at",
+    "kind",
+    "source"
+  ],
+  "type": "object"
+}

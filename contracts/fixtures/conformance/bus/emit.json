@@ -1,0 +1,265 @@
+{
+  "suite": "bus",
+  "description": "How the hook bus runs middleware for one event and combines the answers (DESIGNS No. 8). Each case emits one event whose payload carries `value` (input.before: input; output.before and run.end: output). A middleware `does` one of: continue, modify (to `value`), retry, escalate, suspend, block, raise, timeout (its timeout is 10ms and it never answers), bad_answer (returns something that isn't an outcome) or bad_modify (modifies into another hook's payload). `ran` lists the middleware called, in order; `seen` is the value each one saw; `trace` lists [source, kind, outcome, modified] per middleware. Failure reasons name the language's exception type, so only kind and code are compared for them.",
+  "cases": [
+    {
+      "name": "no middleware continues with the payload unchanged",
+      "hook": "input.before",
+      "value": "hello",
+      "middleware": [],
+      "expect": {
+        "outcome": { "kind": "continue" },
+        "ran": [],
+        "value": "hello",
+        "trace": []
+      }
+    },
+    {
+      "name": "inbound runs bands outermost first, registration order within a band",
+      "hook": "input.before",
+      "value": "hello",
+      "middleware": [
+        { "name": "app-1", "band": "app", "fail_mode": "closed", "does": { "outcome": "continue" } },
+        { "name": "task-1", "band": "task", "fail_mode": "closed", "does": { "outcome": "continue" } },
+        { "name": "base-1", "band": "baseline", "fail_mode": "closed", "does": { "outcome": "continue" } },
+        { "name": "app-2", "band": "app", "fail_mode": "open", "does": { "outcome": "continue" } },
+        { "name": "plat-1", "band": "platform", "fail_mode": "closed", "does": { "outcome": "continue" } }
+      ],
+      "expect": {
+        "outcome": { "kind": "continue" },
+        "ran": ["base-1", "plat-1", "app-1", "app-2", "task-1"],
+        "value": "hello",
+        "trace": [
+          ["base-1", "outcome", "continue", false],
+          ["plat-1", "outcome", "continue", false],
+          ["app-1", "outcome", "continue", false],
+          ["app-2", "outcome", "continue", false],
+          ["task-1", "outcome", "continue", false]
+        ]
+      }
+    },
+    {
+      "name": "outbound runs innermost first and modifications chain outward",
+      "hook": "run.end",
+      "value": "draft",
+      "middleware": [
+        { "name": "base", "band": "baseline", "fail_mode": "closed", "does": { "outcome": "continue" } },
+        { "name": "app", "band": "app", "fail_mode": "closed", "does": { "outcome": "modify", "value": "by-app" } },
+        { "name": "task", "band": "task", "fail_mode": "closed", "does": { "outcome": "modify", "value": "by-task" } }
+      ],
+      "expect": {
+        "outcome": { "kind": "continue", "modified": true },
+        "ran": ["task", "app", "base"],
+        "seen": { "task": "draft", "app": "by-task", "base": "by-app" },
+        "value": "by-app",
+        "trace": [
+          ["task", "outcome", "continue", true],
+          ["app", "outcome", "continue", true],
+          ["base", "outcome", "continue", false]
+        ]
+      }
+    },
+    {
+      "name": "a modification is what later middleware and the operation see",
+      "hook": "input.before",
+      "value": "my email is alice@example.com",
+      "middleware": [
+        { "name": "redact", "band": "baseline", "fail_mode": "closed", "does": { "outcome": "modify", "value": "my email is [EMAIL]" } },
+        { "name": "check", "band": "app", "fail_mode": "closed", "does": { "outcome": "continue" } }
+      ],
+      "expect": {
+        "outcome": { "kind": "continue", "modified": true },
+        "ran": ["redact", "check"],
+        "seen": { "redact": "my email is alice@example.com", "check": "my email is [EMAIL]" },
+        "value": "my email is [EMAIL]",
+        "trace": [
+          ["redact", "outcome", "continue", true],
+          ["check", "outcome", "continue", false]
+        ]
+      }
+    },
+    {
+      "name": "block stops the chain",
+      "hook": "input.before",
+      "value": "hello",
+      "middleware": [
+        { "name": "first", "band": "app", "fail_mode": "closed", "does": { "outcome": "continue" } },
+        { "name": "blocker", "band": "app", "fail_mode": "closed", "does": { "outcome": "block", "reason": "not allowed", "code": "denied" } },
+        { "name": "never", "band": "app", "fail_mode": "closed", "does": { "outcome": "continue" } }
+      ],
+      "expect": {
+        "outcome": { "kind": "block", "reason": "not allowed", "code": "denied" },
+        "ran": ["first", "blocker"],
+        "value": "hello",
+        "trace": [
+          ["first", "outcome", "continue", false],
+          ["blocker", "outcome", "block", false]
+        ]
+      }
+    },
+    {
+      "name": "the most severe outcome wins and the chain goes on until a block",
+      "hook": "output.before",
+      "value": "answer",
+      "middleware": [
+        { "name": "wants-retry", "band": "app", "fail_mode": "closed", "does": { "outcome": "retry", "reason": "too short" } },
+        { "name": "wants-approval", "band": "app", "fail_mode": "closed", "does": { "outcome": "suspend", "reason": "needs a human" } },
+        { "name": "wants-escalation", "band": "app", "fail_mode": "closed", "does": { "outcome": "escalate", "reason": "unsure" } }
+      ],
+      "expect": {
+        "outcome": { "kind": "suspend", "reason": "needs a human" },
+        "ran": ["wants-retry", "wants-approval", "wants-escalation"],
+        "value": "answer",
+        "trace": [
+          ["wants-retry", "outcome", "retry", false],
+          ["wants-approval", "outcome", "suspend", false],
+          ["wants-escalation", "outcome", "escalate", false]
+        ]
+      }
+    },
+    {
+      "name": "on a tie the earlier middleware's outcome wins",
+      "hook": "input.before",
+      "value": "hello",
+      "middleware": [
+        { "name": "a", "band": "app", "fail_mode": "closed", "does": { "outcome": "escalate", "reason": "first" } },
+        { "name": "b", "band": "app", "fail_mode": "closed", "does": { "outcome": "escalate", "reason": "second" } }
+      ],
+      "expect": {
+        "outcome": { "kind": "escalate", "reason": "first" },
+        "ran": ["a", "b"],
+        "value": "hello",
+        "trace": [
+          ["a", "outcome", "escalate", false],
+          ["b", "outcome", "escalate", false]
+        ]
+      }
+    },
+    {
+      "name": "a retry after a modification keeps the modified payload",
+      "hook": "output.before",
+      "value": "raw",
+      "middleware": [
+        { "name": "fix", "band": "app", "fail_mode": "closed", "does": { "outcome": "modify", "value": "fixed" } },
+        { "name": "judge", "band": "task", "fail_mode": "closed", "does": { "outcome": "retry", "reason": "still wrong" } }
+      ],
+      "expect": {
+        "outcome": { "kind": "retry", "reason": "still wrong" },
+        "ran": ["fix", "judge"],
+        "seen": { "fix": "raw", "judge": "fixed" },
+        "value": "fixed",
+        "trace": [
+          ["fix", "outcome", "continue", true],
+          ["judge", "outcome", "retry", false]
+        ]
+      }
+    },
+    {
+      "name": "a raise in a closed middleware blocks",
+      "hook": "input.before",
+      "value": "hello",
+      "middleware": [
+        { "name": "broken", "band": "baseline", "fail_mode": "closed", "does": { "outcome": "raise" } },
+        { "name": "never", "band": "app", "fail_mode": "closed", "does": { "outcome": "continue" } }
+      ],
+      "expect": {
+        "outcome": { "kind": "block", "code": "middleware_error" },
+        "ran": ["broken"],
+        "value": "hello",
+        "trace": [["broken", "failure", "block", false]]
+      }
+    },
+    {
+      "name": "a raise in an open middleware continues and is traced",
+      "hook": "input.before",
+      "value": "hello",
+      "middleware": [
+        { "name": "flaky", "band": "app", "fail_mode": "open", "does": { "outcome": "raise" } },
+        { "name": "next", "band": "app", "fail_mode": "closed", "does": { "outcome": "continue" } }
+      ],
+      "expect": {
+        "outcome": { "kind": "continue" },
+        "ran": ["flaky", "next"],
+        "value": "hello",
+        "trace": [
+          ["flaky", "failure", "continue", false],
+          ["next", "outcome", "continue", false]
+        ]
+      }
+    },
+    {
+      "name": "a timeout in a closed middleware blocks",
+      "hook": "input.before",
+      "value": "hello",
+      "middleware": [
+        { "name": "slow", "band": "app", "fail_mode": "closed", "does": { "outcome": "timeout" } }
+      ],
+      "expect": {
+        "outcome": { "kind": "block", "code": "middleware_timeout" },
+        "ran": ["slow"],
+        "value": "hello",
+        "trace": [["slow", "failure", "block", false]]
+      }
+    },
+    {
+      "name": "a timeout in an open middleware continues",
+      "hook": "input.before",
+      "value": "hello",
+      "middleware": [
+        { "name": "slow", "band": "app", "fail_mode": "open", "does": { "outcome": "timeout" } },
+        { "name": "next", "band": "app", "fail_mode": "closed", "does": { "outcome": "modify", "value": "changed" } }
+      ],
+      "expect": {
+        "outcome": { "kind": "continue", "modified": true },
+        "ran": ["slow", "next"],
+        "value": "changed",
+        "trace": [
+          ["slow", "failure", "continue", false],
+          ["next", "outcome", "continue", true]
+        ]
+      }
+    },
+    {
+      "name": "an answer that isn't an outcome is a failure",
+      "hook": "input.before",
+      "value": "hello",
+      "middleware": [
+        { "name": "confused", "band": "app", "fail_mode": "closed", "does": { "outcome": "bad_answer" } }
+      ],
+      "expect": {
+        "outcome": { "kind": "block", "code": "middleware_error" },
+        "ran": ["confused"],
+        "value": "hello",
+        "trace": [["confused", "failure", "block", false]]
+      }
+    },
+    {
+      "name": "modifying into another hook's payload is a failure",
+      "hook": "input.before",
+      "value": "hello",
+      "middleware": [
+        { "name": "mixed-up", "band": "app", "fail_mode": "open", "does": { "outcome": "bad_modify" } },
+        { "name": "next", "band": "app", "fail_mode": "closed", "does": { "outcome": "continue" } }
+      ],
+      "expect": {
+        "outcome": { "kind": "continue" },
+        "ran": ["mixed-up", "next"],
+        "seen": { "next": "hello" },
+        "value": "hello",
+        "trace": [
+          ["mixed-up", "failure", "continue", false],
+          ["next", "outcome", "continue", false]
+        ]
+      }
+    },
+    {
+      "name": "baseline middleware can't fail open",
+      "hook": "input.before",
+      "value": "hello",
+      "middleware": [
+        { "name": "lax", "band": "baseline", "fail_mode": "open", "does": { "outcome": "continue" } }
+      ],
+      "expect": { "error": "spec_invalid" }
+    }
+  ]
+}

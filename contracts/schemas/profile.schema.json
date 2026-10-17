@@ -506,9 +506,16 @@
           "type": "string"
         },
         "band": {
-          "$ref": "#/$defs/Band",
-          "default": "app",
-          "description": "Only profiles may use 'baseline' (S8)."
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Band"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Defaults to the middleware's declared band; only profiles may use 'baseline' (S8)."
         },
         "hooks": {
           "anyOf": [

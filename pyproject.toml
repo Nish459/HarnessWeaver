@@ -96,6 +96,8 @@ venvPath = "."
 venv = ".venv"
 include = ["python", "scripts"]
 exclude = ["**/__pycache__", "**/.venv"]
+# The runtime tests load this plugin module through plugins.local.
+extraPaths = ["python/harnessweaver/tests/fixtures"]
 # RULES C1: strict on the contract-heavy core.
 strict = [
     "python/harnessweaver/src/harnessweaver/core",

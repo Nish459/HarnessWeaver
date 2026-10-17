@@ -1,6 +1,6 @@
 {
   "suite": "durations",
-  "description": "Parsing durations and printing their canonical form (DESIGNS \u00a711).",
+  "description": "Parsing durations and printing their canonical form (DESIGNS No. 11).",
   "cases": [
     {
       "name": "milliseconds",

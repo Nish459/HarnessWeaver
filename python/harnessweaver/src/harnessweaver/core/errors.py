@@ -27,10 +27,15 @@ __all__ = [
     "InternalError",
     "LevelTooLow",
     "LockViolation",
+    "NotFound",
     "PluginConflict",
     "PluginNotAllowed",
     "PolicyDenied",
     "ProviderError",
+    "RunBlocked",
+    "RunEscalated",
+    "RunInterrupted",
+    "RunSuspended",
     "SpecError",
     "ToolError",
     "UnknownProvider",
@@ -52,6 +57,10 @@ class ErrorCode(StrEnum):
     TOOL_ERROR = "tool_error"
     EXPRESSION_ERROR = "expression_error"
     SPEC_INVALID = "spec_invalid"
+    NOT_FOUND = "not_found"
+    BLOCKED = "blocked"
+    ESCALATED = "escalated"
+    SUSPENDED = "suspended"
     INTERNAL = "internal"
 
 
@@ -124,6 +133,38 @@ class ToolError(HarnessError):
     """A tool failed while executing."""
 
     code = ErrorCode.TOOL_ERROR
+
+
+class NotFound(HarnessError):
+    """A run, approval or other named thing doesn't exist."""
+
+    code = ErrorCode.NOT_FOUND
+
+
+class RunInterrupted(HarnessError):
+    """A hook stopped the run with ``Block``, ``Escalate`` or ``Suspend`` (ADR-0020).
+
+    In run style the harness turns these into the run's status. In session style
+    they are raised to the app's code, which may catch them.
+    """
+
+
+class RunBlocked(RunInterrupted):
+    """A hook refused the step. ``details["code"]`` holds the ``Block`` code."""
+
+    code = ErrorCode.BLOCKED
+
+
+class RunEscalated(RunInterrupted):
+    """A hook handed the run to a human queue."""
+
+    code = ErrorCode.ESCALATED
+
+
+class RunSuspended(RunInterrupted):
+    """A hook paused the run until an approver answers."""
+
+    code = ErrorCode.SUSPENDED
 
 
 class InternalError(HarnessError):

@@ -1,0 +1,7 @@
+# A profile shipped by the test plugin: profile://testkit.strict
+apiVersion: harnessweaver/v1
+kind: Profile
+metadata: { name: strict, version: 1.2.0 }
+budgets:
+  per_run: { max_model_calls: 5 }
+locks: [budgets.per_run.max_model_calls]

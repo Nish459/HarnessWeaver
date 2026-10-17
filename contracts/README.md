@@ -29,6 +29,8 @@ make schemas-check    # report drift
 | `tool-info`, `tool-result` | Tool facts policies decide on, and tool output |
 | `context-item` | A retrieved item with its ACL |
 | `approval-request`, `approval-decision` | Human-in-the-loop approvals |
+| `trace-event` | One entry in a run's trace: a hook that fired, a middleware's outcome or failure, or a framework note |
+| `run-result`, `run-event` | A run's status, output or error, usage, cost and trace; and the progress events `harness.stream` yields |
 | `error-info` | The serializable error taxonomy |
 
 Every schema has `$id` `urn:harnessweaver:v1:<name>`. Within `harnessweaver/v1`, changes are additive only (V2).
@@ -59,6 +61,9 @@ The fields of a case depend on the suite:
 | `expr` | `expr`, optional `vars` | `{value, type?}` or `{error: "syntax" \| "eval"}` |
 | `merge` | `layers: [{name, kind, data}]`, or a run budget (`per_run`, `task_budget`, `overrides`, optional `bounds`) | merged `value` plus `provenance` (path to layer name), the `budget`, or `{error, lock?, bound?}` with `error` one of `lock_violation`, `bound_violation`, `spec_invalid` |
 | `levels` | `spec` sections and `risk_tier` | `{level, required, unmet}` with requirement codes by level |
+| `bus` | `hook`, a starting `value`, and `middleware: [{name, band, fail_mode, does}]` | the combined `outcome`, the middleware that `ran`, what each one `saw`, the final `value` and the per-middleware `trace`, or `{error}` |
+| `budgets` | `limits` and `ops` (`model.before`, `model.after`, `tool.before`), or a `cost` lookup | the limit each op breached, the `meter` afterwards and what is `remaining`; or the cost's `usd` and `source` |
+| `plugins` | `owner_of`, `qualify`, `owns`, `allowed` or `namespace` | the owning namespace, the qualified name, or `true`/`false` |
 
 Expected values are written by hand from the design, never copied from an implementation's output. When `expect.type` is given for a number, implementations must also return that cel-lite type (`int` or `double`).
 

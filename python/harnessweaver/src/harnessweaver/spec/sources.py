@@ -23,6 +23,8 @@ from pathlib import Path
 from typing import Any, Final, Protocol
 
 from harnessweaver.core.errors import SpecError
+from harnessweaver.core.plugins import RESERVED_NAMESPACES
+from harnessweaver.core.registry import PluginCatalog
 from harnessweaver.core.semver import Version, VersionRange
 from harnessweaver.spec._raw import as_map
 from harnessweaver.spec.merge import LayerKind
@@ -31,6 +33,7 @@ from harnessweaver.spec.yaml import load_yaml, load_yaml_file
 __all__ = [
     "PROFILE_PATH_ENV",
     "BuiltinProfiles",
+    "PluginProfiles",
     "ProfileDirectories",
     "ProfileRef",
     "ProfileResolver",
@@ -181,6 +184,40 @@ class ProfileDirectories:
         if not isinstance(document, dict):
             raise SpecError(f"{path} is not a map")
         return ResolvedProfile(str(ref.name), LayerKind.ORG, document, str(path), path.parent)  # pyright: ignore[reportUnknownArgumentType]
+
+
+class PluginProfiles:
+    """Profiles contributed by plugins: ``profile://<namespace>.<name>[@range]``.
+
+    Only the plugin that owns the namespace is imported (S8). The loader checks
+    the namespace against ``plugins.allow`` once the layers are merged.
+    """
+
+    def __init__(self, catalog: PluginCatalog) -> None:
+        self.catalog = catalog
+
+    def resolve(self, ref: ProfileRef, relative_to: Path | None) -> ResolvedProfile | None:
+        if ref.scheme != "profile" or "." not in ref.name:
+            return None
+        namespace, _, name = ref.name.partition(".")
+        if namespace in RESERVED_NAMESPACES:
+            return None
+        loaded = self.catalog.load(namespace)
+        path = loaded.plugin.profiles.get(name)
+        if path is None:
+            offered = ", ".join(sorted(loaded.plugin.profiles)) or "none"
+            raise SpecError(
+                f"plugin {namespace!r} has no profile {name!r} (it has: {offered})",
+                reference=ref.text,
+            )
+        resource = loaded.resource(path)
+        document = load_yaml(resource.read_text(encoding="utf-8"), f"profile://{ref.name}")
+        if not isinstance(document, dict):
+            raise SpecError(f"profile://{ref.name} is not a map")
+        version = _check_range(ref, document, f"profile://{ref.name}")  # pyright: ignore[reportUnknownArgumentType]
+        label = f"profile://{ref.name}@{version}" if version else f"profile://{ref.name}"
+        source = f"{loaded.source.module}:{path}"
+        return ResolvedProfile(label, LayerKind.ORG, document, source, None)  # pyright: ignore[reportUnknownArgumentType]
 
 
 def resolve_extends(

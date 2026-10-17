@@ -303,6 +303,12 @@ async def no_weekend_refunds(event: hw.ToolCallEvent, env: hw.Envelope) -> hw.Ou
     return hw.Continue()
 ```
 
+**Details** (fixtures suite `bus`):
+- Returning `None` means `Continue()`. Returning something that isn't an outcome, or modifying the payload into another hook's payload type, is a failure, handled by the fail mode.
+- A closed failure becomes `Block` with code `middleware_error`, or `middleware_timeout` when the middleware's `timeout` ran out. The trace records the exception's type, never its message (R9).
+- The trace has one `outcome` (or `failure`) event per middleware, then one `hook` event with the combined outcome. So it shows every hook point that fired, even with no middleware attached.
+- The band in `@hw.middleware` is a default. The spec's `middleware:` item assigns the real band, and only profiles may assign `baseline` (S8). Baseline middleware that fails open is a load error (R2). A class middleware is built from its `config` model with the item's other keys; its default name is the class name in snake_case.
+
 ## 9. Outcomes and guard actions
 
 Middleware returns one of six outcomes. Guardrails speak a richer vocabulary of **seven actions**, which the guardrails module maps onto outcomes.
@@ -324,6 +330,8 @@ flowchart LR
 | `Escalate(reason, to)` | Stop the automated path and hand off to a human queue | Run ends `escalated` |
 | `Suspend(reason, approver_role)` | Pause durably until an approver answers | Checkpoint, then `awaiting_approval` |
 | `Block(reason, code)` | Refuse | Run ends `blocked`; the step never executes |
+
+`Retry` is honored at `model.after` (the model is asked again, once) and at `output.before` (a repair, up to `validation.max_repairs`). Anywhere else it becomes `Block` with code `retry_not_supported`. `Suspend` pauses at `tool.before` and `output.before` (No. 18). Anywhere else, and in a standalone session, it escalates.
 
 | Guard action | Maps to | Notes |
 | --- | --- | --- |
@@ -349,6 +357,8 @@ Only taxonomy errors cross a public boundary (C5). Each has a stable code that t
 | `tool_error` | `ToolError` | no |
 | `expression_error` | `ExpressionSyntaxError`, `ExpressionEvalError` | no |
 | `spec_invalid` | `SpecError` and its load-time subclasses: `LockViolation`, `BoundViolation`, `LevelTooLow`, `UnreachableHook`, `IncompatibleContract`, `UnknownProvider`, `PluginConflict`, `PluginNotAllowed` | no |
+| `not_found` | `NotFound`: an unknown task, run or approval | no |
+| `blocked`, `escalated`, `suspended` | `RunBlocked`, `RunEscalated`, `RunSuspended`, all `RunInterrupted`: a hook halted the run (ADR-0020). `details` holds the `hook` and the `Block` code | no |
 | `internal` | `InternalError` (anything unexpected) | no |
 
 Error messages and details never contain raw prompts, outputs, tool arguments or variable values (R9).
@@ -387,8 +397,15 @@ The **Envelope** is immutable (`frozen=True`). The mutable state of a run lives 
 **Cost** is resolved in this order (ADR-0012):
 1. The cost the provider reports (for example LiteLLM's response-cost header).
 2. Spec `models.prices`.
-3. The `genai-prices` package, if installed.
+3. The `genai-prices` package, if installed *(planned)*.
 4. Otherwise `unknown`. This is flagged on the trace and never guessed.
+
+**Budget details** (fixtures suite `budgets`):
+- The pre-check at `model.before` blocks when the call count, tokens or cost has reached its limit, or when the request's estimated input (one token per four characters) won't fit in the tokens left. A call is counted when it goes ahead.
+- `model.after` adds the actual usage and cost; going over `max_tokens` or `max_usd` blocks the run.
+- Each check, and each call's usage and cost source, is traced as a `harness.budget` event (R13).
+- A runner or adapter must reach `model.before` and `model.after` when a model limit is set, and `tool.before` when `max_tool_calls` is set. Otherwise loading fails (R4).
+- While a run waits for approval its deadline is paused: the resumed run gets the time it had left.
 
 ## 11. The spec system
 
@@ -638,6 +655,9 @@ middleware:
 - Every contributed name is `<namespace>.<name>`, where the namespace is the plugin's entry-point name (`acme.pii`, `openai.chat`). This lets the loader find the owning plugin **without importing anything**.
 - The core's built-in plugin owns bare names (`direct`, `session`, `workflow`) and a small set of reserved area namespaces (`pii`, `secrets`, `regex`, `injection`, `size`, `topic`, `grounded`, `llm`, `cel_lite`, `rules`, `lexical`, `semantic`, `memory`, `sqlite`, `scripted`, ...), listed in `harnessweaver.RESERVED_NAMESPACES`. Other plugins can't claim them.
 - Loading fails (R4) if two installed plugins claim the same namespace, or if a referenced name resolves to nothing.
+- Names are lowercase words joined by dots. Names are unique per port, so `memory` can be both a state store and an approval channel.
+- A plugin can ship profiles. `profile://acme.baseline@^1` imports only the `acme` plugin, and `plugins.allow` applies to it like any other use.
+- The built-in plugin is always imported from the core itself and is always allowed. `PluginCatalog.problems()` lists namespaces that are shared or reserved, for `harnessweaver doctor`.
 
 ### Loading lifecycle
 
@@ -745,6 +765,11 @@ flowchart LR
 | `workflow` | A step DAG (`needs:`), parallel steps, and an evaluator-optimizer loop | Deterministic orchestration only |
 | `pydantic_ai.agent` (plugin) | A Pydantic AI agent, governed through a capability | Default runner in the `agent` template; never required |
 
+- **`direct`** sends the task's prompt, rendered from the input (ADR-0013), as the system message and the input as the user message, and offers the task's tools. `max_steps` (default 8) caps the model calls of the tool loop; repairs don't count. Reaching it blocks the run with code `max_steps`. With a task `output` model, the answer is parsed and repaired as No. 20 describes.
+- **`session`** calls `runner: { use: session, handler: "pkg.mod:fn" }` as `await fn(session, input)`.
+- **`workflow`** takes `steps` (each an `id`, a `handler` and the steps it `needs`). Steps that are ready together run in parallel. A step with an `evaluator` loops up to `max_rounds`, passing `feedback` and `round` back to the handler, then applies `on_reject` (`escalate`, `block` or `accept`). `output` names the step whose output is the result (default: the last step).
+- **Standalone sessions** (`async with harness.session(...) as s`) offer `generate`, `tool`, `decide`, `context(source).check(items)`, `guard`, `validate` and `prompt`. Their app code can't be resumed later, so `Suspend` escalates there. A halting outcome reaches the app's code as a `RunInterrupted` error (ADR-0020).
+
 ## 16. Models
 
 - **Neutral contracts (R7).** `ModelRequest`, `ModelResponse`, `Message`, `ToolSpec`, `ToolCall`, `Usage`. No SDK types cross the port.
@@ -833,6 +858,12 @@ stateDiagram-v2
   2. Fires `approval.resolved`.
   3. Re-runs schema and policy on any edited args.
   4. Resumes.
+- **Approval requests.** The approver role and expiry come from the task's `approvals`, then the spec's `approvals`.
+- **Grants.** An approval becomes a grant that matches the call by tool name and arguments, or the output by its content. A matching call carries the approval into `tool.before` as `event.approval`, so middleware doesn't ask again but still checks edited arguments.
+- **How runs resume** (ADR-0021). `direct` continues from the exact step. `session` and `workflow` run the interrupted handler or step again; finished workflow steps don't run again. Work before a suspension point should be safe to repeat.
+- **Expiry.** An answer after `expires_at` ends the run as `on_timeout` says (`escalate` or `reject`).
+- **Crash safety.** `approve()` saves the answer before resuming. `harness.resume(run_id)` continues a run whose answer was saved but which didn't finish. `harness.cancel(run_id)` stops a live or waiting run.
+- **Background runs.** Inside `async with harness:`, `harness.submit(...)` returns a run id at once. `harness.stream(run_id)` yields `RunEvent`s: `status` and `approval` events from the state store's event log, plus live `trace` and streamed `chunk` events.
 - **Idempotency.** `harness.run(..., idempotency_key=k)` returns the stored result for `(tenant, task, k)` instead of re-running.
 - **Durable runners.** Long-running work delegates to Temporal or DBOS through a `DurableRunner` plugin (planned). HarnessWeaver never builds its own scheduler.
 
@@ -1031,6 +1062,8 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | **0017** | Specs are read as YAML 1.2 (core schema): only `true`/`false` are booleans, there are no implicit dates or sexagesimal numbers, `012` is decimal, and duplicate keys are errors | PyYAML implements YAML 1.1 (`no` is false, `1:30` is 90), while JavaScript's `yaml` follows 1.2. One schema keeps a spec meaning the same in every language | Accepted |
 | **0018** | A lock forbids *changing* a value (or anything under it), not restating it. Bounds from several profiles accumulate and are never loosened by a later layer | Apps can repeat baseline values for readability without failing; stacking org profiles can only tighten | Accepted |
 | **0019** | One `models` section (`provider`, `default`, `aliases`, `allowed_aliases`, `prices`) replaces the guide's separate `model_access` and `models`. Provider settings sit next to `use:` and are validated by the provider. `evals.online` is a reserved key beside the per-task suite lists | One place to read model access; the guide's inline provider settings stay valid; the guide's `evals: {task: [files]}` form stays valid | Accepted |
+| **0020** | A hook that halts a run raises a taxonomy error: `RunBlocked`, `RunEscalated` or `RunSuspended`, all `RunInterrupted` (codes `blocked`, `escalated`, `suspended`). In run style the harness turns it into the run's status; in session style the app's code sees it. `NotFound` (code `not_found`) covers unknown tasks, runs and approvals | One mechanism stops every integration style, apps can catch one base class, and only taxonomy errors cross a public boundary (C5) | Accepted |
+| **0021** | An approved step resumes from its checkpoint in `direct`, and by running the interrupted handler or workflow step again in `session` and `workflow`. Approvals are matched by tool name and arguments, or by the output's content, so the repeated call doesn't ask twice | App code can't be resumed in the middle of a function. Running the step again, as LangGraph's interrupts do, keeps handlers plain async functions | Accepted |
 
 ## 29. Deviations from the design guide
 

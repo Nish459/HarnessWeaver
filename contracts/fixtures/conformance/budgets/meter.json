@@ -1,0 +1,132 @@
+{
+  "suite": "budgets",
+  "description": "Budget accounting for one run (DESIGNS No. 10). `ops` run in order on a fresh meter with `limits`. model.before checks the call (estimating input tokens as ceil(chars / 4), counting Unicode code points) and, if allowed, counts it; model.after adds usage and cost (null cost means unknown); tool.before checks and, if allowed, counts a tool call. `results` holds, per op, the limit that blocked it or null. `meter` is the usage afterwards.",
+  "cases": [
+    {
+      "name": "no limits never block",
+      "limits": {},
+      "ops": [
+        { "op": "model.before", "chars": 4000 },
+        { "op": "model.after", "usage": { "input_tokens": 1000, "output_tokens": 500 }, "cost_usd": 2.5 },
+        { "op": "tool.before" }
+      ],
+      "expect": {
+        "results": [null, null, null],
+        "meter": { "usd": 2.5, "cost_known": true, "input_tokens": 1000, "output_tokens": 500, "model_calls": 1, "tool_calls": 1 }
+      }
+    },
+    {
+      "name": "the model-call limit blocks the next call once reached",
+      "limits": { "max_model_calls": 2 },
+      "ops": [
+        { "op": "model.before", "chars": 8 },
+        { "op": "model.after", "usage": { "input_tokens": 2, "output_tokens": 1 }, "cost_usd": 0.001 },
+        { "op": "model.before", "chars": 8 },
+        { "op": "model.after", "usage": { "input_tokens": 2, "output_tokens": 1 }, "cost_usd": 0.001 },
+        { "op": "model.before", "chars": 8 }
+      ],
+      "expect": {
+        "results": [null, null, null, null, "max_model_calls"],
+        "meter": { "usd": 0.002, "cost_known": true, "input_tokens": 4, "output_tokens": 2, "model_calls": 2, "tool_calls": 0 }
+      }
+    },
+    {
+      "name": "an estimated input that doesn't fit in the tokens left is blocked",
+      "limits": { "max_tokens": 10 },
+      "ops": [
+        { "op": "model.before", "chars": 41 },
+        { "op": "model.before", "chars": 40 }
+      ],
+      "expect": {
+        "results": ["max_tokens", null],
+        "meter": { "usd": 0, "cost_known": true, "input_tokens": 0, "output_tokens": 0, "model_calls": 1, "tool_calls": 0 }
+      }
+    },
+    {
+      "name": "usage over the token limit blocks after the call",
+      "limits": { "max_tokens": 10 },
+      "ops": [
+        { "op": "model.before", "chars": 4 },
+        { "op": "model.after", "usage": { "input_tokens": 5, "output_tokens": 6 }, "cost_usd": null }
+      ],
+      "expect": {
+        "results": [null, "max_tokens"],
+        "meter": { "usd": 0, "cost_known": false, "input_tokens": 5, "output_tokens": 6, "model_calls": 1, "tool_calls": 0 }
+      }
+    },
+    {
+      "name": "using exactly the token limit is fine, but nothing more can be sent",
+      "limits": { "max_tokens": 10 },
+      "ops": [
+        { "op": "model.before", "chars": 4 },
+        { "op": "model.after", "usage": { "input_tokens": 4, "output_tokens": 6 }, "cost_usd": 0 },
+        { "op": "model.before", "chars": 0 }
+      ],
+      "expect": {
+        "results": [null, null, "max_tokens"],
+        "meter": { "usd": 0, "cost_known": true, "input_tokens": 4, "output_tokens": 6, "model_calls": 1, "tool_calls": 0 }
+      }
+    },
+    {
+      "name": "cost over the USD limit blocks, and so does the next call",
+      "limits": { "max_usd": 0.01 },
+      "ops": [
+        { "op": "model.before", "chars": 4 },
+        { "op": "model.after", "usage": { "input_tokens": 1, "output_tokens": 1 }, "cost_usd": 0.006 },
+        { "op": "model.before", "chars": 4 },
+        { "op": "model.after", "usage": { "input_tokens": 1, "output_tokens": 1 }, "cost_usd": 0.005 },
+        { "op": "model.before", "chars": 4 }
+      ],
+      "expect": {
+        "results": [null, null, null, "max_usd", "max_usd"],
+        "meter": { "usd": 0.011, "cost_known": true, "input_tokens": 2, "output_tokens": 2, "model_calls": 2, "tool_calls": 0 }
+      }
+    },
+    {
+      "name": "an unknown cost is flagged, not guessed",
+      "limits": { "max_usd": 1 },
+      "ops": [
+        { "op": "model.before", "chars": 4 },
+        { "op": "model.after", "usage": { "input_tokens": 100, "output_tokens": 100 }, "cost_usd": null },
+        { "op": "model.before", "chars": 4 },
+        { "op": "model.after", "usage": { "input_tokens": 1, "output_tokens": 1 }, "cost_usd": 0.25 }
+      ],
+      "expect": {
+        "results": [null, null, null, null],
+        "meter": { "usd": 0.25, "cost_known": false, "input_tokens": 101, "output_tokens": 101, "model_calls": 2, "tool_calls": 0 }
+      }
+    },
+    {
+      "name": "the tool-call limit blocks the next call once reached",
+      "limits": { "max_tool_calls": 1 },
+      "ops": [{ "op": "tool.before" }, { "op": "tool.before" }],
+      "expect": {
+        "results": [null, "max_tool_calls"],
+        "meter": { "usd": 0, "cost_known": true, "input_tokens": 0, "output_tokens": 0, "model_calls": 0, "tool_calls": 1 }
+      }
+    },
+    {
+      "name": "a zero limit blocks the first call",
+      "limits": { "max_model_calls": 0, "max_tool_calls": 0 },
+      "ops": [{ "op": "model.before", "chars": 1 }, { "op": "tool.before" }],
+      "expect": {
+        "results": ["max_model_calls", "max_tool_calls"],
+        "meter": { "usd": 0, "cost_known": true, "input_tokens": 0, "output_tokens": 0, "model_calls": 0, "tool_calls": 0 }
+      }
+    },
+    {
+      "name": "what is left of each limit, never negative",
+      "limits": { "max_usd": 1, "max_tokens": 100, "max_model_calls": 3, "max_tool_calls": 2 },
+      "ops": [
+        { "op": "model.before", "chars": 4 },
+        { "op": "model.after", "usage": { "input_tokens": 60, "output_tokens": 50 }, "cost_usd": 0.25 },
+        { "op": "tool.before" }
+      ],
+      "expect": {
+        "results": [null, "max_tokens", null],
+        "meter": { "usd": 0.25, "cost_known": true, "input_tokens": 60, "output_tokens": 50, "model_calls": 1, "tool_calls": 1 },
+        "remaining": { "max_usd": 0.75, "max_tokens": 0, "max_model_calls": 2, "max_tool_calls": 1 }
+      }
+    }
+  ]
+}

@@ -275,7 +275,11 @@ class SidecarSpec(_Strict):
 class MiddlewareSpec(_Provider):
     id: str | None = None
     use: str
-    band: Band = Field(default=Band.APP, description="Only profiles may use 'baseline' (S8).")
+    band: Band | None = Field(
+        default=None,
+        description="Defaults to the middleware's declared band; only profiles may use "
+        "'baseline' (S8).",
+    )
     hooks: tuple[HookPoint, ...] | None = Field(default=None, description="Narrow the hooks.")
     fail_mode: Literal["closed", "open"] | None = None
     timeout: Duration | None = None

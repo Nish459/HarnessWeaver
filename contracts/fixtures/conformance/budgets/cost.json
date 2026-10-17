@@ -1,0 +1,60 @@
+{
+  "suite": "budgets",
+  "description": "Where a model call's cost comes from (ADR-0012): the provider's report, then `models.prices` looked up by the response's model, the request's model and the request's alias, otherwise unknown. Prices are [USD per million input tokens, USD per million output tokens].",
+  "cases": [
+    {
+      "name": "a reported cost wins over prices",
+      "cost": {
+        "response": { "model": "gpt-x", "usage": { "input_tokens": 1000, "output_tokens": 500 }, "cost_usd": 0.5 },
+        "request": { "model": "gpt-x" },
+        "prices": { "gpt-x": [3, 15] }
+      },
+      "expect": { "usd": 0.5, "source": "provider" }
+    },
+    {
+      "name": "prices by the response's model",
+      "cost": {
+        "response": { "model": "gpt-x", "usage": { "input_tokens": 1000, "output_tokens": 500 } },
+        "request": { "model": "gpt-x-latest", "alias": "fast" },
+        "prices": { "gpt-x": [3, 15], "gpt-x-latest": [100, 100], "fast": [100, 100] }
+      },
+      "expect": { "usd": 0.0105, "source": "prices" }
+    },
+    {
+      "name": "prices by the request's model when the response names none",
+      "cost": {
+        "response": { "usage": { "input_tokens": 2000000, "output_tokens": 0 } },
+        "request": { "model": "small" },
+        "prices": { "small": [0.25, 1] }
+      },
+      "expect": { "usd": 0.5, "source": "prices" }
+    },
+    {
+      "name": "prices by the request's alias as a last resort",
+      "cost": {
+        "response": { "model": "unlisted", "usage": { "input_tokens": 0, "output_tokens": 1000000 } },
+        "request": { "model": "also-unlisted", "alias": "strong" },
+        "prices": { "strong": [5, 20] }
+      },
+      "expect": { "usd": 20, "source": "prices" }
+    },
+    {
+      "name": "no report and no price means unknown",
+      "cost": {
+        "response": { "model": "gpt-x", "usage": { "input_tokens": 10, "output_tokens": 10 } },
+        "request": { "model": "gpt-x", "alias": "fast" },
+        "prices": {}
+      },
+      "expect": { "usd": null, "source": "unknown" }
+    },
+    {
+      "name": "a reported zero is a known cost",
+      "cost": {
+        "response": { "model": "local", "usage": { "input_tokens": 10, "output_tokens": 10 }, "cost_usd": 0 },
+        "request": { "model": "local" },
+        "prices": { "local": [1, 1] }
+      },
+      "expect": { "usd": 0, "source": "provider" }
+    }
+  ]
+}

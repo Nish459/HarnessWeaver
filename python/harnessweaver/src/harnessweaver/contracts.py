@@ -21,9 +21,11 @@ from harnessweaver.core.guards import GuardResult
 from harnessweaver.core.hooks import HookEvent
 from harnessweaver.core.messages import ModelRequest, ModelResponse, ToolCall
 from harnessweaver.core.outcomes import Outcome
+from harnessweaver.core.results import RunEvent, RunResult
 from harnessweaver.core.retrieval import ContextItem
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest
 from harnessweaver.core.tools import ToolInfo, ToolResult
+from harnessweaver.core.trace import TraceEvent
 from harnessweaver.spec.models import HarnessSpec, ProfileSpec
 
 __all__ = [
@@ -58,6 +60,9 @@ CONTRACTS: Final[dict[str, Any]] = {
     "context-item": ContextItem,
     "approval-request": ApprovalRequest,
     "approval-decision": ApprovalDecision,
+    "trace-event": TraceEvent,
+    "run-result": RunResult,
+    "run-event": RunEvent,
     "error-info": ErrorInfo,
 }
 """Every exported contract, by schema file name (without ``.schema.json``)."""

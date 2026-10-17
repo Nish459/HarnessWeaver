@@ -1,6 +1,6 @@
 {
   "suite": "outcomes",
-  "description": "Outcome severity and how answers to one event combine (DESIGNS \u00a78).",
+  "description": "Outcome severity and how answers to one event combine (DESIGNS No. 8).",
   "cases": [
     {
       "name": "severity of continue",

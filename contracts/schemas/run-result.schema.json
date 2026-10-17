@@ -1,0 +1,580 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:run-result",
+  "title": "RunResult",
+  "$defs": {
+    "ApprovalRequest": {
+      "additionalProperties": false,
+      "description": "A suspended step waiting for a human.",
+      "properties": {
+        "approval_id": {
+          "minLength": 1,
+          "title": "Approval Id",
+          "type": "string"
+        },
+        "run_id": {
+          "minLength": 1,
+          "title": "Run Id",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "approver_role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approver Role"
+        },
+        "call": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolCall"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tool": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "requested_at": {
+          "format": "date-time",
+          "title": "Requested At",
+          "type": "string"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expires At"
+        }
+      },
+      "required": [
+        "approval_id",
+        "run_id",
+        "reason",
+        "requested_at"
+      ],
+      "title": "ApprovalRequest",
+      "type": "object"
+    },
+    "Band": {
+      "description": "Middleware priority bands, outermost first.\n\nThe spec assigns bands; a plugin can't place itself in ``baseline`` (S8).",
+      "enum": [
+        "baseline",
+        "platform",
+        "app",
+        "task"
+      ],
+      "title": "Band",
+      "type": "string"
+    },
+    "ErrorCode": {
+      "description": "Stable, language-neutral error codes.",
+      "enum": [
+        "budget_exceeded",
+        "deadline_exceeded",
+        "policy_denied",
+        "validation_failed",
+        "provider_error",
+        "tool_error",
+        "expression_error",
+        "spec_invalid",
+        "not_found",
+        "blocked",
+        "escalated",
+        "suspended",
+        "internal"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    },
+    "ErrorInfo": {
+      "additionalProperties": false,
+      "description": "The serializable form of an error, as carried by hook events and the wire API.",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "type": {
+          "description": "The error class name, e.g. 'LockViolation'.",
+          "title": "Type",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "default": false,
+          "title": "Retryable",
+          "type": "boolean"
+        },
+        "details": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Details",
+          "type": "object"
+        }
+      },
+      "required": [
+        "code",
+        "type",
+        "message"
+      ],
+      "title": "ErrorInfo",
+      "type": "object"
+    },
+    "HookPoint": {
+      "description": "A named moment in the run lifecycle. The set is fixed and versioned (R11).",
+      "enum": [
+        "run.start",
+        "input.before",
+        "route.decide",
+        "context.after",
+        "model.before",
+        "model.after",
+        "stream.chunk",
+        "tool.before",
+        "tool.after",
+        "output.before",
+        "approval.resolved",
+        "run.error",
+        "run.end"
+      ],
+      "title": "HookPoint",
+      "type": "string"
+    },
+    "JsonValue": {},
+    "OutcomeKind": {
+      "enum": [
+        "continue",
+        "retry",
+        "escalate",
+        "suspend",
+        "block"
+      ],
+      "title": "OutcomeKind",
+      "type": "string"
+    },
+    "Risk": {
+      "description": "How much harm a misused call could do.",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "Risk",
+      "type": "string"
+    },
+    "RunStatus": {
+      "description": "Where a run is in its lifecycle (DESIGNS No. 18).",
+      "enum": [
+        "pending",
+        "running",
+        "awaiting_approval",
+        "completed",
+        "blocked",
+        "escalated",
+        "failed",
+        "cancelled"
+      ],
+      "title": "RunStatus",
+      "type": "string"
+    },
+    "SideEffect": {
+      "description": "What a tool changes when it runs.",
+      "enum": [
+        "none",
+        "read",
+        "write_internal",
+        "write_external",
+        "destructive"
+      ],
+      "title": "SideEffect",
+      "type": "string"
+    },
+    "ToolCall": {
+      "additionalProperties": false,
+      "description": "A tool call proposed by a model.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "arguments": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Arguments",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "ToolCall",
+      "type": "object"
+    },
+    "ToolInfo": {
+      "additionalProperties": false,
+      "description": "The parts of a tool manifest that policies and middleware decide on.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        },
+        "side_effect": {
+          "$ref": "#/$defs/SideEffect",
+          "default": "none"
+        },
+        "risk": {
+          "$ref": "#/$defs/Risk",
+          "default": "low"
+        },
+        "egress": {
+          "default": [],
+          "description": "Hosts the tool may reach.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Egress",
+          "type": "array"
+        },
+        "data_access": {
+          "default": [],
+          "description": "Data it reads, e.g. 'pii:x'.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Data Access",
+          "type": "array"
+        },
+        "scopes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Scopes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ToolInfo",
+      "type": "object"
+    },
+    "TraceEvent": {
+      "additionalProperties": false,
+      "description": "One entry in a :class:`RunTrace`.",
+      "properties": {
+        "seq": {
+          "description": "Position in the run's trace, from 0.",
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "at": {
+          "format": "date-time",
+          "title": "At",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/TraceKind"
+        },
+        "source": {
+          "description": "Middleware name, or 'harness.<area>'.",
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "hook": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HookPoint"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "band": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Band"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutcomeKind"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "modified": {
+          "default": false,
+          "description": "The middleware changed the payload.",
+          "title": "Modified",
+          "type": "boolean"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Code"
+        },
+        "details": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Details",
+          "type": "object"
+        }
+      },
+      "required": [
+        "seq",
+        "at",
+        "kind",
+        "source"
+      ],
+      "title": "TraceEvent",
+      "type": "object"
+    },
+    "TraceKind": {
+      "description": "What a trace event records.",
+      "enum": [
+        "hook",
+        "outcome",
+        "failure",
+        "note"
+      ],
+      "title": "TraceKind",
+      "type": "string"
+    },
+    "Usage": {
+      "additionalProperties": false,
+      "description": "Token usage of one or more model calls.",
+      "properties": {
+        "input_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Input Tokens",
+          "type": "integer"
+        },
+        "output_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Output Tokens",
+          "type": "integer"
+        }
+      },
+      "title": "Usage",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The state of a run: its status, output or error, usage, cost and trace.",
+  "properties": {
+    "run_id": {
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "task": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Task"
+    },
+    "task_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Task Version"
+    },
+    "status": {
+      "$ref": "#/$defs/RunStatus"
+    },
+    "output": {
+      "$ref": "#/$defs/JsonValue",
+      "default": null
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ErrorInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Why the run didn't complete: failed, blocked or escalated."
+    },
+    "approval": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ApprovalRequest"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The pending approval, while awaiting_approval."
+    },
+    "usage": {
+      "$ref": "#/$defs/Usage",
+      "default": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      }
+    },
+    "cost_usd": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cost Usd"
+    },
+    "cost_known": {
+      "default": true,
+      "description": "False if any model call's cost was unknown (ADR-0012).",
+      "title": "Cost Known",
+      "type": "boolean"
+    },
+    "trace": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/TraceEvent"
+      },
+      "title": "Trace",
+      "type": "array"
+    },
+    "started_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Started At"
+    },
+    "ended_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Ended At"
+    }
+  },
+  "required": [
+    "run_id",
+    "status"
+  ],
+  "type": "object"
+}

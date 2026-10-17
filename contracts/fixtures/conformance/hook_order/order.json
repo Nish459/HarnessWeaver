@@ -1,6 +1,6 @@
 {
   "suite": "hook_order",
-  "description": "Hook directions and middleware execution order (DESIGNS \u00a78).",
+  "description": "Hook directions and middleware execution order (DESIGNS No. 8).",
   "cases": [
     {
       "name": "the 13 hook points and their directions",

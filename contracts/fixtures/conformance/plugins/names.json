@@ -1,0 +1,39 @@
+{
+  "suite": "plugins",
+  "description": "Plugin names and namespaces (DESIGNS No. 13). A name's namespace is the text before its first dot, or the bare name. Reserved namespaces belong to the built-in plugin `harnessweaver`. Cases check `owner_of` (which plugin owns a name), `qualify` (a plugin's bare names get its namespace), `owns` (whether a plugin may contribute a name), `allowed` (plugins.allow; null allows everything, the built-in plugin is always allowed) and `namespace` (valid plugin namespaces).",
+  "cases": [
+    { "name": "a dotted name belongs to its first segment", "owner_of": "acme.pii", "expect": "acme" },
+    { "name": "deeper names still belong to the first segment", "owner_of": "acme.guards.pii", "expect": "acme" },
+    { "name": "reserved area namespaces belong to the built-in plugin", "owner_of": "pii.regex", "expect": "harnessweaver" },
+    { "name": "bare built-in names belong to the built-in plugin", "owner_of": "direct", "expect": "harnessweaver" },
+    { "name": "memory is a built-in name", "owner_of": "memory", "expect": "harnessweaver" },
+    { "name": "cel_lite is a built-in name", "owner_of": "cel_lite", "expect": "harnessweaver" },
+    { "name": "a bare unknown name is its own namespace", "owner_of": "acme", "expect": "acme" },
+    { "name": "first-party plugins are not reserved", "owner_of": "openai.chat", "expect": "openai" },
+
+    { "name": "a plugin's bare name gets its namespace", "qualify": ["acme", "pii"], "expect": "acme.pii" },
+    { "name": "an already qualified name is kept", "qualify": ["acme", "acme.pii"], "expect": "acme.pii" },
+    { "name": "built-in names stay bare", "qualify": ["harnessweaver", "direct"], "expect": "direct" },
+    { "name": "built-in area names are kept", "qualify": ["harnessweaver", "pii.regex"], "expect": "pii.regex" },
+
+    { "name": "a plugin may contribute in its namespace", "owns": ["acme", "acme.pii"], "expect": true },
+    { "name": "a plugin may not contribute in another namespace", "owns": ["acme", "other.pii"], "expect": false },
+    { "name": "a plugin may not contribute a reserved name", "owns": ["acme", "pii.regex"], "expect": false },
+    { "name": "the built-in plugin may contribute reserved names", "owns": ["harnessweaver", "pii.regex"], "expect": true },
+    { "name": "the built-in plugin may contribute bare reserved names", "owns": ["harnessweaver", "sqlite"], "expect": true },
+    { "name": "the built-in plugin may not contribute in a plugin's namespace", "owns": ["harnessweaver", "acme.pii"], "expect": false },
+
+    { "name": "no allow-list allows every plugin", "allowed": ["acme", null], "expect": true },
+    { "name": "a listed plugin is allowed", "allowed": ["acme", ["openai", "acme"]], "expect": true },
+    { "name": "an unlisted plugin is not allowed", "allowed": ["acme", ["openai"]], "expect": false },
+    { "name": "an empty allow-list allows only the built-in plugin", "allowed": ["acme", []], "expect": false },
+    { "name": "the built-in plugin is always allowed", "allowed": ["harnessweaver", []], "expect": true },
+
+    { "name": "lowercase words are valid namespaces", "namespace": "acme", "expect": true },
+    { "name": "underscores and digits are valid", "namespace": "acme_guards2", "expect": true },
+    { "name": "uppercase is not valid", "namespace": "Acme", "expect": false },
+    { "name": "a leading digit is not valid", "namespace": "2acme", "expect": false },
+    { "name": "dashes are not valid", "namespace": "acme-guards", "expect": false },
+    { "name": "dots are not valid", "namespace": "acme.guards", "expect": false }
+  ]
+}

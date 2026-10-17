@@ -169,6 +169,10 @@ class ToolCallEvent(_Event):
     hook: Literal["tool.before"] = "tool.before"
     call: ToolCall
     tool: ToolInfo
+    approval: ApprovalDecision | None = Field(
+        default=None,
+        description="A human's approval of this call. Re-check edited args; don't ask again.",
+    )
 
 
 class ToolResultEvent(_Event):
@@ -183,6 +187,9 @@ class OutputEvent(_Event):
     output: JsonValue
     attempt: int = Field(default=0, ge=0, description="0 for the first answer, then repairs.")
     schema_name: str | None = None
+    approval: ApprovalDecision | None = Field(
+        default=None, description="A human's approval of this output; don't ask again."
+    )
 
 
 class ApprovalResolvedEvent(_Event):

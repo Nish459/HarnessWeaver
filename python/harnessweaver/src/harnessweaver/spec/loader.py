@@ -9,8 +9,16 @@ from typing import Any, Final
 from pydantic import JsonValue, ValidationError
 
 from harnessweaver.core.envelope import Budget
-from harnessweaver.core.errors import BoundViolation, ExpressionSyntaxError, LevelTooLow, SpecError
+from harnessweaver.core.errors import (
+    BoundViolation,
+    ExpressionSyntaxError,
+    LevelTooLow,
+    PluginNotAllowed,
+    SpecError,
+)
 from harnessweaver.core.expr import compile_expression
+from harnessweaver.core.plugins import RESERVED_NAMESPACES
+from harnessweaver.core.registry import PluginCatalog
 from harnessweaver.spec._raw import as_list, as_map
 from harnessweaver.spec.explain import ExplainRow, SpecDiff, diff_data, explain_rows, origin_of
 from harnessweaver.spec.levels import REQUIREMENTS, LevelReport, assess
@@ -27,6 +35,7 @@ from harnessweaver.spec.models import API_VERSION, HarnessSpec, ProfileSpec
 from harnessweaver.spec.paths import Item, Segment, SpecPath, format_path, parse_path
 from harnessweaver.spec.sources import (
     BuiltinProfiles,
+    PluginProfiles,
     ProfileDirectories,
     ProfileResolver,
     ResolvedProfile,
@@ -167,6 +176,22 @@ def _check_bands(data: Mapping[str, Any], provenance: Mapping[str, Provenance]) 
                 )
 
 
+def _check_plugin_profiles(spec: HarnessSpec, layers: Sequence[Provenance]) -> None:
+    """Plugin profiles count as using the plugin, so ``plugins.allow`` applies (S8)."""
+    allow = spec.plugins.allow
+    if allow is None:
+        return
+    for layer in layers:
+        if layer.layer.startswith("profile://") and "." in layer.layer:
+            namespace = layer.layer.removeprefix("profile://").split(".", 1)[0]
+            if namespace not in RESERVED_NAMESPACES and namespace not in allow:
+                raise PluginNotAllowed(
+                    f"{layer.layer} comes from plugin {namespace!r}, which isn't in "
+                    f"plugins.allow ({', '.join(sorted(allow)) or '(none)'})",
+                    namespace=namespace,
+                )
+
+
 @dataclass(frozen=True, slots=True)
 class EffectiveSpec:
     """An app's validated spec, with the layers, provenance, locks and bounds behind it."""
@@ -244,7 +269,9 @@ def spec_from_documents(
     """
     app_doc = _check_document(dict(app), "Harness", app_source or app_name)
     resolvers = (
-        list(resolvers) if resolvers is not None else [BuiltinProfiles(), ProfileDirectories([])]
+        list(resolvers)
+        if resolvers is not None
+        else [BuiltinProfiles(), PluginProfiles(PluginCatalog.default()), ProfileDirectories([])]
     )
     defaults = BuiltinProfiles().resolve(parse_ref("profile://defaults"), None)
     assert defaults is not None, "the built-in defaults profile is missing"
@@ -285,6 +312,7 @@ def spec_from_documents(
     spec = _validate(data, merged.provenance)
     _compile_rules(spec)
     _check_bands(merged.data, merged.provenance)
+    _check_plugin_profiles(spec, merged.layers)
     level = assess(spec)
     if not level.ok:
         missing = "; ".join(REQUIREMENTS[code] for code in level.missing_for(level.required))
@@ -313,6 +341,7 @@ def load_spec(
     env: str | None = None,
     profile_dirs: Sequence[Path] = (),
     resolvers: Sequence[ProfileResolver] | None = None,
+    catalog: PluginCatalog | None = None,
 ) -> EffectiveSpec:
     """Load ``harness.yaml`` with its profiles and environment overlay.
 
@@ -322,6 +351,8 @@ def load_spec(
             A missing overlay file is not an error; ``spec explain`` lists the layers used.
         profile_dirs: Extra directories to search for ``org://`` profiles.
         resolvers: Replace the default profile resolvers entirely.
+        catalog: Where plugin profiles (``profile://<namespace>.<name>``) are found;
+            defaults to the installed plugins.
 
     Raises:
         SpecError: See :func:`spec_from_documents`.
@@ -333,6 +364,7 @@ def load_spec(
     if resolvers is None:
         resolvers = [
             BuiltinProfiles(),
+            PluginProfiles(catalog or PluginCatalog.default()),
             ProfileDirectories.from_environment(path.parent, profile_dirs),
         ]
     env = env if env is not None else (os.environ.get(ENV_VAR) or None)

@@ -427,6 +427,10 @@
         "tool_error",
         "expression_error",
         "spec_invalid",
+        "not_found",
+        "blocked",
+        "escalated",
+        "suspended",
         "internal"
       ],
       "title": "ErrorCode",
@@ -790,6 +794,18 @@
           ],
           "default": null,
           "title": "Schema Name"
+        },
+        "approval": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ApprovalDecision"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A human's approval of this output; don't ask again."
         }
       },
       "required": [
@@ -1127,6 +1143,18 @@
         },
         "tool": {
           "$ref": "#/$defs/ToolInfo"
+        },
+        "approval": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ApprovalDecision"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A human's approval of this call. Re-check edited args; don't ask again."
         }
       },
       "required": [
