@@ -1,0 +1,165 @@
+{
+  "suite": "hook_order",
+  "description": "Hook directions and middleware execution order (DESIGNS \u00a78).",
+  "cases": [
+    {
+      "name": "the 13 hook points and their directions",
+      "directions": {
+        "run.start": "inbound",
+        "input.before": "inbound",
+        "route.decide": "inbound",
+        "context.after": "outbound",
+        "model.before": "inbound",
+        "model.after": "outbound",
+        "stream.chunk": "inbound",
+        "tool.before": "inbound",
+        "tool.after": "outbound",
+        "output.before": "inbound",
+        "approval.resolved": "inbound",
+        "run.error": "outbound",
+        "run.end": "outbound"
+      }
+    },
+    {
+      "name": "inbound runs baseline first, registration order within a band",
+      "hook": "tool.before",
+      "middleware": [
+        {
+          "name": "app-a",
+          "band": "app"
+        },
+        {
+          "name": "base",
+          "band": "baseline"
+        },
+        {
+          "name": "app-b",
+          "band": "app"
+        },
+        {
+          "name": "task",
+          "band": "task"
+        },
+        {
+          "name": "plat",
+          "band": "platform"
+        },
+        {
+          "name": "base-2",
+          "band": "baseline"
+        }
+      ],
+      "expect": [
+        "base",
+        "base-2",
+        "plat",
+        "app-a",
+        "app-b",
+        "task"
+      ]
+    },
+    {
+      "name": "outbound runs innermost first",
+      "hook": "tool.after",
+      "middleware": [
+        {
+          "name": "app-a",
+          "band": "app"
+        },
+        {
+          "name": "base",
+          "band": "baseline"
+        },
+        {
+          "name": "app-b",
+          "band": "app"
+        },
+        {
+          "name": "task",
+          "band": "task"
+        },
+        {
+          "name": "plat",
+          "band": "platform"
+        },
+        {
+          "name": "base-2",
+          "band": "baseline"
+        }
+      ],
+      "expect": [
+        "task",
+        "app-b",
+        "app-a",
+        "plat",
+        "base-2",
+        "base"
+      ]
+    },
+    {
+      "name": "run.end is outbound",
+      "hook": "run.end",
+      "middleware": [
+        {
+          "name": "tracer",
+          "band": "baseline"
+        },
+        {
+          "name": "evals",
+          "band": "app"
+        }
+      ],
+      "expect": [
+        "evals",
+        "tracer"
+      ]
+    },
+    {
+      "name": "run.start is inbound",
+      "hook": "run.start",
+      "middleware": [
+        {
+          "name": "evals",
+          "band": "app"
+        },
+        {
+          "name": "tracer",
+          "band": "baseline"
+        }
+      ],
+      "expect": [
+        "tracer",
+        "evals"
+      ]
+    },
+    {
+      "name": "one band keeps registration order",
+      "hook": "model.before",
+      "middleware": [
+        {
+          "name": "a",
+          "band": "app"
+        },
+        {
+          "name": "b",
+          "band": "app"
+        },
+        {
+          "name": "c",
+          "band": "app"
+        }
+      ],
+      "expect": [
+        "a",
+        "b",
+        "c"
+      ]
+    },
+    {
+      "name": "no middleware",
+      "hook": "output.before",
+      "middleware": [],
+      "expect": []
+    }
+  ]
+}

@@ -5,8 +5,8 @@
 
 This document is the architecture of HarnessWeaver: what the parts are, how they fit together, and why. It turns the design guide ([`docs/AI Harness Framework Design and Build Guide.md`](docs/AI%20Harness%20Framework%20Design%20and%20Build%20Guide.md)) into concrete decisions for this codebase.
 
-- **Status:** a living document. Any change to the architecture updates the relevant section and, when it is a decision, adds an ADR (§28).
-- **Rules:** [RULES.md](RULES.md) holds the invariants this design must uphold. Rule IDs (R1–R14) are cited inline.
+- **Status:** a living document. Any change to the architecture updates the relevant section and, when it is a decision, adds an ADR (No. 28).
+- **Rules:** [RULES.md](RULES.md) holds the invariants this design must uphold. Rule IDs (R1-R14) are cited inline.
 
 ## Contents
 
@@ -73,7 +73,7 @@ The design guide used the working name `harnesskit`. That name is taken on PyPI 
 | `harnessweaver` | PyPI | Python | Core: spec loader, hook bus, envelope, budgets, errors, runners, the 12 modules with dependency-free default providers, and the test kit. `import harnessweaver as hw` |
 | `harnessweaver-cli` | PyPI | Python | Developer tooling. Installs the `harnessweaver` command (init, add, spec, doctor, dev, test, eval, replay, plugin, gateway, sidecar) |
 | `harnessweaver-sidecar` | PyPI + container | Python | `harnessd`, the HTTP sidecar that serves the Python core to other languages |
-| `harnessweaver-<name>` | PyPI | Python | First-party plugins: `harnessweaver-openai`, `-anthropic`, `-pydantic-ai`, `-monty`, `-otel`, `-cel`. Third-party plugins can use any package name (§13) |
+| `harnessweaver-<name>` | PyPI | Python | First-party plugins: `harnessweaver-openai`, `-anthropic`, `-pydantic-ai`, `-monty`, `-otel`, `-cel`. Third-party plugins can use any package name (No. 13) |
 | `@harnessweaver/core` | npm | TypeScript | Native TypeScript core: spec loader, hook bus, budgets, local guards, tool governor, sidecar client |
 | `@harnessweaver/<name>` | npm | TypeScript | First-party TypeScript plugins, e.g. `@harnessweaver/ai-sdk` |
 
@@ -91,7 +91,7 @@ Every feature request is tested against these ten goals. **When two goals confli
 6. **Small core.** The core depends only on Pydantic, the OpenTelemetry API, PyYAML and anyio. Everything heavy is a plugin. (R6)
 7. **Polyglot by contract.** One spec format and one set of wire contracts serve Python, TypeScript and any language that can call HTTP. (R11)
 8. **Testable.** Every module runs against fakes. Every plugin passes a shared conformance suite. (R14, T5)
-9. **Stable extension surface.** Hook points, ports and the spec are versioned and change slowly. Internals can change freely. (V1–V5)
+9. **Stable extension surface.** Hook points, ports and the spec are versioned and change slowly. Internals can change freely. (V1-V5)
 10. **Observable.** Every decision HarnessWeaver makes (route chosen, guard fired, tool denied, budget hit) is a traced, queryable event. (R13)
 
 **Non-goals.** HarnessWeaver is not an agent framework, a prompt library, a vector database, a model host or a hosted platform. It does not pick an app's model, prompt, retrieval method or workflow. It ships plugins for the tools that do those jobs and governs them. (R12)
@@ -138,15 +138,15 @@ App teams touch only the top layer and their spec. Everything below it is shippe
 
 ```mermaid
 flowchart TB
-    A["<b>App teams write</b><br/>harness.yaml · prompts · tools + manifests · app plugins"]
-    D["<b>Delivery</b> — one spec, every language<br/>Python SDK (full) · TypeScript SDK · harnessd sidecar · gateway configs"]
-    AD["<b>Adapters</b> — map each framework onto the 13 hook points<br/>Pydantic AI · raw OpenAI / Anthropic SDKs · (LangGraph, OpenAI Agents, LlamaIndex later)"]
-    C["<b>Core</b> — owns lifecycle and policy, never reasoning<br/>spec loader + locks · hook bus · envelope + budgets · error taxonomy · runners"]
-    M["<b>Modules</b> — each a port with swappable providers<br/>models · routing · policy · tools · approvals · guardrails · validation · context · state · observability · evals"]
-    K["<b>Contracts</b> — source of truth, versioned as v1<br/>JSON Schema spec + events · OpenAPI / proto services · OTel GenAI conventions"]
+    A["<b>App teams write</b><br/>harness.yaml, prompts, tools + manifests, app plugins"]
+    D["<b>Delivery</b> - one spec, every language<br/>Python SDK (full), TypeScript SDK, harnessd sidecar, gateway configs"]
+    AD["<b>Adapters</b> - map each framework onto the 13 hook points<br/>Pydantic AI, raw OpenAI / Anthropic SDKs, (LangGraph, OpenAI Agents, LlamaIndex later)"]
+    C["<b>Core</b> - owns lifecycle and policy, never reasoning<br/>spec loader + locks, hook bus, envelope + budgets, error taxonomy, runners"]
+    M["<b>Modules</b> - each a port with swappable providers<br/>models, routing, policy, tools, approvals, guardrails, validation, context, state, observability, evals"]
+    K["<b>Contracts</b> - source of truth, versioned as v1<br/>JSON Schema spec + events, OpenAPI / proto services, OTel GenAI conventions"]
     A --> D --> AD --> C --> M --> K
-    BL["<b>Org baseline</b><br/>locks · bounds · required level · mandatory guards"] -. merged at load .-> C
-    TL["<b>Developer tooling</b><br/>CLI · templates · test kit · conformance kit"] -.-> A
+    BL["<b>Org baseline</b><br/>locks, bounds, required level, mandatory guards"] -. merged at load .-> C
+    TL["<b>Developer tooling</b><br/>CLI, templates, test kit, conformance kit"] -.-> A
 ```
 
 The guide's original rendering of the same model is in [`docs/assets/mental_model.png`](docs/assets/mental_model.png).
@@ -162,13 +162,13 @@ App developers learn twelve concepts. Everything else is an implementation detai
 | **Profile** | A reusable partial spec. Built-in ones (`extraction`, `rag`, `agent`, `workflow`, `chat`) preset modules; the org baseline is also a profile. | HarnessWeaver, platform team | `harnessweaver.spec.Profile` |
 | **Task** | A named, versioned unit of work with input and output schemas, a runner and task-level overrides, such as `extract_invoice@3`. | App team | `spec.tasks.<name>` |
 | **Envelope** | The immutable context carried through every call: run id, tenant, principal, task, budget, deadline, labels. | HarnessWeaver, filled from the request | `harnessweaver.Envelope` |
-| **Hook point** | A named moment in the lifecycle (`model.before`, `tool.before`, …). Modules attach behavior here. | HarnessWeaver (fixed, versioned set of 13) | `harnessweaver.HookPoint` |
+| **Hook point** | A named moment in the lifecycle (`model.before`, `tool.before`, ...). Modules attach behavior here. | HarnessWeaver (fixed, versioned set of 13) | `harnessweaver.HookPoint` |
 | **Middleware** | A function attached to one or more hook points. It can observe, modify, block, retry, escalate or suspend. | Modules, app plugins | `@hw.middleware` |
-| **Port** | A typed interface for one capability: `Decider`, `Guardrail`, `Validator`, `ToolGovernor`, `ModelProvider`, … | HarnessWeaver | `harnessweaver.core.ports` |
+| **Port** | A typed interface for one capability: `Decider`, `Guardrail`, `Validator`, `ToolGovernor`, `ModelProvider`, ... | HarnessWeaver | `harnessweaver.core.ports` |
 | **Provider** | A concrete implementation of a port, such as `pii.regex` for `Guardrail`. Contributed by a plugin. | HarnessWeaver, third parties, app teams | `@hw.provider` |
 | **Module** | A bundle that wires one capability end to end: its port, a default provider, the middleware it installs and its config schema. | HarnessWeaver | `harnessweaver.modules.*` |
 | **Runner** | The adapter that executes a task: `direct`, `session`, `workflow`, `pydantic_ai.agent`, or a custom one. Runners don't implement controls; hook points do. | HarnessWeaver, app teams | `@hw.runner` |
-| **Plugin** | A package or module that contributes providers, middleware, routing stages, runners, adapters, profiles or templates through one contract, whatever its name (§13). | HarnessWeaver, third parties, app teams | `hw.Plugin` |
+| **Plugin** | A package or module that contributes providers, middleware, routing stages, runners, adapters, profiles or templates through one contract, whatever its name (No. 13). | HarnessWeaver, third parties, app teams | `hw.Plugin` |
 
 **The key relationship:** a **spec** selects **modules**. Each module configures a **provider** behind its **port** and installs **middleware** on **hook points**. The **runner** emits hook events as the task executes, and every event carries the **envelope**.
 
@@ -210,35 +210,35 @@ sequenceDiagram
     participant S as StateStore
 
     App->>H: run("billing_agent", input, principal)
-    H->>Bus: run.start — envelope, budget, deadline
-    H->>Bus: input.before — redact, validate, block
-    H->>Bus: route.decide — task variant, model alias
+    H->>Bus: run.start - envelope, budget, deadline
+    H->>Bus: input.before - redact, validate, block
+    H->>Bus: route.decide - task variant, model alias
     H->>R: execute(task, input)
-    R->>Bus: context.after — ACL filter, provenance labels
+    R->>Bus: context.after - ACL filter, provenance labels
     loop bounded steps
-        R->>Bus: model.before — budget pre-check, guards
+        R->>Bus: model.before - budget pre-check, guards
         R->>M: generate(request)
         M-->>R: response + usage
-        R->>Bus: model.after — cost, redaction
+        R->>Bus: model.after - cost, redaction
         opt streaming
-            R->>Bus: stream.chunk — moderate, cut
+            R->>Bus: stream.chunk - moderate, cut
         end
         opt the model proposes a tool call
-            R->>Bus: tool.before — 9-step governor
+            R->>Bus: tool.before - 9-step governor
             alt approval required
                 Bus-->>H: Suspend
                 H->>S: checkpoint
                 H-->>App: RunResult(status=awaiting_approval)
                 App->>H: approve(run_id, approval_id)
-                H->>Bus: approval.resolved — re-check edited args
+                H->>Bus: approval.resolved - re-check edited args
                 H->>R: resume from checkpoint
             end
             R->>T: execute (sandbox per manifest)
-            R->>Bus: tool.after — truncate, redact, label untrusted
+            R->>Bus: tool.after - truncate, redact, label untrusted
         end
     end
-    R->>Bus: output.before — validate, repair, guards
-    H->>Bus: run.end — persist, sample evals
+    R->>Bus: output.before - validate, repair, guards
+    H->>Bus: run.end - persist, sample evals
     H-->>App: RunResult(status=completed)
     Note over H,Bus: Any exception fires run.error (classify, retry or fail)
 ```
@@ -250,7 +250,7 @@ The bus is the one shared piece every app runs unchanged. Its ordering rules mak
 ### Rules
 
 1. **Priority bands.** Middleware runs in bands: `baseline` (org, locked, outermost), then `platform`, then `app`, then `task`. Within a band, registration order applies.
-2. **Onion order.** Inbound hooks run outermost-first (baseline → task). Outbound hooks run innermost-first (task → baseline). A baseline tracer therefore wraps everything inside it.
+2. **Onion order.** Inbound hooks run outermost-first (baseline -> task). Outbound hooks run innermost-first (task -> baseline). A baseline tracer therefore wraps everything inside it.
 3. **Most severe outcome wins** when several middleware answer the same event: `Block` > `Suspend` > `Escalate` > `Retry` > `Continue(modified)` > `Continue`.
 4. **Fail mode is declared, never implied.** If a middleware raises or times out, `fail_mode="closed"` turns that into `Block`; `fail_mode="open"` logs, alerts and continues. Baseline middleware is always closed (R2).
 
@@ -281,7 +281,7 @@ async def emit(hook: HookPoint, payload: Event, ctx: RunContext) -> HookResult:
             with anyio.fail_after(mw.timeout):
                 outcome = await mw(payload, ctx.envelope) or Continue()
         except Exception as exc:                    # includes timeouts
-            outcome = mw.on_failure(exc)            # closed → Block, open → Continue + alert
+            outcome = mw.on_failure(exc)            # closed -> Block, open -> Continue + alert
         ctx.trace.record(hook, mw, outcome)         # R13: every outcome is traced
         outcomes.append(outcome)
         if isinstance(outcome, Continue) and outcome.modified is not None:
@@ -318,8 +318,8 @@ flowchart LR
 
 | Outcome | Meaning | Runner behavior |
 | --- | --- | --- |
-| `Continue()` | Proceed unchanged | — |
-| `Continue(modified=…)` | Proceed with a changed payload (redacted text, rewritten args) | Later middleware and the operation see the new payload |
+| `Continue()` | Proceed unchanged | - |
+| `Continue(modified=...)` | Proceed with a changed payload (redacted text, rewritten args) | Later middleware and the operation see the new payload |
 | `Retry(reason)` | Redo the step (bounded) | `model.after` re-asks; `output.before` runs a repair attempt |
 | `Escalate(reason, to)` | Stop the automated path and hand off to a human queue | Run ends `escalated` |
 | `Suspend(reason, approver_role)` | Pause durably until an approver answers | Checkpoint, then `awaiting_approval` |
@@ -328,12 +328,30 @@ flowchart LR
 | Guard action | Maps to | Notes |
 | --- | --- | --- |
 | `allow` | `Continue()` | |
-| `redact` | `Continue(modified=…)` | Redactions chain through the pipeline |
+| `redact` | `Continue(modified=...)` | Redactions chain through the pipeline |
 | `repair` | `Retry` | Output stage only, bounded by `max_repairs` |
 | `escalate` | `Escalate` | |
 | `require_approval` | `Suspend` | |
 | `block` | `Block` | |
 | `log_only` | `Continue()` + a "would have fired" trace event | Shadow mode (R8) |
+
+### Error taxonomy
+
+Only taxonomy errors cross a public boundary (C5). Each has a stable code that travels as `ErrorInfo` in `run.error` events and over the wire.
+
+| Code | Errors | Retryable |
+| --- | --- | --- |
+| `budget_exceeded` | `BudgetExceeded` | no |
+| `deadline_exceeded` | `DeadlineExceeded` | no |
+| `policy_denied` | `PolicyDenied` | no |
+| `validation_failed` | `ValidationFailed` | no |
+| `provider_error` | `ProviderError` | yes |
+| `tool_error` | `ToolError` | no |
+| `expression_error` | `ExpressionSyntaxError`, `ExpressionEvalError` | no |
+| `spec_invalid` | `SpecError` and its load-time subclasses: `LockViolation`, `BoundViolation`, `LevelTooLow`, `UnreachableHook`, `IncompatibleContract`, `UnknownProvider`, `PluginConflict`, `PluginNotAllowed` | no |
+| `internal` | `InternalError` (anything unexpected) | no |
+
+Error messages and details never contain raw prompts, outputs, tool arguments or variable values (R9).
 
 ## 10. Envelope, labels and budgets
 
@@ -349,6 +367,7 @@ The **Envelope** is immutable (`frozen=True`). The mutable state of a run lives 
 | `labels` | Data class plus provenance flags: `untrusted_seen`, `private_seen`, and a `sources` list |
 | `idempotency_key` | Caller-supplied key for safe retries |
 | `trace_id` | Correlates with OpenTelemetry |
+| `attributes` | Free-form app tags such as channel or region |
 | `clock` | Injected clock (`now()`, `is_weekend()`), so time is testable (C4) |
 
 **Labels drive the lethal-trifecta check (S3).**
@@ -379,16 +398,16 @@ Effective config is merged in this order. Later layers override earlier ones, ex
 
 ```mermaid
 flowchart TD
-    L1["1 · Framework defaults<br/>safe, minimal"] --> L2["2 · Built-in profile<br/>profile://rag"]
-    L2 --> L3["3 · Org baseline<br/>org://acme-baseline@^2<br/>locks + bounds + require_level"]
-    L3 --> L4["4 · App spec<br/>harness.yaml"]
-    L4 --> L5["5 · Environment overlay<br/>harness.ENV.yaml, chosen by HARNESSWEAVER_ENV"]
-    L5 --> L6["6 · Per-run overrides<br/>overridable fields only, may only lower"]
+    L1["1. Framework defaults<br/>safe, minimal"] --> L2["2. Built-in profile<br/>profile://rag"]
+    L2 --> L3["3. Org baseline<br/>org://acme-baseline@^2<br/>locks + bounds + require_level"]
+    L3 --> L4["4. App spec<br/>harness.yaml"]
+    L4 --> L5["5. Environment overlay<br/>harness.ENV.yaml, chosen by HARNESSWEAVER_ENV"]
+    L5 --> L6["6. Per-run overrides<br/>overridable fields only, may only lower"]
     L6 --> V{validate}
-    V -->|locked path changed| E1[SpecError · LockViolation]
-    V -->|value out of bounds| E2[SpecError · BoundViolation]
-    V -->|level below required| E3[SpecError · LevelTooLow]
-    V -->|hook unreachable| E4[SpecError · UnreachableHook]
+    V -->|locked path changed| E1[SpecError: LockViolation]
+    V -->|value out of bounds| E2[SpecError: BoundViolation]
+    V -->|level below required| E3[SpecError: LevelTooLow]
+    V -->|hook unreachable| E4[SpecError: UnreachableHook]
     V -->|ok| OK[EffectiveSpec + provenance]
 ```
 
@@ -526,7 +545,7 @@ class InHousePII:
         return hw.GuardResult.redact(self.client.mask(content, hits), findings=hits)
 ```
 
-Providers, middleware, routing stages, runners and adapters reach a harness through a **plugin** (§13).
+Providers, middleware, routing stages, runners and adapters reach a harness through a **plugin** (No. 13).
 
 ## 13. Plugins
 
@@ -576,18 +595,18 @@ middleware:
 
 | Contribution | Declared with | Selected in the spec by |
 | --- | --- | --- |
-| Providers for any port (`Guardrail`, `ModelProvider`, `PolicyEngine`, `Sandbox`, …) | `@hw.provider` | `use: acme.pii` in the module's section |
+| Providers for any port (`Guardrail`, `ModelProvider`, `PolicyEngine`, `Sandbox`, ...) | `@hw.provider` | `use: acme.pii` in the module's section |
 | Middleware | `@hw.middleware` | `middleware: [{ use: acme.no_weekend_refunds, band: app }]` |
 | Routing stages | `@hw.decider` | `cascade: [{ use: acme.vip_rules }]` |
 | Runners | `@hw.runner` | `tasks.<t>.runner: { use: acme.flow }` |
 | Adapters | `@hw.adapter` | Picked by `harness.wrap()` / `harness.instrument()` from the target's type |
-| Profiles | `profiles={…}` | `extends: ["profile://acme.baseline@^1"]` |
-| Templates | `templates={…}` | `harnessweaver init --template acme.rag` |
+| Profiles | `profiles={...}` | `extends: ["profile://acme.baseline@^1"]` |
+| Templates | `templates={...}` | `harnessweaver init --template acme.rag` |
 
 ### Names and namespaces
 
 - Every contributed name is `<namespace>.<name>`, where the namespace is the plugin's entry-point name (`acme.pii`, `openai.chat`). This lets the loader find the owning plugin **without importing anything**.
-- The core's built-in plugin owns bare names (`direct`, `session`, `workflow`) and a small set of reserved area namespaces (`pii`, `secrets`, `regex`, `injection`, `size`, `topic`, `grounded`, `llm`, `cel_lite`, `rules`, `lexical`, `semantic`, `memory`, `sqlite`, `scripted`, …), listed in `harnessweaver.RESERVED_NAMESPACES`. Other plugins can't claim them.
+- The core's built-in plugin owns bare names (`direct`, `session`, `workflow`) and a small set of reserved area namespaces (`pii`, `secrets`, `regex`, `injection`, `size`, `topic`, `grounded`, `llm`, `cel_lite`, `rules`, `lexical`, `semantic`, `memory`, `sqlite`, `scripted`, ...), listed in `harnessweaver.RESERVED_NAMESPACES`. Other plugins can't claim them.
 - Loading fails (R4) if two installed plugins claim the same namespace, or if a referenced name resolves to nothing.
 
 ### Loading lifecycle
@@ -595,12 +614,12 @@ middleware:
 ```mermaid
 flowchart TD
     A["Discover<br/>entry-point metadata + plugins.local<br/>(nothing imported yet)"] --> B["Resolve<br/>namespaces referenced by the effective spec"]
-    B -- "unknown name or namespace conflict" --> X1["SpecError · UnknownProvider / PluginConflict"]
+    B -- "unknown name or namespace conflict" --> X1["SpecError: UnknownProvider / PluginConflict"]
     B --> C{"Allowed by the org baseline?<br/>plugins.allow"}
-    C -- no --> X2["SpecError · PluginNotAllowed"]
+    C -- no --> X2["SpecError: PluginNotAllowed"]
     C -- yes --> D["Import only the referenced plugins"]
     D --> E{"Contract range matches<br/>harnessweaver/v1?"}
-    E -- no --> X3["SpecError · IncompatibleContract"]
+    E -- no --> X3["SpecError: IncompatibleContract"]
     E -- yes --> F["Register contributions<br/>in this Harness's registry (C4)"]
     F --> G["Validate every config<br/>against its Pydantic model"]
     G --> H["Modules build providers and<br/>install middleware on hook points"]
@@ -667,14 +686,14 @@ Teams pick one of three integration styles per task. All three load the same spe
 
 ```mermaid
 flowchart LR
-    subgraph Wrap[Wrap — minutes]
+    subgraph Wrap[Wrap - minutes]
         w1[existing client / agent] --> w2["harness.instrument(client)<br/>harness.wrap(agent)"]
     end
-    subgraph Session[Session — hours]
-        s1[your pipeline code] --> s2["async with harness.session(...) as s:<br/>s.decide · s.context · s.generate · s.tool"]
+    subgraph Session[Session - hours]
+        s1[your pipeline code] --> s2["async with harness.session(...) as s:<br/>s.decide, s.context, s.generate, s.tool"]
     end
-    subgraph Run[Run — hours to days]
-        r1[task in harness.yaml] --> r2["await harness.run(task, input)<br/>submit · stream · approve"]
+    subgraph Run[Run - hours to days]
+        r1[task in harness.yaml] --> r2["await harness.run(task, input)<br/>submit, stream, approve"]
     end
     w2 --> bus((hook bus<br/>+ baseline))
     s2 --> bus
@@ -693,7 +712,7 @@ flowchart LR
 | --- | --- | --- |
 | `direct` | One typed `generate`, optionally with a **bounded** governed tool loop (`max_steps`) | No planning, memory or templating (R12, ADR-0011) |
 | `session` | An app function `handler(s: Session, input) -> output` | The framework owns the run lifecycle around it |
-| `workflow` | A step DAG (`needs:`), parallel steps, and an evaluator–optimizer loop | Deterministic orchestration only |
+| `workflow` | A step DAG (`needs:`), parallel steps, and an evaluator-optimizer loop | Deterministic orchestration only |
 | `pydantic_ai.agent` (plugin) | A Pydantic AI agent, governed through a capability | Default runner in the `agent` template; never required |
 
 ## 16. Models
@@ -716,7 +735,7 @@ metadata: { name: refund_payment, version: 2.1.0, owner: payments-team }
 spec:
   transport: native                     # native | http | mcp
   handler: "app.tools:refund_payment"
-  definition_digest: "sha256:9f3c…"     # pinned {name, description, input_schema}
+  definition_digest: "sha256:9f3c..."     # pinned {name, description, input_schema}
   input_schema: { $ref: schemas/refund_args.json }
   side_effect: write_external           # none | read | write_internal | write_external | destructive
   risk: high
@@ -733,23 +752,23 @@ The governor runs nine deterministic steps on every `tool.before` / `tool.after`
 
 ```mermaid
 flowchart TD
-    A([tool.before]) --> S1{1 · Registry<br/>exists, enabled for tenant,<br/>digest matches?}
+    A([tool.before]) --> S1{1. Registry<br/>exists, enabled for tenant,<br/>digest matches?}
     S1 -- no --> BLK[Block]
-    S1 -- yes --> S2{2 · Schema<br/>args valid?}
+    S1 -- yes --> S2{2. Schema<br/>args valid?}
     S2 -- no --> BLK
-    S2 -- yes --> S3{3 · Policy<br/>deterministic engine}
+    S2 -- yes --> S3{3. Policy<br/>deterministic engine}
     S3 -- deny --> BLK
-    S3 -- "allow or approve" --> S4{4 · Lethal trifecta<br/>untrusted ∧ private ∧ egress?}
+    S3 -- "allow or approve" --> S4{4. Lethal trifecta<br/>untrusted and private and egress?}
     S4 -- yes --> AP
-    S4 -- no --> S5{5 · Limits<br/>rate, tool-call budget,<br/>idempotency}
+    S4 -- no --> S5{5. Limits<br/>rate, tool-call budget,<br/>idempotency}
     S5 -- exceeded --> BLK
-    S5 -- ok --> S6[6 · Optional judge<br/>may only tighten · R3]
+    S5 -- ok --> S6[6. Optional judge<br/>may only tighten, R3]
     S6 --> NEED{approval needed?}
-    NEED -- yes --> AP[7 · Suspend for approval]
+    NEED -- yes --> AP[7. Suspend for approval]
     AP -- "approved, edited args<br/>re-checked from step 2" --> S8
     AP -- "rejected or timed out" --> BLK
-    NEED -- no --> S8[8 · Execute<br/>native · http · monty sandbox]
-    S8 --> S9([9 · tool.after<br/>truncate · redact · label untrusted])
+    NEED -- no --> S8[8. Execute<br/>native, http, monty sandbox]
+    S8 --> S9([9. tool.after<br/>truncate, redact, label untrusted])
 ```
 
 The same manifests generate allow-lists for the MCP gateway and LiteLLM's tool-permission guardrail (`harnessweaver gateway`), so apps that call tools over the network get identical rules.
@@ -801,9 +820,9 @@ One `Decider` port covers three kinds of decision, with different trust rules.
 flowchart LR
     Q[DecisionRequest] --> R1{rules<br/>exact match?}
     R1 -- exact --> D[Decision]
-    R1 -- abstain --> R2{lexical<br/>p ≥ 0.82?}
+    R1 -- abstain --> R2{lexical<br/>p >= 0.82?}
     R2 -- yes --> D
-    R2 -- no --> R3{llm<br/>p ≥ 0.70?}
+    R2 -- no --> R3{llm<br/>p >= 0.70?}
     R3 -- yes --> D
     R3 -- no --> DF[default option] --> D
 ```
@@ -864,7 +883,7 @@ flowchart LR
         pyc["harnessweaver<br/>full core + modules"]
     end
     subgraph TS[TypeScript app]
-        tsc["@harnessweaver/core<br/>spec · bus · budgets · local guards · governor"]
+        tsc["@harnessweaver/core<br/>spec, bus, budgets, local guards, governor"]
     end
     subgraph OT[Go / Java / .NET / Ruby app]
         cl[thin HTTP client]
@@ -917,13 +936,13 @@ flowchart BT
     p7["third-party plugins<br/>(any package name)"] --> core
     tsc["@harnessweaver/core"]
     tsp["@harnessweaver/ai-sdk"] --> tsc
-    contracts[(contracts/<br/>schemas · fixtures · openapi)]
+    contracts[(contracts/<br/>schemas, fixtures, openapi)]
     core -. generates + tests .-> contracts
     tsc -. tests against .-> contracts
     side -. exports openapi .-> contracts
 ```
 
-The repository is a **uv workspace** (Python) plus a **pnpm workspace** (TypeScript), sharing one `contracts/` directory. The core declares extras that pull in first-party plugins (`harnessweaver[openai]`, `harnessweaver[all]`). Plugins built outside this repository need nothing from it except the public extension surface (§13).
+The repository is a **uv workspace** (Python) plus a **pnpm workspace** (TypeScript), sharing one `contracts/` directory. The core declares extras that pull in first-party plugins (`harnessweaver[openai]`, `harnessweaver[all]`). Plugins built outside this repository need nothing from it except the public extension surface (No. 13).
 
 ```
 python/harnessweaver/                 python/plugins/<name>/   (harnessweaver-<name>)
@@ -966,7 +985,7 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | **0001** | Ship as **HarnessWeaver**: `harnessweaver`, `harnessweaver-cli` (command `harnessweaver`), `harnessweaver-sidecar`, first-party plugins `harnessweaver-<name>`, `@harnessweaver/core`, `@harnessweaver/<name>` | `harnesskit` is taken on PyPI and npm; the new names were free when checked (2026-10-17) | Accepted |
 | **0002** | Support Python `>=3.12`; develop on 3.14 | Wide adoption while allowing modern typing (PEP 695 generics) | Accepted |
 | **0003** | Core dependencies are `pydantic`, `opentelemetry-api`, `pyyaml`, `anyio` | The guide's two, plus the YAML parser the spec format needs and the async library the guide names. HTTP uses the stdlib via `anyio.to_thread` | Accepted |
-| **0004** | Built-in **cel-lite** expression language (a CEL subset) for policy, rules, approvals and business rules; full CEL as the `cel.policy` provider in `harnessweaver-cel` | `cel-python` pulls in `google-re2` and `pendulum`. A CEL-compatible subset keeps rules portable to TS and real CEL engines, sharing fixtures | Accepted |
+| **0004** | Built-in **cel-lite** expression language (a CEL subset) for policy, rules, approvals and business rules; full CEL as the `cel.policy` provider in `harnessweaver-cel`. It covers literals, field/index access, `has()`, arithmetic, comparison, `in`, `&&`/`\|\|` with CEL's error absorption, `?:`, `size`, `int`, `double`, `string`, `startsWith`, `endsWith`, `contains`, `matches`, and the `exists`, `all`, `exists_one`, `map`, `filter` macros. Unknown functions and (when declared) unknown variables fail at compile time. Three deliberate differences from CEL keep Python and TypeScript identical: mixed int/double arithmetic gives a double instead of an error; integral floats in *data* are treated as ints (JSON numbers have no int/double distinction in JavaScript); `string(double)` prints like JavaScript's `Number#toString` | `cel-python` pulls in `google-re2` and `pendulum`. A CEL-compatible subset keeps rules portable to TS and real CEL engines, sharing fixtures (suite `expr`) | Accepted |
 | **0005** | Contract models are Pydantic. JSON Schemas are generated, checked in under `contracts/schemas`, and drift-tested. Behavioral contracts live in JSON fixtures | One authoring language without losing a reviewed, language-neutral contract. Revisit schema-first codegen if a third native SDK appears | Accepted |
 | **0006** | uv workspace with separate core, CLI, sidecar and first-party plugin packages; plugins are exposed as core extras for convenience | Keeps the core small (R6) and lets each plugin version on its own | Accepted |
 | **0007** | Sidecar speaks HTTP/JSON (FastAPI, OpenAPI) first; gRPC from the proto later | Fastest path for every language; the proto keeps the gRPC option open | Accepted |
@@ -989,7 +1008,7 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | Core depends only on Pydantic and the OTel API | Adds PyYAML and anyio | The spec format and deadlines need them (0003) |
 | `cel-python` in the core | Built-in cel-lite; full CEL as a plugin | Dependency weight (0004) |
 | JSON Schema is the source, Pydantic generated from it | Pydantic generates JSON Schema, which is drift-tested | Single authoring path (0005) |
-| Monorepo of independent packages under `python/`, `typescript/` | Same idea: uv + pnpm workspaces, with plugins as separate packages | — (0006) |
+| Monorepo of independent packages under `python/`, `typescript/` | Same idea: uv + pnpm workspaces, with plugins as separate packages | - (0006) |
 | Providers registered through a `harnesskit.providers` entry-point group; `plugins: [module]` for in-repo code | One `harnessweaver.plugins` entry-point group exposing an `hw.Plugin` object per distribution; `plugins: { local, allow }` in the spec; namespaced names | One contract for every contribution kind, lazy loading, org allow-lists (0015) |
 | Sidecar with FastAPI + gRPC | HTTP/JSON first, proto kept for later gRPC | Scope (0007) |
 | `harness.yaml` guards enforce as written | Same, plus the CLI scaffolds shadow guards | (0008) |

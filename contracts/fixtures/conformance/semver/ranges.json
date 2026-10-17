@@ -1,0 +1,392 @@
+{
+  "suite": "semver",
+  "description": "npm-style version ranges for profile references and plugin contracts.",
+  "cases": [
+    {
+      "name": "caret full",
+      "range": "^1.2.3",
+      "expect": {
+        "matches": [
+          "1.2.3",
+          "1.9.9"
+        ],
+        "rejects": [
+          "1.2.2",
+          "2.0.0",
+          "2.0.0-rc.1",
+          "1.5.0-beta"
+        ]
+      }
+    },
+    {
+      "name": "caret zero major",
+      "range": "^0.2.3",
+      "expect": {
+        "matches": [
+          "0.2.3",
+          "0.2.9"
+        ],
+        "rejects": [
+          "0.2.2",
+          "0.3.0",
+          "1.0.0"
+        ]
+      }
+    },
+    {
+      "name": "caret zero minor",
+      "range": "^0.0.3",
+      "expect": {
+        "matches": [
+          "0.0.3"
+        ],
+        "rejects": [
+          "0.0.2",
+          "0.0.4"
+        ]
+      }
+    },
+    {
+      "name": "caret partial",
+      "range": "^1.2",
+      "expect": {
+        "matches": [
+          "1.2.0",
+          "1.9.0"
+        ],
+        "rejects": [
+          "1.1.9",
+          "2.0.0"
+        ]
+      }
+    },
+    {
+      "name": "caret 0.0",
+      "range": "^0.0",
+      "expect": {
+        "matches": [
+          "0.0.0",
+          "0.0.9"
+        ],
+        "rejects": [
+          "0.1.0"
+        ]
+      }
+    },
+    {
+      "name": "caret major only",
+      "range": "^2",
+      "expect": {
+        "matches": [
+          "2.0.0",
+          "2.9.9"
+        ],
+        "rejects": [
+          "1.9.9",
+          "3.0.0"
+        ]
+      }
+    },
+    {
+      "name": "caret zero only",
+      "range": "^0",
+      "expect": {
+        "matches": [
+          "0.0.0",
+          "0.9.9"
+        ],
+        "rejects": [
+          "1.0.0"
+        ]
+      }
+    },
+    {
+      "name": "caret with prerelease",
+      "range": "^1.2.3-beta.2",
+      "expect": {
+        "matches": [
+          "1.2.3-beta.2",
+          "1.2.3-beta.10",
+          "1.2.3",
+          "1.3.0"
+        ],
+        "rejects": [
+          "1.2.3-beta.1",
+          "1.3.0-beta.1",
+          "2.0.0"
+        ]
+      }
+    },
+    {
+      "name": "tilde full",
+      "range": "~1.2.3",
+      "expect": {
+        "matches": [
+          "1.2.3",
+          "1.2.9"
+        ],
+        "rejects": [
+          "1.2.2",
+          "1.3.0"
+        ]
+      }
+    },
+    {
+      "name": "tilde partial",
+      "range": "~1.2",
+      "expect": {
+        "matches": [
+          "1.2.0",
+          "1.2.9"
+        ],
+        "rejects": [
+          "1.3.0"
+        ]
+      }
+    },
+    {
+      "name": "tilde major only",
+      "range": "~1",
+      "expect": {
+        "matches": [
+          "1.0.0",
+          "1.9.9"
+        ],
+        "rejects": [
+          "2.0.0"
+        ]
+      }
+    },
+    {
+      "name": "comma-separated set",
+      "range": ">=1.0,<2",
+      "expect": {
+        "matches": [
+          "1.0.0",
+          "1.9.9"
+        ],
+        "rejects": [
+          "0.9.9",
+          "2.0.0",
+          "2.0.0-rc.1"
+        ]
+      }
+    },
+    {
+      "name": "space-separated set",
+      "range": ">=1.0 <2",
+      "expect": {
+        "matches": [
+          "1.0.0",
+          "1.9.9"
+        ],
+        "rejects": [
+          "0.9.9",
+          "2.0.0"
+        ]
+      }
+    },
+    {
+      "name": "spaces after operators",
+      "range": ">= 1.0, < 2",
+      "expect": {
+        "matches": [
+          "1.0.0",
+          "1.9.9"
+        ],
+        "rejects": [
+          "0.9.9",
+          "2.0.0"
+        ]
+      }
+    },
+    {
+      "name": "exact",
+      "range": "1.2.3",
+      "expect": {
+        "matches": [
+          "1.2.3"
+        ],
+        "rejects": [
+          "1.2.4",
+          "1.2.3-rc.1"
+        ]
+      }
+    },
+    {
+      "name": "exact with equals",
+      "range": "=1.2.3",
+      "expect": {
+        "matches": [
+          "1.2.3"
+        ],
+        "rejects": [
+          "1.2.2"
+        ]
+      }
+    },
+    {
+      "name": "partial means the whole minor",
+      "range": "1.2",
+      "expect": {
+        "matches": [
+          "1.2.0",
+          "1.2.9"
+        ],
+        "rejects": [
+          "1.1.9",
+          "1.3.0"
+        ]
+      }
+    },
+    {
+      "name": "x wildcard",
+      "range": "1.x",
+      "expect": {
+        "matches": [
+          "1.0.0",
+          "1.9.0"
+        ],
+        "rejects": [
+          "0.9.0",
+          "2.0.0"
+        ]
+      }
+    },
+    {
+      "name": "star",
+      "range": "*",
+      "expect": {
+        "matches": [
+          "0.0.1",
+          "5.0.0"
+        ],
+        "rejects": [
+          "1.0.0-rc.1"
+        ]
+      }
+    },
+    {
+      "name": "empty range means any",
+      "range": "",
+      "expect": {
+        "matches": [
+          "1.0.0",
+          "0.0.0"
+        ],
+        "rejects": []
+      }
+    },
+    {
+      "name": "greater than partial",
+      "range": ">1.2",
+      "expect": {
+        "matches": [
+          "1.3.0"
+        ],
+        "rejects": [
+          "1.2.9"
+        ]
+      }
+    },
+    {
+      "name": "greater than full",
+      "range": ">1.2.3",
+      "expect": {
+        "matches": [
+          "1.2.4"
+        ],
+        "rejects": [
+          "1.2.3"
+        ]
+      }
+    },
+    {
+      "name": "at most partial",
+      "range": "<=1.2",
+      "expect": {
+        "matches": [
+          "1.2.9"
+        ],
+        "rejects": [
+          "1.3.0"
+        ]
+      }
+    },
+    {
+      "name": "less than partial",
+      "range": "<1.2",
+      "expect": {
+        "matches": [
+          "1.1.9"
+        ],
+        "rejects": [
+          "1.2.0"
+        ]
+      }
+    },
+    {
+      "name": "alternatives",
+      "range": "~1.4 || ^2",
+      "expect": {
+        "matches": [
+          "1.4.5",
+          "2.3.0"
+        ],
+        "rejects": [
+          "1.5.0",
+          "3.0.0"
+        ]
+      }
+    },
+    {
+      "name": "double caret",
+      "range": "^^1",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "operator without version",
+      "range": ">=",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "four-part version",
+      "range": "1.2.3.4",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "wildcard before number",
+      "range": "x.1",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "empty alternative",
+      "range": "1 || ",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "ruby-style operator",
+      "range": "~>1.2",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "prerelease on partial",
+      "range": "1.2-beta",
+      "expect": {
+        "error": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:approval-decision",
+  "title": "ApprovalDecision",
+  "$defs": {
+    "JsonValue": {},
+    "Principal": {
+      "additionalProperties": false,
+      "description": "Who a run acts for.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "roles": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Roles",
+          "type": "array"
+        },
+        "attrs": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Attrs",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "Principal",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A human's answer to an :class:`ApprovalRequest`.",
+  "properties": {
+    "approval_id": {
+      "minLength": 1,
+      "title": "Approval Id",
+      "type": "string"
+    },
+    "decision": {
+      "enum": [
+        "approve",
+        "reject",
+        "edit"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "approver": {
+      "$ref": "#/$defs/Principal"
+    },
+    "edited_args": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Edited Args"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    }
+  },
+  "required": [
+    "approval_id",
+    "decision",
+    "approver"
+  ],
+  "type": "object"
+}

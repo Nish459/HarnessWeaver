@@ -9,40 +9,40 @@ This file is for AI coding agents (and humans) working **on** the HarnessWeaver 
 
 | Doc | Why |
 | --- | --- |
-| [RULES.md](RULES.md) | Non-negotiable invariants (R1–R14) and the coding, testing, security, docs, versioning and git rules. Cite rule IDs in reviews and commit bodies. |
+| [RULES.md](RULES.md) | Non-negotiable invariants (R1-R14) and the coding, testing, security, docs, versioning and git rules. Cite rule IDs in reviews and commit bodies. |
 | [DESIGNS.md](DESIGNS.md) | Architecture: hook bus, spec layering, modules, governor, approvals, cross-language delivery, ADRs. |
-| [`docs/AI Harness Framework Design and Build Guide.md`](docs/AI%20Harness%20Framework%20Design%20and%20Build%20Guide.md) | The original design source. Read it, but never edit it; record deviations as ADRs in DESIGNS.md (D5). |
+| [`docs/AI Harness Framework Design and Build Guide.md`](docs/AI%20Harness%20Framework%20Design%20and%20Build%20Guide.md) | The original design source. Read it, but never edit it; record deviations as ADRs in DESIGNS.md (D4). |
 
 ## Repository map
 
 ```
 .
-├── AGENTS.md  CLAUDE.md  RULES.md  DESIGNS.md  README.md
-├── pyproject.toml                  # uv workspace root (virtual): members, dev group, tool config
-├── Makefile                        # make check | test | lint | fmt | typecheck | schemas | docs
-├── contracts/                      # SOURCE OF TRUTH shared by every language (R11)
-│   ├── schemas/                    #   generated JSON Schemas, checked in, drift-tested
-│   ├── openapi/                    #   generated sidecar OpenAPI, drift-tested
-│   ├── proto/harnessweaver/v1/     #   sidecar service definition (future gRPC)
-│   └── fixtures/conformance/       #   language-neutral behavior fixtures, one folder per suite
-├── python/
-│   ├── harnessweaver/              # core package (import harnessweaver as hw)
-│   │   └── src/harnessweaver/
-│   │       ├── core/               #   envelope, hooks, outcomes, bus, middleware, budgets, errors, registry, expr (cel-lite)
-│   │       ├── spec/               #   models, sources, merge (locks/bounds/provenance), levels, explain, diff
-│   │       ├── modules/            #   models, routing, policy, tools, approvals, guardrails, validation, context, state, observability, evals
-│   │       ├── runners/            #   direct, session, workflow
-│   │       ├── testing/            #   ScriptedModel, FakeTool, assert_trace, cassettes, conformance plugin
-│   │       ├── profiles/           #   built-in profiles (YAML)
-│   │       ├── harness.py          #   Harness: load, run, session, wrap, instrument, approve, …
-│   │       └── session.py
-│   ├── harnessweaver-cli/          # `harnessweaver` command + templates + gateway generators
-│   ├── harnessweaver-sidecar/      # harnessd (FastAPI)
-│   └── plugins/<name>/             # first-party plugins harnessweaver-<name>: openai, anthropic, pydantic-ai, monty, otel, cel
-├── typescript/                     # pnpm workspace: packages/core (@harnessweaver/core), packages/ai-sdk (@harnessweaver/ai-sdk)
-├── examples/                       # _org baseline + 01..04, each runnable offline and tested
-├── deploy/harnessd/                # sidecar Dockerfile
-└── docs/                           # mkdocs site + the original design guide and assets
+|-- AGENTS.md  CLAUDE.md  RULES.md  DESIGNS.md  README.md
+|-- pyproject.toml                  # uv workspace root (virtual): members, dev group, tool config
+|-- Makefile                        # make check | test | lint | fmt | typecheck | schemas | docs
+|-- contracts/                      # SOURCE OF TRUTH shared by every language (R11)
+|   |-- schemas/                    #   generated JSON Schemas, checked in, drift-tested
+|   |-- openapi/                    #   generated sidecar OpenAPI, drift-tested
+|   |-- proto/harnessweaver/v1/     #   sidecar service definition (future gRPC)
+|   `-- fixtures/conformance/       #   language-neutral behavior fixtures, one folder per suite
+|-- python/
+|   |-- harnessweaver/              # core package (import harnessweaver as hw)
+|   |   `-- src/harnessweaver/
+|   |       |-- core/               #   envelope, hooks, outcomes, bus, middleware, budgets, errors, registry, expr (cel-lite)
+|   |       |-- spec/               #   models, sources, merge (locks/bounds/provenance), levels, explain, diff
+|   |       |-- modules/            #   models, routing, policy, tools, approvals, guardrails, validation, context, state, observability, evals
+|   |       |-- runners/            #   direct, session, workflow
+|   |       |-- testing/            #   ScriptedModel, FakeTool, assert_trace, cassettes, conformance plugin
+|   |       |-- profiles/           #   built-in profiles (YAML)
+|   |       |-- harness.py          #   Harness: load, run, session, wrap, instrument, approve, ...
+|   |       `-- session.py
+|   |-- harnessweaver-cli/          # `harnessweaver` command + templates + gateway generators
+|   |-- harnessweaver-sidecar/      # harnessd (FastAPI)
+|   `-- plugins/<name>/             # first-party plugins harnessweaver-<name>: openai, anthropic, pydantic-ai, monty, otel, cel
+|-- typescript/                     # pnpm workspace: packages/core (@harnessweaver/core), packages/ai-sdk (@harnessweaver/ai-sdk)
+|-- examples/                       # _org baseline + 01..04, each runnable offline and tested
+|-- deploy/harnessd/                # sidecar Dockerfile
+`-- docs/                           # mkdocs site + the original design guide and assets
 ```
 
 Some of these directories are added as the framework is built out; check the tree for what exists today.
@@ -62,8 +62,8 @@ uv sync --all-packages          # install every workspace package + dev tools in
 | One test | `uv run pytest python/harnessweaver/tests/test_bus.py::test_onion_order -q` |
 | Lint / auto-fix / format | `make lint`, `make fmt` |
 | Type check | `make typecheck` (pyright; strict on `core/` and `spec/`) |
-| Regenerate contract schemas | `make schemas` (then commit `contracts/schemas`) |
-| Conformance fixtures only | `uv run pytest tests/conformance -q` |
+| Regenerate contract schemas | `make schemas` (then commit `contracts/schemas`); `make schemas-check` reports drift |
+| Conformance fixtures only | `uv run pytest python/harnessweaver/tests/conformance -q` |
 | Run an example offline | `HARNESSWEAVER_ENV=offline uv run python examples/01_invoice_extraction/run.py` |
 | CLI from source | `uv run harnessweaver --help` |
 | TypeScript | `pnpm -C typescript install && pnpm -C typescript test && pnpm -C typescript build` |
@@ -81,15 +81,15 @@ flowchart LR
     mw -->|attach to| hooks[13 hook points]
     runner[Runner / Adapter] -->|emits events on| hooks
     hooks -->|every event carries| env[Envelope]
-    hooks -->|outcomes| bus{Hook bus<br/>bands · onion · most severe wins}
+    hooks -->|outcomes| bus{Hook bus<br/>bands, onion, most severe wins}
 ```
 
 - **Hook points** (fixed set of 13): `run.start`, `input.before`, `route.decide`, `context.after`, `model.before`, `model.after`, `stream.chunk`, `tool.before`, `tool.after`, `output.before`, `approval.resolved`, `run.error`, `run.end`.
 - **Outcomes:** `Block` > `Suspend` > `Escalate` > `Retry` > `Continue(modified)` > `Continue`.
-- **Bands:** `baseline` → `platform` → `app` → `task`. Inbound hooks run outermost-first; outbound hooks run innermost-first.
-- **Spec layers:** defaults → built-in profile → org baseline → app spec → env overlay → per-run overrides. Locks and bounds are enforced at load and are never clamped.
+- **Bands:** `baseline` -> `platform` -> `app` -> `task`. Inbound hooks run outermost-first; outbound hooks run innermost-first.
+- **Spec layers:** defaults -> built-in profile -> org baseline -> app spec -> env overlay -> per-run overrides. Locks and bounds are enforced at load and are never clamped.
 
-## Conventions (summary of RULES.md C1–C12)
+## Conventions (summary of RULES.md C1-C12)
 
 - Python 3.12+, fully typed, `pyright` strict on `core/` and `spec/`. Pydantic v2 for anything that crosses a boundary; `extra="forbid"` on spec and config models; `frozen=True` on contract values.
 - Async first with `anyio`. No blocking I/O on the event loop.
@@ -99,24 +99,25 @@ flowchart LR
 - Public API lives in `harnessweaver/__init__.py`. Anything prefixed `_` is private.
 - Names: hook points `tool.before`; providers `area.capability` (`pii.regex`); spec keys `snake_case`; env vars `HARNESSWEAVER_*`.
 - Match the surrounding code's style, naming and comment density. Comments explain *why*.
+- Only keyboard characters (D5): `No. 13` for sections, `-` for dashes, `->` for arrows, `...` for ellipses. `make check` runs `scripts/check_ascii.py`.
 
 ## Checklists
 
 ### Add a provider for an existing port
 1. Write a Pydantic config model and a class that satisfies the port Protocol in `core/ports.py`.
-2. Decorate it with `@hw.provider(port=…, name="area.capability", config=…, contract=">=1.0,<2", deterministic=…, latency_class=…)`.
-3. Add it to the owning plugin's `hw.Plugin(providers=[…])`. Its name must sit in that plugin's namespace (`acme.pii`); core providers belong to the built-in plugin and use the reserved area namespaces (DESIGNS §13).
+2. Decorate it with `@hw.provider(port=..., name="area.capability", config=..., contract=">=1.0,<2", deterministic=..., latency_class=...)`.
+3. Add it to the owning plugin's `hw.Plugin(providers=[...])`. Its name must sit in that plugin's namespace (`acme.pii`); core providers belong to the built-in plugin and use the reserved area namespaces (DESIGNS No. 13).
 4. Add unit tests, and make it pass `--harnessweaver-conformance=<name>` (T5).
 5. If its behavior is part of a contract (built-in guards, cel-lite, the governor), add JSON fixtures and make the TypeScript implementation pass them too (R11, T4).
 6. Document it on the module's docs page and in `CHANGELOG.md` (D1).
 
 ### Add middleware
-1. `@hw.middleware(hooks=[…], band=…, fail_mode="closed"|"open", timeout=…)`. `fail_mode` is required (R2, ADR-0014).
+1. `@hw.middleware(hooks=[...], band=..., fail_mode="closed"|"open", timeout=...)`. `fail_mode` is required (R2, ADR-0014).
 2. Return an outcome (or `None` for `Continue()`). Never raise for control flow.
 3. Test the outcome and the trace (`assert_trace`). Test the failure path for its fail mode.
 
 ### Add an adapter or runner
-1. Declare `reaches=[…]` honestly (R4). Loading must fail when the baseline needs a hook you can't reach.
+1. Declare `reaches=[...]` honestly (R4). Loading must fail when the baseline needs a hook you can't reach.
 2. Inject governed model calls and governed tools; bridge native callbacks onto hook points; translate errors into the taxonomy.
 3. No framework types in hook payloads (R7).
 4. Pass the adapter conformance suite (declared hooks fire in documented order).
@@ -124,7 +125,7 @@ flowchart LR
 ### Add or change a hook point, outcome, action, spec field or wire payload (a contract change)
 1. Stop and check: is it additive within `harnessweaver/v1` (V2)? If not, it needs an ADR and a new major `apiVersion`.
 2. Change the contract model first, then run `make schemas`.
-3. Add or extend fixtures in `contracts/fixtures/conformance/<suite>/`.
+3. Add or extend fixtures in `contracts/fixtures/conformance/<suite>/` (format in [contracts/README.md](contracts/README.md)). Write expected values by hand from the design, never by copying an implementation's output.
 4. Make Python **and** TypeScript (and the sidecar, if affected) pass (R11).
 5. Update DESIGNS.md, the docs page and `CHANGELOG.md`.
 
@@ -132,12 +133,12 @@ flowchart LR
 Platform-level decision. Write an ADR in DESIGNS.md first, covering the port, default provider, hook points, config schema, failure modes, telemetry and tests.
 
 ### Add a plugin
-A plugin is defined by its design, not its name (DESIGNS §13, ADR-0015). First-party plugins use exactly the contract that third-party plugins use; never give them private access to core internals.
+A plugin is defined by its design, not its name (DESIGNS No. 13, ADR-0015). First-party plugins use exactly the contract that third-party plugins use; never give them private access to core internals.
 1. Create `python/plugins/<name>/` with `pyproject.toml` (distribution `harnessweaver-<name>`, hatchling, `requires-python = ">=3.12"`, depends on `harnessweaver`), `src/harnessweaver_<name>/`, `py.typed` and `tests/`.
-2. Expose one `plugin = hw.Plugin(namespace="<name>", version=…, contract=">=1.0,<2", providers=[…], …)` and register it once: `[project.entry-points."harnessweaver.plugins"] <name> = "harnessweaver_<name>:plugin"`.
+2. Expose one `plugin = hw.Plugin(namespace="<name>", version=..., contract=">=1.0,<2", providers=[...], ...)` and register it once: `[project.entry-points."harnessweaver.plugins"] <name> = "harnessweaver_<name>:plugin"`.
 3. Import nothing heavy and do no I/O at import time (S8). Build only against the public extension surface: `hw.Plugin`, the decorators, `harnessweaver.ports`, contract models, `harnessweaver.testing`.
 4. Pass `pytest --harnessweaver-conformance=<name>` (T5). Add the package to the workspace members and a convenience extra on the core (`harnessweaver[<name>]`).
-5. TypeScript plugins go in `typescript/packages/<name>/` as `@harnessweaver/<name>` and export `definePlugin({…})`.
+5. TypeScript plugins go in `typescript/packages/<name>/` as `@harnessweaver/<name>` and export `definePlugin({...})`.
 
 ### Add a CLI command, template or example
 - CLI commands live in `python/harnessweaver-cli`. Test them with Typer's `CliRunner`, and add them to the CLI docs.
@@ -153,7 +154,7 @@ A plugin is defined by its design, not its name (DESIGNS §13, ADR-0015). First-
 
 ## Docs
 
-- Diagrams are Mermaid, next to the text (D2). Never document an API that doesn't exist without marking it *planned* (D3).
+- Diagrams are Mermaid, next to the text (D2), and use only keyboard characters (D5). Never document an API that doesn't exist without marking it *planned* (D3).
 - Every public change updates the relevant doc and `CHANGELOG.md` (D1).
 
 ## Commits and pull requests
@@ -172,5 +173,5 @@ A plugin is defined by its design, not its name (DESIGNS §13, ADR-0015). First-
 - Don't log or trace raw prompts, outputs or tool args (R9).
 - Don't add a core dependency (R6) or any dependency without an ADR (C10).
 - Don't call the network or spend tokens in tests (R14).
-- Don't edit the design guide in `docs/`; record deviations as ADRs (D5).
+- Don't edit the design guide in `docs/`; record deviations as ADRs (D4).
 - Don't rely on memory for fast-moving external APIs (Pydantic AI, Monty, Vercel AI SDK, OTel semconv, LiteLLM). Read the installed source under `.venv/` or `node_modules/`, or the current docs.

@@ -1,0 +1,205 @@
+{
+  "suite": "expr",
+  "description": "cel-lite literals.",
+  "cases": [
+    {
+      "name": "int",
+      "expr": "42",
+      "expect": {
+        "value": 42,
+        "type": "int"
+      }
+    },
+    {
+      "name": "negative int",
+      "expr": "-7",
+      "expect": {
+        "value": -7,
+        "type": "int"
+      }
+    },
+    {
+      "name": "hex int",
+      "expr": "0x1F",
+      "expect": {
+        "value": 31,
+        "type": "int"
+      }
+    },
+    {
+      "name": "double",
+      "expr": "1.5",
+      "expect": {
+        "value": 1.5,
+        "type": "double"
+      }
+    },
+    {
+      "name": "double with exponent",
+      "expr": "2e3",
+      "expect": {
+        "value": 2000.0,
+        "type": "double"
+      }
+    },
+    {
+      "name": "integral double stays a double",
+      "expr": "1.0",
+      "expect": {
+        "value": 1.0,
+        "type": "double"
+      }
+    },
+    {
+      "name": "most negative int64",
+      "expr": "-9223372036854775808",
+      "expect": {
+        "value": -9223372036854775808,
+        "type": "int"
+      }
+    },
+    {
+      "name": "single-quoted string",
+      "expr": "'hello'",
+      "expect": {
+        "value": "hello",
+        "type": "string"
+      }
+    },
+    {
+      "name": "double-quoted string",
+      "expr": "\"hello\"",
+      "expect": {
+        "value": "hello"
+      }
+    },
+    {
+      "name": "escapes",
+      "expr": "'a\\tb\\n\\'c\\''",
+      "expect": {
+        "value": "a\tb\n'c'"
+      }
+    },
+    {
+      "name": "unicode escape",
+      "expr": "'\u00e9'",
+      "expect": {
+        "value": "\u00e9"
+      }
+    },
+    {
+      "name": "raw string keeps backslashes",
+      "expr": "r'\\d+'",
+      "expect": {
+        "value": "\\d+"
+      }
+    },
+    {
+      "name": "true",
+      "expr": "true",
+      "expect": {
+        "value": true,
+        "type": "bool"
+      }
+    },
+    {
+      "name": "false",
+      "expr": "false",
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "name": "null",
+      "expr": "null",
+      "expect": {
+        "value": null,
+        "type": "null"
+      }
+    },
+    {
+      "name": "list",
+      "expr": "[1, 'two', true]",
+      "expect": {
+        "value": [
+          1,
+          "two",
+          true
+        ],
+        "type": "list"
+      }
+    },
+    {
+      "name": "trailing comma in list",
+      "expr": "[1, 2,]",
+      "expect": {
+        "value": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "name": "map",
+      "expr": "{'a': 1, 'b': [2]}",
+      "expect": {
+        "value": {
+          "a": 1,
+          "b": [
+            2
+          ]
+        },
+        "type": "map"
+      }
+    },
+    {
+      "name": "comment is ignored",
+      "expr": "1 // the answer",
+      "expect": {
+        "value": 1
+      }
+    },
+    {
+      "name": "int64 overflow literal",
+      "expr": "9223372036854775808",
+      "expect": {
+        "error": "syntax"
+      }
+    },
+    {
+      "name": "unterminated string",
+      "expr": "'abc",
+      "expect": {
+        "error": "syntax"
+      }
+    },
+    {
+      "name": "unsigned suffix",
+      "expr": "1u",
+      "expect": {
+        "error": "syntax"
+      }
+    },
+    {
+      "name": "number glued to a name",
+      "expr": "1abc",
+      "expect": {
+        "error": "syntax"
+      }
+    },
+    {
+      "name": "invalid escape",
+      "expr": "'\\q'",
+      "expect": {
+        "error": "syntax"
+      }
+    },
+    {
+      "name": "triple-quoted string",
+      "expr": "'''abc'''",
+      "expect": {
+        "error": "syntax"
+      }
+    }
+  ]
+}

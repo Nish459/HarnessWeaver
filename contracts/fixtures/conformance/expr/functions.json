@@ -1,0 +1,214 @@
+{
+  "suite": "expr",
+  "description": "Built-in functions and methods.",
+  "cases": [
+    {
+      "name": "size of a string counts code points",
+      "expr": "size('h\u00e9llo')",
+      "expect": {
+        "value": 5
+      }
+    },
+    {
+      "name": "size of a list",
+      "expr": "size([1, 2, 3])",
+      "expect": {
+        "value": 3
+      }
+    },
+    {
+      "name": "size method on a map",
+      "expr": "{'a': 1}.size()",
+      "expect": {
+        "value": 1
+      }
+    },
+    {
+      "name": "startsWith",
+      "expr": "'payments:refund'.startsWith('payments:')",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "endsWith",
+      "expr": "'report.pdf'.endsWith('.pdf')",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "contains",
+      "expr": "'hello world'.contains('lo w')",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "matches finds a substring",
+      "expr": "'order-123'.matches('[0-9]+')",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "matches with anchors",
+      "expr": "'order-123'.matches('^[0-9]+$')",
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "name": "global matches",
+      "expr": "matches('abc', '^a')",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "int of a double truncates",
+      "expr": "int(3.9)",
+      "expect": {
+        "value": 3,
+        "type": "int"
+      }
+    },
+    {
+      "name": "int of a negative double truncates toward zero",
+      "expr": "int(-3.9)",
+      "expect": {
+        "value": -3
+      }
+    },
+    {
+      "name": "int of a string",
+      "expr": "int('-42')",
+      "expect": {
+        "value": -42
+      }
+    },
+    {
+      "name": "double of an int",
+      "expr": "double(2)",
+      "expect": {
+        "value": 2.0,
+        "type": "double"
+      }
+    },
+    {
+      "name": "double of a string",
+      "expr": "double('2.5')",
+      "expect": {
+        "value": 2.5
+      }
+    },
+    {
+      "name": "string of an int",
+      "expr": "string(42)",
+      "expect": {
+        "value": "42"
+      }
+    },
+    {
+      "name": "string of a double",
+      "expr": "string(1.5)",
+      "expect": {
+        "value": "1.5"
+      }
+    },
+    {
+      "name": "string of an integral double",
+      "expr": "string(100.0)",
+      "expect": {
+        "value": "100"
+      }
+    },
+    {
+      "name": "string of a large double",
+      "expr": "string(1e21)",
+      "expect": {
+        "value": "1e+21"
+      }
+    },
+    {
+      "name": "string of a tiny double",
+      "expr": "string(1e-7)",
+      "expect": {
+        "value": "1e-7"
+      }
+    },
+    {
+      "name": "string of a small double",
+      "expr": "string(0.000001)",
+      "expect": {
+        "value": "0.000001"
+      }
+    },
+    {
+      "name": "string of a bool",
+      "expr": "string(true)",
+      "expect": {
+        "value": "true"
+      }
+    },
+    {
+      "name": "int of a bool",
+      "expr": "int(true)",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "int of a non-numeric string",
+      "expr": "int('4x')",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "size of an int",
+      "expr": "size(1)",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "startsWith on a non-string",
+      "expr": "x.startsWith('a')",
+      "vars": {
+        "x": 1
+      },
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "invalid regular expression",
+      "expr": "'a'.matches('(')",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "unknown function",
+      "expr": "foo(1)",
+      "expect": {
+        "error": "syntax"
+      }
+    },
+    {
+      "name": "unknown method",
+      "expr": "'a'.upper()",
+      "expect": {
+        "error": "syntax"
+      }
+    },
+    {
+      "name": "wrong number of arguments",
+      "expr": "size(1, 2)",
+      "expect": {
+        "error": "syntax"
+      }
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "suite": "expr",
+  "description": "Boolean logic, CEL's error absorption, and the conditional operator.",
+  "cases": [
+    {
+      "name": "and",
+      "expr": "true && false",
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "name": "or",
+      "expr": "true || false",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "and binds tighter than or",
+      "expr": "true || false && false",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "or absorbs an error on the left",
+      "expr": "x.missing || true",
+      "vars": {
+        "x": {}
+      },
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "or absorbs an error on the right",
+      "expr": "true || x.missing",
+      "vars": {
+        "x": {}
+      },
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "and absorbs an error",
+      "expr": "x.missing && false",
+      "vars": {
+        "x": {}
+      },
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "name": "or without a decisive side keeps the error",
+      "expr": "x.missing || false",
+      "vars": {
+        "x": {}
+      },
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "and without a decisive side keeps the error",
+      "expr": "x.missing && true",
+      "vars": {
+        "x": {}
+      },
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "or needs bools",
+      "expr": "1 || false",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "conditional",
+      "expr": "x > 1 ? 'big' : 'small'",
+      "vars": {
+        "x": 2
+      },
+      "expect": {
+        "value": "big"
+      }
+    },
+    {
+      "name": "conditional is right-associative",
+      "expr": "false ? 1 : true ? 2 : 3",
+      "expect": {
+        "value": 2
+      }
+    },
+    {
+      "name": "conditional only evaluates the chosen branch",
+      "expr": "true ? 1 : x.missing",
+      "vars": {
+        "x": {}
+      },
+      "expect": {
+        "value": 1
+      }
+    },
+    {
+      "name": "conditional needs a bool",
+      "expr": "1 ? 2 : 3",
+      "expect": {
+        "error": "eval"
+      }
+    }
+  ]
+}

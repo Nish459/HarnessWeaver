@@ -15,9 +15,10 @@ These add to AGENTS.md and RULES.md (imported above). They don't replace them.
 5. Summarize what changed and anything not verified, then **ask for approval before committing** (G1). Never commit or push on your own initiative.
 
 ### Environment
-- Use `uv run …` and `uv add --package <member> …`. Never `pip install`.
+- Use `uv run ...` and `uv add --package <member> ...`. Never `pip install`.
 - Temporary files go in your scratchpad directory, not the repo.
 - Tests must stay offline (R14). Never put real API keys in fixtures, cassettes or examples (S7).
+- Write only keyboard characters (D5), including in commit messages: `No. 13`, not a section sign; `-`, `->` and `...` instead of dashes, arrows and ellipses.
 
 ### External APIs to verify, not recall
 - **Anthropic plugin** (`harnessweaver-anthropic`): load the `claude-api` skill before writing or changing it, and use current model IDs from it.

@@ -1,0 +1,157 @@
+{
+  "suite": "expr",
+  "description": "Comprehension macros over lists and maps.",
+  "cases": [
+    {
+      "name": "exists",
+      "expr": "[1, 2, 3].exists(x, x > 2)",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "exists finds nothing",
+      "expr": "[1, 2].exists(x, x > 5)",
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "name": "exists over principal roles",
+      "expr": "principal.roles.exists(r, r == 'finance')",
+      "vars": {
+        "principal": {
+          "roles": [
+            "dev",
+            "finance"
+          ]
+        }
+      },
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "all",
+      "expr": "[1, 2, 3].all(x, x > 0)",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "all fails",
+      "expr": "[1, -2].all(x, x > 0)",
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "name": "all of nothing is true",
+      "expr": "[].all(x, x > 0)",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "exists_one",
+      "expr": "[1, 2, 3].exists_one(x, x == 2)",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "exists_one with two matches",
+      "expr": "[2, 2].exists_one(x, x == 2)",
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "name": "map",
+      "expr": "[1, 2, 3].map(x, x * 10)",
+      "expect": {
+        "value": [
+          10,
+          20,
+          30
+        ]
+      }
+    },
+    {
+      "name": "filter",
+      "expr": "[1, 2, 3, 4].filter(x, x % 2 == 0)",
+      "expect": {
+        "value": [
+          2,
+          4
+        ]
+      }
+    },
+    {
+      "name": "macros iterate map keys",
+      "expr": "{'a': 1, 'b': 2}.all(k, k.size() == 1)",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "macro variable shadows a variable",
+      "expr": "[1].exists(x, x == 1)",
+      "vars": {
+        "x": 99
+      },
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "exists absorbs errors when it finds a match",
+      "expr": "[{}, {'a': 1}].exists(m, m.a == 1)",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "all absorbs errors when it finds a false",
+      "expr": "[{}, {'a': 1}].all(m, m.a == 2)",
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "name": "exists keeps an error without a match",
+      "expr": "[{}, {'a': 1}].exists(m, m.a == 2)",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "predicate must be a bool",
+      "expr": "[1].exists(x, x)",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "macro needs a list or map",
+      "expr": "'abc'.exists(c, true)",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "macro variable must be a name",
+      "expr": "[1].exists(1, true)",
+      "expect": {
+        "error": "syntax"
+      }
+    },
+    {
+      "name": "macro needs two arguments",
+      "expr": "[1].exists(x)",
+      "expect": {
+        "error": "syntax"
+      }
+    }
+  ]
+}

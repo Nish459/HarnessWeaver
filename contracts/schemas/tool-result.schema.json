@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:tool-result",
+  "title": "ToolResult",
+  "$defs": {
+    "JsonValue": {}
+  },
+  "additionalProperties": false,
+  "description": "What a tool returned. Output is untrusted unless the manifest says otherwise (S3).",
+  "properties": {
+    "call_id": {
+      "minLength": 1,
+      "title": "Call Id",
+      "type": "string"
+    },
+    "output": {
+      "$ref": "#/$defs/JsonValue",
+      "default": null
+    },
+    "is_error": {
+      "default": false,
+      "title": "Is Error",
+      "type": "boolean"
+    },
+    "untrusted": {
+      "default": true,
+      "title": "Untrusted",
+      "type": "boolean"
+    },
+    "truncated": {
+      "default": false,
+      "title": "Truncated",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "call_id"
+  ],
+  "type": "object"
+}

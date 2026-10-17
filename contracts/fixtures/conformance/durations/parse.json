@@ -1,0 +1,193 @@
+{
+  "suite": "durations",
+  "description": "Parsing durations and printing their canonical form (DESIGNS \u00a711).",
+  "cases": [
+    {
+      "name": "milliseconds",
+      "input": "250ms",
+      "expect": {
+        "ms": 250,
+        "canonical": "250ms"
+      }
+    },
+    {
+      "name": "seconds",
+      "input": "20s",
+      "expect": {
+        "ms": 20000,
+        "canonical": "20s"
+      }
+    },
+    {
+      "name": "minutes",
+      "input": "5m",
+      "expect": {
+        "ms": 300000,
+        "canonical": "5m"
+      }
+    },
+    {
+      "name": "hours and minutes",
+      "input": "1h30m",
+      "expect": {
+        "ms": 5400000,
+        "canonical": "1h30m"
+      }
+    },
+    {
+      "name": "days",
+      "input": "1d",
+      "expect": {
+        "ms": 86400000,
+        "canonical": "1d"
+      }
+    },
+    {
+      "name": "all units",
+      "input": "1d2h3m4s5ms",
+      "expect": {
+        "ms": 93784005,
+        "canonical": "1d2h3m4s5ms"
+      }
+    },
+    {
+      "name": "fractional seconds",
+      "input": "1.5s",
+      "expect": {
+        "ms": 1500,
+        "canonical": "1s500ms"
+      }
+    },
+    {
+      "name": "overflowing unit is normalized",
+      "input": "90s",
+      "expect": {
+        "ms": 90000,
+        "canonical": "1m30s"
+      }
+    },
+    {
+      "name": "zero",
+      "input": "0s",
+      "expect": {
+        "ms": 0,
+        "canonical": "0s"
+      }
+    },
+    {
+      "name": "surrounding whitespace is ignored",
+      "input": " 5m ",
+      "expect": {
+        "ms": 300000,
+        "canonical": "5m"
+      }
+    },
+    {
+      "name": "number means seconds",
+      "input": 20,
+      "expect": {
+        "ms": 20000,
+        "canonical": "20s"
+      }
+    },
+    {
+      "name": "fractional number of seconds",
+      "input": 0.25,
+      "expect": {
+        "ms": 250,
+        "canonical": "250ms"
+      }
+    },
+    {
+      "name": "empty",
+      "input": "",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "number as string needs a unit",
+      "input": "5",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "unknown unit",
+      "input": "5x",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "uppercase unit",
+      "input": "1H",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "negative string",
+      "input": "-5s",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "negative number",
+      "input": -1,
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "units out of order",
+      "input": "30m1h",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "repeated unit",
+      "input": "1m1m",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "malformed number",
+      "input": "1.5.5s",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "sub-millisecond precision",
+      "input": "0.0001s",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "unit before number",
+      "input": "m5",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "space inside",
+      "input": "5 m",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "bool is not a duration",
+      "input": true,
+      "expect": {
+        "error": true
+      }
+    }
+  ]
+}

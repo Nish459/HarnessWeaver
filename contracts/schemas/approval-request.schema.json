@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:approval-request",
+  "title": "ApprovalRequest",
+  "$defs": {
+    "JsonValue": {},
+    "Risk": {
+      "description": "How much harm a misused call could do.",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "Risk",
+      "type": "string"
+    },
+    "SideEffect": {
+      "description": "What a tool changes when it runs.",
+      "enum": [
+        "none",
+        "read",
+        "write_internal",
+        "write_external",
+        "destructive"
+      ],
+      "title": "SideEffect",
+      "type": "string"
+    },
+    "ToolCall": {
+      "additionalProperties": false,
+      "description": "A tool call proposed by a model.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "arguments": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Arguments",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "ToolCall",
+      "type": "object"
+    },
+    "ToolInfo": {
+      "additionalProperties": false,
+      "description": "The parts of a tool manifest that policies and middleware decide on.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        },
+        "side_effect": {
+          "$ref": "#/$defs/SideEffect",
+          "default": "none"
+        },
+        "risk": {
+          "$ref": "#/$defs/Risk",
+          "default": "low"
+        },
+        "egress": {
+          "default": [],
+          "description": "Hosts the tool may reach.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Egress",
+          "type": "array"
+        },
+        "data_access": {
+          "default": [],
+          "description": "Data it reads, e.g. 'pii:x'.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Data Access",
+          "type": "array"
+        },
+        "scopes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Scopes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ToolInfo",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A suspended step waiting for a human.",
+  "properties": {
+    "approval_id": {
+      "minLength": 1,
+      "title": "Approval Id",
+      "type": "string"
+    },
+    "run_id": {
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    },
+    "approver_role": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approver Role"
+    },
+    "call": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ToolCall"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "tool": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ToolInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "requested_at": {
+      "format": "date-time",
+      "title": "Requested At",
+      "type": "string"
+    },
+    "expires_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expires At"
+    }
+  },
+  "required": [
+    "approval_id",
+    "run_id",
+    "reason",
+    "requested_at"
+  ],
+  "type": "object"
+}

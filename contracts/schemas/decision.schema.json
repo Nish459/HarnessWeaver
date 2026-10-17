@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:decision",
+  "title": "Decision",
+  "$defs": {
+    "DecisionKind": {
+      "description": "How a decision was reached.",
+      "enum": [
+        "exact",
+        "probabilistic",
+        "abstain",
+        "default"
+      ],
+      "title": "DecisionKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A router's answer, with the stage and reason that produced it (R13).",
+  "properties": {
+    "kind": {
+      "$ref": "#/$defs/DecisionKind"
+    },
+    "choice": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Choice"
+    },
+    "confidence": {
+      "anyOf": [
+        {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Confidence"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    },
+    "stage": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The cascade stage that answered.",
+      "title": "Stage"
+    }
+  },
+  "required": [
+    "kind"
+  ],
+  "type": "object"
+}

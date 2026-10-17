@@ -6,7 +6,7 @@
 
 *Weave your own AI harness. Bring your models. Choose your plugins. Define your execution.*
 
-`Python 3.12+` · `TypeScript` · `Apache-2.0` · **early development**
+`Python 3.12+`, `TypeScript`, `Apache-2.0`, **early development**
 
 </div>
 
@@ -24,9 +24,9 @@ HarnessWeaver is a **framework for building your own harness**. You keep the exe
 flowchart LR
     app["Your app<br/>(any executor)"] --> hw["HarnessWeaver<br/>13 hook points"]
     spec["harness.yaml<br/>+ org baseline"] -.-> hw
-    hw --> models["Your models<br/>LiteLLM · OpenAI-compatible · Anthropic"]
+    hw --> models["Your models<br/>LiteLLM, OpenAI-compatible, Anthropic"]
     hw --> tools["Your tools<br/>manifest-governed"]
-    hw --> obs["Traces · cost · evals"]
+    hw --> obs["Traces, cost, evals"]
 ```
 
 ## Why a framework, not a harness
@@ -45,10 +45,10 @@ import harnessweaver as hw
 
 harness = hw.load("harness.yaml")        # spec + org baseline + env overlay, validated at startup
 
-# Level 0 — keep your code, add tracing and cost in one line
+# Level 0 - keep your code, add tracing and cost in one line
 client = harness.instrument(AsyncOpenAI(base_url=LITELLM_URL))
 
-# Level 3 — let the harness own the lifecycle: budgets, guards, tool governance, approvals
+# Level 3 - let the harness own the lifecycle: budgets, guards, tool governance, approvals
 result = await harness.run("extract_invoice", InvoiceDoc(text=doc), principal=user)
 ```
 
@@ -63,7 +63,7 @@ result = await harness.run("extract_invoice", InvoiceDoc(text=doc), principal=us
 | `@harnessweaver/core` | TypeScript core |
 | `@harnessweaver/ai-sdk` | First-party TypeScript plugin for the Vercel AI SDK |
 
-**Plugins are defined by design, not by name.** Any package that exposes an `hw.Plugin` through the `harnessweaver.plugins` entry point is a plugin, so you can build one in your own repository, publish it under any name, and use it from `harness.yaml` (`use: acme.pii`). See [DESIGNS.md §13](DESIGNS.md#13-plugins).
+**Plugins are defined by design, not by name.** Any package that exposes an `hw.Plugin` through the `harnessweaver.plugins` entry point is a plugin, so you can build one in your own repository, publish it under any name, and use it from `harness.yaml` (`use: acme.pii`). See [DESIGNS.md No. 13](DESIGNS.md#13-plugins).
 
 ## Adoption levels
 

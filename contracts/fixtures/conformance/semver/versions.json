@@ -1,0 +1,163 @@
+{
+  "suite": "semver",
+  "description": "Parsing and ordering SemVer 2.0.0 versions.",
+  "cases": [
+    {
+      "name": "plain",
+      "version": "1.2.3",
+      "expect": {
+        "canonical": "1.2.3"
+      }
+    },
+    {
+      "name": "zero",
+      "version": "0.0.0",
+      "expect": {
+        "canonical": "0.0.0"
+      }
+    },
+    {
+      "name": "multi-digit",
+      "version": "10.20.30",
+      "expect": {
+        "canonical": "10.20.30"
+      }
+    },
+    {
+      "name": "prerelease and build",
+      "version": "1.2.3-rc.1+build.5",
+      "expect": {
+        "canonical": "1.2.3-rc.1"
+      }
+    },
+    {
+      "name": "missing patch",
+      "version": "1.2",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "leading zero",
+      "version": "01.2.3",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "numeric prerelease with leading zero",
+      "version": "1.2.3-01",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "v prefix",
+      "version": "v1.2.3",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "empty prerelease",
+      "version": "1.2.3-",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "four parts",
+      "version": "1.2.3.4",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "empty",
+      "version": "",
+      "expect": {
+        "error": true
+      }
+    },
+    {
+      "name": "alpha before alpha.1",
+      "compare": [
+        "1.0.0-alpha",
+        "1.0.0-alpha.1"
+      ],
+      "expect": -1
+    },
+    {
+      "name": "numeric identifier before alphanumeric",
+      "compare": [
+        "1.0.0-alpha.1",
+        "1.0.0-alpha.beta"
+      ],
+      "expect": -1
+    },
+    {
+      "name": "alpha.beta before beta",
+      "compare": [
+        "1.0.0-alpha.beta",
+        "1.0.0-beta"
+      ],
+      "expect": -1
+    },
+    {
+      "name": "beta before beta.2",
+      "compare": [
+        "1.0.0-beta",
+        "1.0.0-beta.2"
+      ],
+      "expect": -1
+    },
+    {
+      "name": "numeric identifiers compare numerically",
+      "compare": [
+        "1.0.0-beta.2",
+        "1.0.0-beta.11"
+      ],
+      "expect": -1
+    },
+    {
+      "name": "beta before rc",
+      "compare": [
+        "1.0.0-beta.11",
+        "1.0.0-rc.1"
+      ],
+      "expect": -1
+    },
+    {
+      "name": "prerelease before release",
+      "compare": [
+        "1.0.0-rc.1",
+        "1.0.0"
+      ],
+      "expect": -1
+    },
+    {
+      "name": "build metadata is ignored",
+      "compare": [
+        "1.0.0",
+        "1.0.0+build.7"
+      ],
+      "expect": 0
+    },
+    {
+      "name": "major wins",
+      "compare": [
+        "2.0.0",
+        "1.9.9"
+      ],
+      "expect": 1
+    },
+    {
+      "name": "minor compares numerically",
+      "compare": [
+        "1.10.0",
+        "1.9.0"
+      ],
+      "expect": 1
+    }
+  ]
+}

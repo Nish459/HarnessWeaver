@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:tool-info",
+  "title": "ToolInfo",
+  "$defs": {
+    "Risk": {
+      "description": "How much harm a misused call could do.",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "Risk",
+      "type": "string"
+    },
+    "SideEffect": {
+      "description": "What a tool changes when it runs.",
+      "enum": [
+        "none",
+        "read",
+        "write_internal",
+        "write_external",
+        "destructive"
+      ],
+      "title": "SideEffect",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The parts of a tool manifest that policies and middleware decide on.",
+  "properties": {
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Version"
+    },
+    "side_effect": {
+      "$ref": "#/$defs/SideEffect",
+      "default": "none"
+    },
+    "risk": {
+      "$ref": "#/$defs/Risk",
+      "default": "low"
+    },
+    "egress": {
+      "default": [],
+      "description": "Hosts the tool may reach.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Egress",
+      "type": "array"
+    },
+    "data_access": {
+      "default": [],
+      "description": "Data it reads, e.g. 'pii:x'.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Data Access",
+      "type": "array"
+    },
+    "scopes": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Scopes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "type": "object"
+}

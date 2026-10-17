@@ -1,0 +1,194 @@
+{
+  "suite": "expr",
+  "description": "Variables, fields, indexes and has().",
+  "cases": [
+    {
+      "name": "field",
+      "expr": "principal.id",
+      "vars": {
+        "principal": {
+          "id": "alice"
+        }
+      },
+      "expect": {
+        "value": "alice"
+      }
+    },
+    {
+      "name": "nested field",
+      "expr": "a.b.c",
+      "vars": {
+        "a": {
+          "b": {
+            "c": 1
+          }
+        }
+      },
+      "expect": {
+        "value": 1
+      }
+    },
+    {
+      "name": "list index",
+      "expr": "items[1]",
+      "vars": {
+        "items": [
+          "a",
+          "b"
+        ]
+      },
+      "expect": {
+        "value": "b"
+      }
+    },
+    {
+      "name": "map index",
+      "expr": "m['k']",
+      "vars": {
+        "m": {
+          "k": 2
+        }
+      },
+      "expect": {
+        "value": 2
+      }
+    },
+    {
+      "name": "index into a literal",
+      "expr": "{'a': [10, 20]}['a'][1]",
+      "expect": {
+        "value": 20
+      }
+    },
+    {
+      "name": "has finds a field",
+      "expr": "has(a.b)",
+      "vars": {
+        "a": {
+          "b": null
+        }
+      },
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "has misses a field",
+      "expr": "has(a.c)",
+      "vars": {
+        "a": {
+          "b": 1
+        }
+      },
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "name": "has guards access",
+      "expr": "has(a.c) ? a.c : 'default'",
+      "vars": {
+        "a": {}
+      },
+      "expect": {
+        "value": "default"
+      }
+    },
+    {
+      "name": "missing field",
+      "expr": "a.c",
+      "vars": {
+        "a": {
+          "b": 1
+        }
+      },
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "field of a non-map",
+      "expr": "a.b",
+      "vars": {
+        "a": 1
+      },
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "index out of range",
+      "expr": "items[5]",
+      "vars": {
+        "items": [
+          1
+        ]
+      },
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "negative index",
+      "expr": "items[-1]",
+      "vars": {
+        "items": [
+          1
+        ]
+      },
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "list index must be an int",
+      "expr": "items['0']",
+      "vars": {
+        "items": [
+          1
+        ]
+      },
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "missing map key",
+      "expr": "m['x']",
+      "vars": {
+        "m": {}
+      },
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "undefined variable at evaluation",
+      "expr": "nope",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "has needs a field selection",
+      "expr": "has(a)",
+      "expect": {
+        "error": "syntax"
+      }
+    },
+    {
+      "name": "dangling dot",
+      "expr": "a.",
+      "expect": {
+        "error": "syntax"
+      }
+    },
+    {
+      "name": "reserved word as a name",
+      "expr": "if",
+      "expect": {
+        "error": "syntax"
+      }
+    }
+  ]
+}

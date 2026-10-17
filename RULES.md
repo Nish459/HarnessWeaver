@@ -6,7 +6,7 @@ These are the non-negotiable rules for building HarnessWeaver. They are numbered
 - The **coding (C), testing (T), security (S), docs (D), versioning (V) and git (G) rules** keep the codebase consistent.
 - If a rule blocks something that is genuinely needed, write an ADR in [DESIGNS.md](DESIGNS.md#28-architecture-decision-records) proposing the change. Don't work around the rule in code.
 
-When two design goals conflict, the earlier goal in [DESIGNS.md § Design goals](DESIGNS.md#3-design-goals-and-non-goals) wins.
+When two design goals conflict, the earlier goal in [DESIGNS.md, Design goals](DESIGNS.md#3-design-goals-and-non-goals) wins.
 
 ---
 
@@ -71,7 +71,7 @@ When two design goals conflict, the earlier goal in [DESIGNS.md § Design goals]
 | **S4** | Code-executing tools run in a sandbox (`sandbox: monty` or stronger), never with `exec`/`eval` in the host process. The cel-lite evaluator never calls `eval`. |
 | **S5** | Supply chain: lockfiles are committed; CI actions are pinned by commit SHA; container base images are pinned by digest; releases ship an SBOM and signed artifacts. |
 | **S6** | The sidecar binds to `127.0.0.1` by default and requires a bearer token for every route except `/v1/health`. |
-| **S7** | Secrets and personal data never appear in fixtures, cassettes, examples or logs. Use obviously fake values (`sk-test-…`, `alice@example.com`). |
+| **S7** | Secrets and personal data never appear in fixtures, cassettes, examples or logs. Use obviously fake values (`sk-test-...`, `alice@example.com`). |
 | **S8** | Plugins are inert until used. Installing a plugin enables nothing; only names referenced by the effective spec are imported. Plugin modules do no I/O and register nothing at import time, and the org baseline can lock `plugins.allow`. |
 
 ## Documentation rules
@@ -82,6 +82,7 @@ When two design goals conflict, the earlier goal in [DESIGNS.md § Design goals]
 | **D2** | Diagrams are Mermaid, kept next to the text they explain, so they are reviewed like code. PNGs are only for diagrams that Mermaid can't express. |
 | **D3** | Code in docs is either a tested example (included from `examples/`) or short enough to be checked by eye. Never document an API that doesn't exist yet without marking it *planned*. |
 | **D4** | Any deviation from the design guide (`docs/AI Harness Framework Design and Build Guide.md`) is recorded as an ADR in `DESIGNS.md` with its reason. |
+| **D5** | Use only characters found on a standard keyboard (printable ASCII) in docs, code, comments, fixtures and commit messages. Refer to numbered sections as `No. 13`, and write `-` for dashes, `->` for arrows and `...` for ellipses. Unicode test data is written as escapes (`\u00e9`). `make check` enforces this; the design guide is the only exception (D4). |
 
 ## Versioning rules
 
@@ -110,12 +111,12 @@ When two design goals conflict, the earlier goal in [DESIGNS.md § Design goals]
 
 Copy this into every pull request (it is also in `.github/PULL_REQUEST_TEMPLATE.md`).
 
-- [ ] No invariant (R1–R14) is weakened; any rule exception has an ADR.
+- [ ] No invariant (R1-R14) is weakened; any rule exception has an ADR.
 - [ ] Contract changes start in the models, schemas and fixtures, and pass in Python and TypeScript (R11, T4).
 - [ ] New middleware declares `fail_mode`; baseline middleware is `closed` (R2).
 - [ ] New guards ship with `mode: log_only` (R8).
 - [ ] Nothing raw reaches logs or spans before redaction (R9).
 - [ ] No new core dependency (R6); any new dependency has an ADR (C10).
-- [ ] Tests are offline, cover the change, and include property tests or fixtures where relevant (T1–T4).
-- [ ] Docs and `CHANGELOG.md` are updated (D1).
+- [ ] Tests are offline, cover the change, and include property tests or fixtures where relevant (T1-T4).
+- [ ] Docs and `CHANGELOG.md` are updated (D1), using only keyboard characters (D5).
 - [ ] `make check` is green (G5); the commit is approved by a human (G1).

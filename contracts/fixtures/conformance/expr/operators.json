@@ -1,0 +1,273 @@
+{
+  "suite": "expr",
+  "description": "Arithmetic, comparison, equality and membership.",
+  "cases": [
+    {
+      "name": "precedence",
+      "expr": "1 + 2 * 3",
+      "expect": {
+        "value": 7,
+        "type": "int"
+      }
+    },
+    {
+      "name": "parentheses",
+      "expr": "(1 + 2) * 3",
+      "expect": {
+        "value": 9
+      }
+    },
+    {
+      "name": "int division truncates toward zero",
+      "expr": "7 / 2",
+      "expect": {
+        "value": 3,
+        "type": "int"
+      }
+    },
+    {
+      "name": "negative int division truncates toward zero",
+      "expr": "-7 / 2",
+      "expect": {
+        "value": -3,
+        "type": "int"
+      }
+    },
+    {
+      "name": "modulus takes the dividend's sign",
+      "expr": "-7 % 3",
+      "expect": {
+        "value": -1,
+        "type": "int"
+      }
+    },
+    {
+      "name": "double division",
+      "expr": "7.0 / 2.0",
+      "expect": {
+        "value": 3.5,
+        "type": "double"
+      }
+    },
+    {
+      "name": "mixed int and double gives a double",
+      "expr": "1 + 0.5",
+      "expect": {
+        "value": 1.5,
+        "type": "double"
+      }
+    },
+    {
+      "name": "string concatenation",
+      "expr": "'ab' + 'cd'",
+      "expect": {
+        "value": "abcd"
+      }
+    },
+    {
+      "name": "list concatenation",
+      "expr": "[1] + [2, 3]",
+      "expect": {
+        "value": [
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "name": "int and double compare",
+      "expr": "2 > 1.5",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "string comparison",
+      "expr": "'apple' < 'banana'",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "bool comparison",
+      "expr": "false < true",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "numeric equality across types",
+      "expr": "1 == 1.0",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "different types are not equal",
+      "expr": "1 == '1'",
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "name": "list equality",
+      "expr": "[1, [2]] == [1, [2]]",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "map equality ignores order",
+      "expr": "{'a': 1, 'b': 2} == {'b': 2, 'a': 1}",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "not equal",
+      "expr": "1 != 2",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "in list",
+      "expr": "'b' in ['a', 'b']",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "not in list",
+      "expr": "'z' in ['a', 'b']",
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "name": "in map tests keys",
+      "expr": "'a' in {'a': 1}",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "bool and int are different map keys",
+      "expr": "true in {1: 'x'}",
+      "expect": {
+        "value": false
+      }
+    },
+    {
+      "name": "unary not",
+      "expr": "!false",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "double negation",
+      "expr": "!!true",
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "negate a variable",
+      "expr": "-x",
+      "vars": {
+        "x": 5
+      },
+      "expect": {
+        "value": -5
+      }
+    },
+    {
+      "name": "comparison with data",
+      "expr": "args.amount_usd > 100",
+      "vars": {
+        "args": {
+          "amount_usd": 250
+        }
+      },
+      "expect": {
+        "value": true
+      }
+    },
+    {
+      "name": "integral float in data acts as an int",
+      "expr": "x / 2",
+      "vars": {
+        "x": 4.0
+      },
+      "expect": {
+        "value": 2,
+        "type": "int"
+      }
+    },
+    {
+      "name": "division by zero",
+      "expr": "1 / 0",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "modulus by zero",
+      "expr": "1 % 0",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "modulus needs ints",
+      "expr": "1.5 % 1",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "int overflow",
+      "expr": "9223372036854775807 + 1",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "adding a string and a number",
+      "expr": "'a' + 1",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "comparing different types",
+      "expr": "1 < 'a'",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "in needs a list or map",
+      "expr": "1 in 'abc'",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "not needs a bool",
+      "expr": "!1",
+      "expect": {
+        "error": "eval"
+      }
+    },
+    {
+      "name": "negating a string",
+      "expr": "-'a'",
+      "expect": {
+        "error": "eval"
+      }
+    }
+  ]
+}

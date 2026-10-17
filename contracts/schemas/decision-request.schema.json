@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:decision-request",
+  "title": "DecisionRequest",
+  "$defs": {
+    "JsonValue": {}
+  },
+  "additionalProperties": false,
+  "description": "A question for a router: pick one of ``options`` for ``text`` and ``state``.",
+  "properties": {
+    "router": {
+      "minLength": 1,
+      "title": "Router",
+      "type": "string"
+    },
+    "text": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Text"
+    },
+    "options": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Options",
+      "type": "array"
+    },
+    "state": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "State",
+      "type": "object"
+    }
+  },
+  "required": [
+    "router"
+  ],
+  "type": "object"
+}

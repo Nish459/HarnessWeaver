@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:context-item",
+  "title": "ContextItem",
+  "$defs": {
+    "Acl": {
+      "additionalProperties": false,
+      "description": "Who may see a retrieved item. An empty list means \"no restriction\" for that part.",
+      "properties": {
+        "tenants": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Tenants",
+          "type": "array"
+        },
+        "principals": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Principals",
+          "type": "array"
+        },
+        "roles": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Roles",
+          "type": "array"
+        }
+      },
+      "title": "Acl",
+      "type": "object"
+    },
+    "JsonValue": {}
+  },
+  "additionalProperties": false,
+  "description": "One retrieved document or memory entry.",
+  "properties": {
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "content": {
+      "title": "Content",
+      "type": "string"
+    },
+    "source": {
+      "description": "Where the item came from, e.g. the context provider name.",
+      "title": "Source",
+      "type": "string"
+    },
+    "score": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Score"
+    },
+    "untrusted": {
+      "default": true,
+      "title": "Untrusted",
+      "type": "boolean"
+    },
+    "acl": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Acl"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "metadata": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "Metadata",
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "content",
+    "source"
+  ],
+  "type": "object"
+}

@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:guard-result",
+  "title": "GuardResult",
+  "$defs": {
+    "Finding": {
+      "additionalProperties": false,
+      "description": "Something a guardrail found. Never holds the raw matched text (R9).",
+      "properties": {
+        "type": {
+          "description": "What was found, e.g. 'EMAIL' or 'aws_key'.",
+          "minLength": 1,
+          "title": "Type",
+          "type": "string"
+        },
+        "start": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "GuardAction": {
+      "description": "What a guardrail wants done with the content it checked.\n\nThe guardrails module maps actions onto hook outcomes (DESIGNS No. 9).",
+      "enum": [
+        "allow",
+        "redact",
+        "repair",
+        "escalate",
+        "require_approval",
+        "block",
+        "log_only"
+      ],
+      "title": "GuardAction",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A guardrail's verdict on one piece of content.",
+  "properties": {
+    "action": {
+      "$ref": "#/$defs/GuardAction"
+    },
+    "content": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Replacement content, for 'redact'.",
+      "title": "Content"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    },
+    "findings": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "score": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Score"
+    }
+  },
+  "required": [
+    "action"
+  ],
+  "type": "object"
+}

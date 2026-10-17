@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:outcome",
+  "title": "Outcome",
+  "$defs": {
+    "Block": {
+      "additionalProperties": false,
+      "description": "Refuse. The step never executes and the run ends ``blocked``.",
+      "properties": {
+        "kind": {
+          "const": "block",
+          "default": "block",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "code": {
+          "default": "blocked",
+          "title": "Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "title": "Block",
+      "type": "object"
+    },
+    "Continue": {
+      "additionalProperties": false,
+      "description": "Proceed. With ``modified``, later middleware and the operation see the new payload.",
+      "properties": {
+        "kind": {
+          "const": "continue",
+          "default": "continue",
+          "title": "Kind",
+          "type": "string"
+        },
+        "modified": {
+          "default": null,
+          "description": "The replacement event payload, if any.",
+          "title": "Modified"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "title": "Continue",
+      "type": "object"
+    },
+    "Escalate": {
+      "additionalProperties": false,
+      "description": "Stop the automated path and hand the run to a human queue.",
+      "properties": {
+        "kind": {
+          "const": "escalate",
+          "default": "escalate",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The queue or role to hand off to.",
+          "title": "To"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "title": "Escalate",
+      "type": "object"
+    },
+    "Retry": {
+      "additionalProperties": false,
+      "description": "Redo the step, within the step's retry or repair budget.",
+      "properties": {
+        "kind": {
+          "const": "retry",
+          "default": "retry",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "title": "Retry",
+      "type": "object"
+    },
+    "Suspend": {
+      "additionalProperties": false,
+      "description": "Pause the run durably until an approver answers.",
+      "properties": {
+        "kind": {
+          "const": "suspend",
+          "default": "suspend",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "approver_role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approver Role"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "title": "Suspend",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "block": "#/$defs/Block",
+      "continue": "#/$defs/Continue",
+      "escalate": "#/$defs/Escalate",
+      "retry": "#/$defs/Retry",
+      "suspend": "#/$defs/Suspend"
+    },
+    "propertyName": "kind"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Continue"
+    },
+    {
+      "$ref": "#/$defs/Retry"
+    },
+    {
+      "$ref": "#/$defs/Escalate"
+    },
+    {
+      "$ref": "#/$defs/Suspend"
+    },
+    {
+      "$ref": "#/$defs/Block"
+    }
+  ]
+}

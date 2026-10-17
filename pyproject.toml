@@ -49,7 +49,7 @@ dev = [
 line-length = 100
 target-version = "py312"
 src = ["python/*/src", "python/plugins/*/src"]
-# Code blocks in docs are laid out for reading, and the design guide must not be edited (RULES D5).
+# Code blocks in docs are laid out for reading, and the design guide must not be edited (RULES D4).
 extend-exclude = ["**/*.md"]
 
 [tool.ruff.lint]
@@ -69,6 +69,8 @@ select = [
     "TID",              # banned APIs (C4)
     "S102", "S307",     # no exec / eval (S4)
 ]
+# The error taxonomy names errors by what happened (BudgetExceeded, LockViolation), as DESIGNS does.
+ignore = ["N818"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "datetime.datetime.now".msg = "Use the injected Clock (RULES C4)."
@@ -80,6 +82,10 @@ known-first-party = ["harnessweaver", "harnessweaver_*"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S", "T20", "TID251"]
+# Fixtures only say that an input is invalid, not which message it produces.
+"**/tests/conformance/**" = ["PT011"]
+# Repository scripts are command-line tools.
+"scripts/**" = ["T20"]
 
 # --- pyright ----------------------------------------------------------------
 
@@ -88,7 +94,7 @@ pythonVersion = "3.12"
 typeCheckingMode = "standard"
 venvPath = "."
 venv = ".venv"
-include = ["python"]
+include = ["python", "scripts"]
 exclude = ["**/__pycache__", "**/.venv"]
 # RULES C1: strict on the contract-heavy core.
 strict = [
@@ -103,6 +109,9 @@ minversion = "9.0"
 testpaths = ["python"]
 addopts = ["-ra", "--strict-markers", "--strict-config", "--import-mode=importlib"]
 xfail_strict = true
+markers = [
+    "conformance_suite(name): run once per case in contracts/fixtures/conformance/<name>",
+]
 filterwarnings = ["error"]
 
 # --- coverage ---------------------------------------------------------------

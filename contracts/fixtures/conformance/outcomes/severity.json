@@ -1,0 +1,191 @@
+{
+  "suite": "outcomes",
+  "description": "Outcome severity and how answers to one event combine (DESIGNS \u00a78).",
+  "cases": [
+    {
+      "name": "severity of continue",
+      "outcome": {
+        "kind": "continue"
+      },
+      "expect": {
+        "severity": 0
+      }
+    },
+    {
+      "name": "severity of continue with a modification",
+      "outcome": {
+        "kind": "continue",
+        "modified": {
+          "redacted": true
+        }
+      },
+      "expect": {
+        "severity": 1
+      }
+    },
+    {
+      "name": "severity of retry",
+      "outcome": {
+        "kind": "retry",
+        "reason": "r"
+      },
+      "expect": {
+        "severity": 2
+      }
+    },
+    {
+      "name": "severity of escalate",
+      "outcome": {
+        "kind": "escalate",
+        "reason": "e"
+      },
+      "expect": {
+        "severity": 3
+      }
+    },
+    {
+      "name": "severity of suspend",
+      "outcome": {
+        "kind": "suspend",
+        "reason": "s"
+      },
+      "expect": {
+        "severity": 4
+      }
+    },
+    {
+      "name": "severity of block",
+      "outcome": {
+        "kind": "block",
+        "reason": "b"
+      },
+      "expect": {
+        "severity": 5
+      }
+    },
+    {
+      "name": "nothing to combine is continue",
+      "outcomes": [],
+      "expect": {
+        "kind": "continue",
+        "index": null
+      }
+    },
+    {
+      "name": "block beats everything",
+      "outcomes": [
+        {
+          "kind": "continue"
+        },
+        {
+          "kind": "block",
+          "reason": "b"
+        },
+        {
+          "kind": "retry",
+          "reason": "r"
+        }
+      ],
+      "expect": {
+        "kind": "block",
+        "index": 1
+      }
+    },
+    {
+      "name": "first of equal severity wins",
+      "outcomes": [
+        {
+          "kind": "suspend",
+          "reason": "s"
+        },
+        {
+          "kind": "block",
+          "reason": "b"
+        },
+        {
+          "kind": "block",
+          "reason": "second"
+        }
+      ],
+      "expect": {
+        "kind": "block",
+        "index": 1
+      }
+    },
+    {
+      "name": "suspend beats escalate and retry",
+      "outcomes": [
+        {
+          "kind": "retry",
+          "reason": "r"
+        },
+        {
+          "kind": "escalate",
+          "reason": "e"
+        },
+        {
+          "kind": "suspend",
+          "reason": "s"
+        }
+      ],
+      "expect": {
+        "kind": "suspend",
+        "index": 2
+      }
+    },
+    {
+      "name": "escalate beats retry",
+      "outcomes": [
+        {
+          "kind": "escalate",
+          "reason": "e"
+        },
+        {
+          "kind": "retry",
+          "reason": "r"
+        }
+      ],
+      "expect": {
+        "kind": "escalate",
+        "index": 0
+      }
+    },
+    {
+      "name": "a modification beats a plain continue",
+      "outcomes": [
+        {
+          "kind": "continue"
+        },
+        {
+          "kind": "continue",
+          "modified": {
+            "redacted": true
+          }
+        }
+      ],
+      "expect": {
+        "kind": "continue",
+        "index": 1
+      }
+    },
+    {
+      "name": "retry beats a modification",
+      "outcomes": [
+        {
+          "kind": "continue",
+          "modified": {
+            "redacted": true
+          }
+        },
+        {
+          "kind": "retry",
+          "reason": "r"
+        }
+      ],
+      "expect": {
+        "kind": "retry",
+        "index": 1
+      }
+    }
+  ]
+}

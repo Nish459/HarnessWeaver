@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:error-info",
+  "title": "ErrorInfo",
+  "$defs": {
+    "ErrorCode": {
+      "description": "Stable, language-neutral error codes.",
+      "enum": [
+        "budget_exceeded",
+        "deadline_exceeded",
+        "policy_denied",
+        "validation_failed",
+        "provider_error",
+        "tool_error",
+        "expression_error",
+        "spec_invalid",
+        "internal"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    },
+    "JsonValue": {}
+  },
+  "additionalProperties": false,
+  "description": "The serializable form of an error, as carried by hook events and the wire API.",
+  "properties": {
+    "code": {
+      "$ref": "#/$defs/ErrorCode"
+    },
+    "type": {
+      "description": "The error class name, e.g. 'LockViolation'.",
+      "title": "Type",
+      "type": "string"
+    },
+    "message": {
+      "title": "Message",
+      "type": "string"
+    },
+    "retryable": {
+      "default": false,
+      "title": "Retryable",
+      "type": "boolean"
+    },
+    "details": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "Details",
+      "type": "object"
+    }
+  },
+  "required": [
+    "code",
+    "type",
+    "message"
+  ],
+  "type": "object"
+}
