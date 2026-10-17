@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling>=1.32"]
+build-backend = "hatchling.build"
+
+[project]
+name = "harnessweaver-cel"
+version = "0.1.0"
+description = "HarnessWeaver plugin: CEL policies."
+readme = "README.md"
+license = "Apache-2.0"
+authors = [{ name = "Muthu Kumaran R", email = "rsmk7new@gmail.com" }]
+requires-python = ">=3.12"
+keywords = ["ai", "llm", "harness", "guardrails", "agents", "governance", "observability"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Typing :: Typed",
+]
+dependencies = [
+    "harnessweaver>=0.1.0",
+    "cel-python>=0.5,<0.6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/harnessweaver_cel"]

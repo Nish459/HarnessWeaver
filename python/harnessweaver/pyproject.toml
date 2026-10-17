@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling>=1.32"]
+build-backend = "hatchling.build"
+
+[project]
+name = "harnessweaver"
+version = "0.1.0"
+description = "The composable AI harness framework. Weave your own AI harness: bring your models, choose your plugins, define your execution."
+readme = "README.md"
+license = "Apache-2.0"
+authors = [{ name = "Muthu Kumaran R", email = "rsmk7new@gmail.com" }]
+requires-python = ">=3.12"
+keywords = ["ai", "llm", "harness", "guardrails", "agents", "governance", "observability"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pydantic>=2.12",
+    "opentelemetry-api>=1.30",
+    "pyyaml>=6.0.2",
+    "anyio>=4.7",
+]
+
+[project.optional-dependencies]
+openai = ["harnessweaver-openai>=0.1.0"]
+anthropic = ["harnessweaver-anthropic>=0.1.0"]
+pydantic-ai = ["harnessweaver-pydantic-ai>=0.1.0"]
+monty = ["harnessweaver-monty>=0.1.0"]
+otel = ["harnessweaver-otel>=0.1.0"]
+cel = ["harnessweaver-cel>=0.1.0"]
+cli = ["harnessweaver-cli>=0.1.0"]
+sidecar = ["harnessweaver-sidecar>=0.1.0"]
+all = ["harnessweaver[openai,anthropic,pydantic-ai,monty,otel,cel,cli,sidecar]"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/harnessweaver"]

@@ -1,0 +1,16 @@
+# Local hooks run the workspace's own pinned tools through uv, so there are no
+# third-party hook repositories to pin (RULES S5).
+#   uvx pre-commit install
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types_or: [python, pyi]

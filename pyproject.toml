@@ -1,0 +1,117 @@
+# HarnessWeaver workspace root.
+#
+# This file is not a package. It ties the Python packages together as a uv
+# workspace and holds the tool configuration they share. Each package has its
+# own pyproject.toml under python/.
+
+[tool.uv.workspace]
+members = [
+    "python/harnessweaver",
+    "python/harnessweaver-cli",
+    "python/harnessweaver-sidecar",
+    "python/plugins/*",
+]
+
+[tool.uv.sources]
+harnessweaver = { workspace = true }
+harnessweaver-cli = { workspace = true }
+harnessweaver-sidecar = { workspace = true }
+harnessweaver-openai = { workspace = true }
+harnessweaver-anthropic = { workspace = true }
+harnessweaver-pydantic-ai = { workspace = true }
+harnessweaver-monty = { workspace = true }
+harnessweaver-otel = { workspace = true }
+harnessweaver-cel = { workspace = true }
+
+[dependency-groups]
+# Every workspace package plus the dev tools, so `uv sync` installs everything.
+dev = [
+    "harnessweaver",
+    "harnessweaver-cli",
+    "harnessweaver-sidecar",
+    "harnessweaver-openai",
+    "harnessweaver-anthropic",
+    "harnessweaver-pydantic-ai",
+    "harnessweaver-monty",
+    "harnessweaver-otel",
+    "harnessweaver-cel",
+    "pytest>=9.1",
+    "hypothesis>=6.170",
+    "coverage[toml]>=7.16",
+    "httpx>=0.28",
+    "ruff>=0.17",
+    "pyright>=1.1.414",
+]
+
+# --- ruff -------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["python/*/src", "python/plugins/*/src"]
+# Code blocks in docs are laid out for reading, and the design guide must not be edited (RULES D5).
+extend-exclude = ["**/*.md"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F",      # pycodestyle, pyflakes
+    "I",                # isort
+    "UP",               # pyupgrade
+    "B",                # bugbear
+    "SIM",              # simplify
+    "C4",               # comprehensions
+    "PIE", "RET",       # misc. correctness and clarity
+    "N",                # naming
+    "RUF",              # ruff-specific
+    "ASYNC",            # async pitfalls (C3)
+    "PT",               # pytest style
+    "T20",              # no print in library code (C6)
+    "TID",              # banned APIs (C4)
+    "S102", "S307",     # no exec / eval (S4)
+]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"datetime.datetime.now".msg = "Use the injected Clock (RULES C4)."
+"datetime.datetime.utcnow".msg = "Use the injected Clock (RULES C4)."
+"time.time".msg = "Use the injected Clock (RULES C4)."
+
+[tool.ruff.lint.isort]
+known-first-party = ["harnessweaver", "harnessweaver_*"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S", "T20", "TID251"]
+
+# --- pyright ----------------------------------------------------------------
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
+include = ["python"]
+exclude = ["**/__pycache__", "**/.venv"]
+# RULES C1: strict on the contract-heavy core.
+strict = [
+    "python/harnessweaver/src/harnessweaver/core",
+    "python/harnessweaver/src/harnessweaver/spec",
+]
+
+# --- pytest -----------------------------------------------------------------
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+testpaths = ["python"]
+addopts = ["-ra", "--strict-markers", "--strict-config", "--import-mode=importlib"]
+xfail_strict = true
+filterwarnings = ["error"]
+
+# --- coverage ---------------------------------------------------------------
+
+[tool.coverage.run]
+branch = true
+source_pkgs = ["harnessweaver", "harnessweaver_cli", "harnessweaver_sidecar"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError", "@overload"]
