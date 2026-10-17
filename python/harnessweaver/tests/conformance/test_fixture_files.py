@@ -3,7 +3,7 @@ from pathlib import Path
 
 # Every suite directory needs a runner here and in TypeScript (RULES R11). Add new
 # suites to this set together with their test module.
-SUITES_WITH_RUNNERS = {"durations", "expr", "hook_order", "outcomes", "semver"}
+SUITES_WITH_RUNNERS = {"durations", "expr", "hook_order", "levels", "merge", "outcomes", "semver"}
 
 
 def test_every_suite_has_a_runner(fixtures_root: Path) -> None:

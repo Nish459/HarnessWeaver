@@ -24,6 +24,7 @@ from harnessweaver.core.outcomes import Outcome
 from harnessweaver.core.retrieval import ContextItem
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest
 from harnessweaver.core.tools import ToolInfo, ToolResult
+from harnessweaver.spec.models import HarnessSpec, ProfileSpec
 
 __all__ = [
     "API_VERSION",
@@ -41,6 +42,8 @@ API_VERSION: Final = "harnessweaver/v1"
 _DIALECT: Final = "https://json-schema.org/draft/2020-12/schema"
 
 CONTRACTS: Final[dict[str, Any]] = {
+    "harness": HarnessSpec,
+    "profile": ProfileSpec,
     "envelope": Envelope,
     "hook-event": HookEvent,
     "outcome": Outcome,

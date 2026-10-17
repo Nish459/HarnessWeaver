@@ -1,0 +1,1551 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:harness",
+  "title": "HarnessSpec",
+  "$defs": {
+    "ApprovalsSpec": {
+      "additionalProperties": true,
+      "properties": {
+        "use": {
+          "default": "memory",
+          "title": "Use",
+          "type": "string"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "pattern": "^(\\d+(\\.\\d+)?(ms|d|h|m|s))+$",
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "description": "A duration such as '250ms', '20s', '5m' or '1h30m', or a number of seconds."
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout"
+        },
+        "on_timeout": {
+          "default": "escalate",
+          "enum": [
+            "escalate",
+            "reject"
+          ],
+          "title": "On Timeout",
+          "type": "string"
+        },
+        "approver_role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approver Role"
+        }
+      },
+      "title": "ApprovalsSpec",
+      "type": "object"
+    },
+    "Band": {
+      "description": "Middleware priority bands, outermost first.\n\nThe spec assigns bands; a plugin can't place itself in ``baseline`` (S8).",
+      "enum": [
+        "baseline",
+        "platform",
+        "app",
+        "task"
+      ],
+      "title": "Band",
+      "type": "string"
+    },
+    "Budget": {
+      "additionalProperties": false,
+      "description": "Limits for one run. ``None`` means no limit at this layer.",
+      "properties": {
+        "max_usd": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Usd"
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Tokens"
+        },
+        "max_model_calls": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Model Calls"
+        },
+        "max_tool_calls": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Tool Calls"
+        },
+        "deadline": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "pattern": "^(\\d+(\\.\\d+)?(ms|d|h|m|s))+$",
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "description": "A duration such as '250ms', '20s', '5m' or '1h30m', or a number of seconds."
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline"
+        }
+      },
+      "title": "Budget",
+      "type": "object"
+    },
+    "BudgetsSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "per_run": {
+          "$ref": "#/$defs/Budget",
+          "default": {
+            "max_usd": null,
+            "max_tokens": null,
+            "max_model_calls": null,
+            "max_tool_calls": null,
+            "deadline": null
+          }
+        }
+      },
+      "title": "BudgetsSpec",
+      "type": "object"
+    },
+    "ContextSourceSpec": {
+      "additionalProperties": true,
+      "properties": {
+        "use": {
+          "title": "Use",
+          "type": "string"
+        },
+        "label": {
+          "default": "untrusted",
+          "enum": [
+            "untrusted",
+            "trusted"
+          ],
+          "title": "Label",
+          "type": "string"
+        },
+        "max_items": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Items"
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Tokens"
+        }
+      },
+      "required": [
+        "use"
+      ],
+      "title": "ContextSourceSpec",
+      "type": "object"
+    },
+    "EvalsSpec": {
+      "additionalProperties": true,
+      "description": "``task: [files]`` entries, plus the reserved ``online`` key.",
+      "properties": {
+        "online": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OnlineEvalsSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "EvalsSpec",
+      "type": "object"
+    },
+    "GuardAction": {
+      "description": "What a guardrail wants done with the content it checked.\n\nThe guardrails module maps actions onto hook outcomes (DESIGNS No. 9).",
+      "enum": [
+        "allow",
+        "redact",
+        "repair",
+        "escalate",
+        "require_approval",
+        "block",
+        "log_only"
+      ],
+      "title": "GuardAction",
+      "type": "string"
+    },
+    "GuardSpec": {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "use": {
+          "title": "Use",
+          "type": "string"
+        },
+        "action": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GuardAction"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Overrides the provider's."
+        },
+        "mode": {
+          "default": "enforce",
+          "description": "New guards should start as log_only (R8, ADR-0008).",
+          "enum": [
+            "enforce",
+            "log_only"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "where": {
+          "default": "local",
+          "enum": [
+            "local",
+            "sidecar"
+          ],
+          "title": "Where",
+          "type": "string"
+        },
+        "parallel": {
+          "default": false,
+          "title": "Parallel",
+          "type": "boolean"
+        },
+        "fail_mode": {
+          "default": "closed",
+          "enum": [
+            "closed",
+            "open"
+          ],
+          "title": "Fail Mode",
+          "type": "string"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "pattern": "^(\\d+(\\.\\d+)?(ms|d|h|m|s))+$",
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "description": "A duration such as '250ms', '20s', '5m' or '1h30m', or a number of seconds."
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "use"
+      ],
+      "title": "GuardSpec",
+      "type": "object"
+    },
+    "GuardrailsSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "input": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GuardSpec"
+          },
+          "title": "Input",
+          "type": "array"
+        },
+        "context": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GuardSpec"
+          },
+          "title": "Context",
+          "type": "array"
+        },
+        "tool_result": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GuardSpec"
+          },
+          "title": "Tool Result",
+          "type": "array"
+        },
+        "output": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GuardSpec"
+          },
+          "title": "Output",
+          "type": "array"
+        },
+        "stream": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GuardSpec"
+          },
+          "title": "Stream",
+          "type": "array"
+        }
+      },
+      "title": "GuardrailsSpec",
+      "type": "object"
+    },
+    "HookPoint": {
+      "description": "A named moment in the run lifecycle. The set is fixed and versioned (R11).",
+      "enum": [
+        "run.start",
+        "input.before",
+        "route.decide",
+        "context.after",
+        "model.before",
+        "model.after",
+        "stream.chunk",
+        "tool.before",
+        "tool.after",
+        "output.before",
+        "approval.resolved",
+        "run.error",
+        "run.end"
+      ],
+      "title": "HookPoint",
+      "type": "string"
+    },
+    "Level": {
+      "description": "Adoption levels (DESIGNS No. 11).",
+      "enum": [
+        "L0",
+        "L1",
+        "L2",
+        "L3",
+        "L4"
+      ],
+      "title": "Level",
+      "type": "string"
+    },
+    "Metadata": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "owner": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Owner"
+        },
+        "risk_tier": {
+          "default": "internal",
+          "description": "Picks the required level.",
+          "title": "Risk Tier",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "SemVer; required for org profiles.",
+          "title": "Version"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Metadata",
+      "type": "object"
+    },
+    "MiddlewareSpec": {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "use": {
+          "title": "Use",
+          "type": "string"
+        },
+        "band": {
+          "$ref": "#/$defs/Band",
+          "default": "app",
+          "description": "Only profiles may use 'baseline' (S8)."
+        },
+        "hooks": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/HookPoint"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Narrow the hooks.",
+          "title": "Hooks"
+        },
+        "fail_mode": {
+          "anyOf": [
+            {
+              "enum": [
+                "closed",
+                "open"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fail Mode"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "pattern": "^(\\d+(\\.\\d+)?(ms|d|h|m|s))+$",
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "description": "A duration such as '250ms', '20s', '5m' or '1h30m', or a number of seconds."
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "use"
+      ],
+      "title": "MiddlewareSpec",
+      "type": "object"
+    },
+    "ModelsSpec": {
+      "additionalProperties": true,
+      "properties": {
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "e.g. 'openai.chat', 'scripted'.",
+          "title": "Provider"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default model alias.",
+          "title": "Default"
+        },
+        "aliases": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "object"
+        },
+        "allowed_aliases": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Allowed Aliases"
+        },
+        "prices": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Price"
+          },
+          "title": "Prices",
+          "type": "object"
+        }
+      },
+      "title": "ModelsSpec",
+      "type": "object"
+    },
+    "ObservabilitySpec": {
+      "additionalProperties": true,
+      "properties": {
+        "exporter": {
+          "default": "none",
+          "enum": [
+            "none",
+            "console",
+            "otlp"
+          ],
+          "title": "Exporter",
+          "type": "string"
+        },
+        "endpoint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Endpoint"
+        },
+        "capture_content": {
+          "default": false,
+          "description": "Post-redaction content only (R9).",
+          "title": "Capture Content",
+          "type": "boolean"
+        },
+        "configure_sdk": {
+          "default": false,
+          "title": "Configure Sdk",
+          "type": "boolean"
+        },
+        "service_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Service Name"
+        }
+      },
+      "title": "ObservabilitySpec",
+      "type": "object"
+    },
+    "OnlineEvalsSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "sample_rate": {
+          "default": 0.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Sample Rate",
+          "type": "number"
+        }
+      },
+      "title": "OnlineEvalsSpec",
+      "type": "object"
+    },
+    "PluginsSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "local": {
+          "default": [],
+          "description": "In-repo modules exposing `plugin`.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Local",
+          "type": "array"
+        },
+        "allow": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Plugin namespaces apps may use; usually locked by the org.",
+          "title": "Allow"
+        }
+      },
+      "title": "PluginsSpec",
+      "type": "object"
+    },
+    "PolicyEffect": {
+      "description": "The outcome of a policy check, from most to least permissive.",
+      "enum": [
+        "allow",
+        "require_approval",
+        "deny"
+      ],
+      "title": "PolicyEffect",
+      "type": "string"
+    },
+    "PolicyRule": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "when": {
+          "description": "cel-lite predicate over principal, tenant, task, tool, args.",
+          "title": "When",
+          "type": "string"
+        },
+        "effect": {
+          "$ref": "#/$defs/PolicyEffect"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "when",
+        "effect"
+      ],
+      "title": "PolicyRule",
+      "type": "object"
+    },
+    "PolicySpec": {
+      "additionalProperties": true,
+      "properties": {
+        "use": {
+          "default": "cel_lite",
+          "title": "Use",
+          "type": "string"
+        },
+        "rules": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PolicyRule"
+          },
+          "title": "Rules",
+          "type": "array"
+        },
+        "default_effect": {
+          "$ref": "#/$defs/PolicyEffect",
+          "default": "allow"
+        }
+      },
+      "title": "PolicySpec",
+      "type": "object"
+    },
+    "Price": {
+      "additionalProperties": false,
+      "properties": {
+        "input_per_mtok": {
+          "description": "USD per million input tokens.",
+          "minimum": 0,
+          "title": "Input Per Mtok",
+          "type": "number"
+        },
+        "output_per_mtok": {
+          "description": "USD per million output tokens.",
+          "minimum": 0,
+          "title": "Output Per Mtok",
+          "type": "number"
+        }
+      },
+      "required": [
+        "input_per_mtok",
+        "output_per_mtok"
+      ],
+      "title": "Price",
+      "type": "object"
+    },
+    "PromptsSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "dir": {
+          "default": "prompts",
+          "title": "Dir",
+          "type": "string"
+        }
+      },
+      "title": "PromptsSpec",
+      "type": "object"
+    },
+    "RequireLevel": {
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "$ref": "#/$defs/Level",
+          "default": "L0"
+        },
+        "tiers": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Level"
+          },
+          "title": "Tiers",
+          "type": "object"
+        }
+      },
+      "title": "RequireLevel",
+      "type": "object"
+    },
+    "RouterSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "options": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Options",
+          "type": "array"
+        },
+        "cascade": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RoutingStage"
+          },
+          "title": "Cascade",
+          "type": "array"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        }
+      },
+      "required": [
+        "options"
+      ],
+      "title": "RouterSpec",
+      "type": "object"
+    },
+    "RoutingStage": {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "use": {
+          "title": "Use",
+          "type": "string"
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Threshold"
+        }
+      },
+      "required": [
+        "use"
+      ],
+      "title": "RoutingStage",
+      "type": "object"
+    },
+    "RunnerSpec": {
+      "additionalProperties": true,
+      "properties": {
+        "use": {
+          "default": "direct",
+          "title": "Use",
+          "type": "string"
+        }
+      },
+      "title": "RunnerSpec",
+      "type": "object"
+    },
+    "SidecarSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "token_env": {
+          "default": "HARNESSD_TOKEN",
+          "title": "Token Env",
+          "type": "string"
+        }
+      },
+      "title": "SidecarSpec",
+      "type": "object"
+    },
+    "StateSpec": {
+      "additionalProperties": true,
+      "properties": {
+        "use": {
+          "default": "memory",
+          "title": "Use",
+          "type": "string"
+        },
+        "record": {
+          "default": false,
+          "description": "Record runs for `harnessweaver replay`.",
+          "title": "Record",
+          "type": "boolean"
+        }
+      },
+      "title": "StateSpec",
+      "type": "object"
+    },
+    "TaskApprovals": {
+      "additionalProperties": false,
+      "properties": {
+        "tools": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Tools",
+          "type": "array"
+        },
+        "approver_role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approver Role"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "pattern": "^(\\d+(\\.\\d+)?(ms|d|h|m|s))+$",
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "description": "A duration such as '250ms', '20s', '5m' or '1h30m', or a number of seconds."
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout"
+        },
+        "on_timeout": {
+          "anyOf": [
+            {
+              "enum": [
+                "escalate",
+                "reject"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "On Timeout"
+        }
+      },
+      "title": "TaskApprovals",
+      "type": "object"
+    },
+    "TaskBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "max_usd": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Usd"
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Tokens"
+        },
+        "max_model_calls": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Model Calls"
+        },
+        "max_tool_calls": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Tool Calls"
+        },
+        "deadline": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "pattern": "^(\\d+(\\.\\d+)?(ms|d|h|m|s))+$",
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "description": "A duration such as '250ms', '20s', '5m' or '1h30m', or a number of seconds."
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline"
+        },
+        "overridable": {
+          "default": [],
+          "description": "Fields a caller may lower for one run (R10).",
+          "items": {
+            "enum": [
+              "max_usd",
+              "max_tokens",
+              "max_model_calls",
+              "max_tool_calls",
+              "deadline"
+            ],
+            "type": "string"
+          },
+          "title": "Overridable",
+          "type": "array"
+        }
+      },
+      "title": "TaskBudget",
+      "type": "object"
+    },
+    "TaskSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "default": "1.0.0",
+          "title": "Version",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "runner": {
+          "$ref": "#/$defs/RunnerSpec",
+          "default": {
+            "use": "direct"
+          }
+        },
+        "input": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Import path of the input model.",
+          "title": "Input"
+        },
+        "output": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Import path of the output model, or 'str' for plain text.",
+          "title": "Output"
+        },
+        "prompt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Prompt reference, 'name@version'.",
+          "title": "Prompt"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Model alias for this task.",
+          "title": "Model"
+        },
+        "tools": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Tools",
+          "type": "array"
+        },
+        "budget": {
+          "$ref": "#/$defs/TaskBudget",
+          "default": {
+            "max_usd": null,
+            "max_tokens": null,
+            "max_model_calls": null,
+            "max_tool_calls": null,
+            "deadline": null,
+            "overridable": []
+          }
+        },
+        "approvals": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TaskApprovals"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "guardrails": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GuardrailsSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "TaskSpec",
+      "type": "object"
+    },
+    "ToolsSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "manifests": {
+          "default": [],
+          "description": "Globs of `kind: Tool` files.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Manifests",
+          "type": "array"
+        },
+        "require_manifest": {
+          "default": true,
+          "title": "Require Manifest",
+          "type": "boolean"
+        },
+        "max_output_bytes": {
+          "default": 20000,
+          "exclusiveMinimum": 0,
+          "title": "Max Output Bytes",
+          "type": "integer"
+        }
+      },
+      "title": "ToolsSpec",
+      "type": "object"
+    },
+    "ValidationRule": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "when": {
+          "description": "cel-lite predicate over `output`, `input` and `task`.",
+          "title": "When",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "when",
+        "message"
+      ],
+      "title": "ValidationRule",
+      "type": "object"
+    },
+    "ValidationSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "max_repairs": {
+          "default": 1,
+          "minimum": 0,
+          "title": "Max Repairs",
+          "type": "integer"
+        },
+        "on_failure": {
+          "default": "block",
+          "enum": [
+            "escalate",
+            "block"
+          ],
+          "title": "On Failure",
+          "type": "string"
+        },
+        "rules": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ValidationRule"
+          },
+          "title": "Rules",
+          "type": "array"
+        }
+      },
+      "title": "ValidationSpec",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The effective spec of one app, after every layer is merged (DESIGNS No. 11).",
+  "properties": {
+    "plugins": {
+      "$ref": "#/$defs/PluginsSpec",
+      "default": {
+        "local": [],
+        "allow": null
+      }
+    },
+    "models": {
+      "$ref": "#/$defs/ModelsSpec",
+      "default": {
+        "provider": null,
+        "default": null,
+        "aliases": {},
+        "allowed_aliases": null,
+        "prices": {}
+      }
+    },
+    "routing": {
+      "additionalProperties": {
+        "$ref": "#/$defs/RouterSpec"
+      },
+      "title": "Routing",
+      "type": "object"
+    },
+    "context": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ContextSourceSpec"
+      },
+      "title": "Context",
+      "type": "object"
+    },
+    "guardrails": {
+      "$ref": "#/$defs/GuardrailsSpec",
+      "default": {
+        "input": [],
+        "context": [],
+        "tool_result": [],
+        "output": [],
+        "stream": []
+      }
+    },
+    "validation": {
+      "$ref": "#/$defs/ValidationSpec",
+      "default": {
+        "max_repairs": 1,
+        "on_failure": "block",
+        "rules": []
+      }
+    },
+    "tools": {
+      "$ref": "#/$defs/ToolsSpec",
+      "default": {
+        "manifests": [],
+        "require_manifest": true,
+        "max_output_bytes": 20000
+      }
+    },
+    "policy": {
+      "$ref": "#/$defs/PolicySpec",
+      "default": {
+        "use": "cel_lite",
+        "rules": [],
+        "default_effect": "allow"
+      }
+    },
+    "approvals": {
+      "$ref": "#/$defs/ApprovalsSpec",
+      "default": {
+        "use": "memory",
+        "timeout": null,
+        "on_timeout": "escalate",
+        "approver_role": null
+      }
+    },
+    "budgets": {
+      "$ref": "#/$defs/BudgetsSpec",
+      "default": {
+        "per_run": {
+          "deadline": null,
+          "max_model_calls": null,
+          "max_tokens": null,
+          "max_tool_calls": null,
+          "max_usd": null
+        }
+      }
+    },
+    "state": {
+      "$ref": "#/$defs/StateSpec",
+      "default": {
+        "use": "memory",
+        "record": false
+      }
+    },
+    "observability": {
+      "$ref": "#/$defs/ObservabilitySpec",
+      "default": {
+        "exporter": "none",
+        "endpoint": null,
+        "capture_content": false,
+        "configure_sdk": false,
+        "service_name": null
+      }
+    },
+    "evals": {
+      "$ref": "#/$defs/EvalsSpec",
+      "default": {
+        "online": null
+      }
+    },
+    "middleware": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/MiddlewareSpec"
+      },
+      "title": "Middleware",
+      "type": "array"
+    },
+    "tasks": {
+      "additionalProperties": {
+        "$ref": "#/$defs/TaskSpec"
+      },
+      "title": "Tasks",
+      "type": "object"
+    },
+    "prompts": {
+      "$ref": "#/$defs/PromptsSpec",
+      "default": {
+        "dir": "prompts"
+      }
+    },
+    "sidecar": {
+      "$ref": "#/$defs/SidecarSpec",
+      "default": {
+        "url": null,
+        "token_env": "HARNESSD_TOKEN"
+      }
+    },
+    "require_level": {
+      "$ref": "#/$defs/RequireLevel",
+      "default": {
+        "default": "L0",
+        "tiers": {}
+      },
+      "description": "Set by profiles; the app's level must reach it."
+    },
+    "apiVersion": {
+      "const": "harnessweaver/v1",
+      "default": "harnessweaver/v1",
+      "title": "Apiversion",
+      "type": "string"
+    },
+    "kind": {
+      "const": "Harness",
+      "default": "Harness",
+      "title": "Kind",
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/Metadata"
+    },
+    "extends": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Extends",
+      "type": "array"
+    }
+  },
+  "required": [
+    "metadata"
+  ],
+  "type": "object"
+}

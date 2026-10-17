@@ -1,0 +1,412 @@
+{
+  "suite": "merge",
+  "description": "Bounds: values outside a profile's bounds fail, never clamped (R10).",
+  "cases": [
+    {
+      "name": "a value above the maximum fails",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "max": 5
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "max_usd": 8
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "bound_violation",
+        "bound": "budgets.per_run.max_usd"
+      }
+    },
+    {
+      "name": "a value within bounds is kept exactly",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "max": 5
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "max_usd": 2.5
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "budgets": {
+            "per_run": {
+              "max_usd": 2.5
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "the maximum itself is allowed",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "max": 5
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "max_usd": 5
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "budgets": {
+            "per_run": {
+              "max_usd": 5
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "a duration above the maximum fails",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.deadline": {
+                "max": "30m"
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "deadline": "1h"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "bound_violation",
+        "bound": "budgets.per_run.deadline"
+      }
+    },
+    {
+      "name": "a duration within bounds is kept",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.deadline": {
+                "max": "30m"
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "deadline": "20s"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "budgets": {
+            "per_run": {
+              "deadline": "20s"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "a duration below the minimum fails",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.deadline": {
+                "min": "10s"
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "deadline": "5s"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "bound_violation",
+        "bound": "budgets.per_run.deadline"
+      }
+    },
+    {
+      "name": "task budgets are checked against per-run bounds",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "max": 5
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "tasks": {
+              "t": {
+                "budget": {
+                  "max_usd": 8
+                }
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "bound_violation",
+        "bound": "budgets.per_run.max_usd"
+      }
+    },
+    {
+      "name": "a wildcard bound covers every task",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "tasks.*.budget.max_tool_calls": {
+                "max": 50
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "tasks": {
+              "a": {
+                "budget": {
+                  "max_tool_calls": 10
+                }
+              },
+              "b": {
+                "budget": {
+                  "max_tool_calls": 100
+                }
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "bound_violation",
+        "bound": "tasks.*.budget.max_tool_calls"
+      }
+    },
+    {
+      "name": "bounds from several profiles all apply",
+      "layers": [
+        {
+          "name": "security",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "max": 20
+              }
+            }
+          }
+        },
+        {
+          "name": "team",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "max": 10
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "max_usd": 15
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "bound_violation",
+        "bound": "budgets.per_run.max_usd"
+      }
+    },
+    {
+      "name": "a profile's own value is checked against its bound",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "max_usd": 9
+              }
+            },
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "max": 5
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "bound_violation",
+        "bound": "budgets.per_run.max_usd"
+      }
+    },
+    {
+      "name": "a bound needs a min or a max",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {}
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "spec_invalid"
+      }
+    },
+    {
+      "name": "a bound's min can't exceed its max",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "min": 5,
+                "max": 1
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "spec_invalid"
+      }
+    },
+    {
+      "name": "a value that isn't a number can't meet a numeric bound",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "max": 5
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "max_usd": "cheap"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "spec_invalid"
+      }
+    }
+  ]
+}

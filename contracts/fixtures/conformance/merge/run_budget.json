@@ -1,0 +1,163 @@
+{
+  "suite": "merge",
+  "description": "The budget for one run: per-run and task limits, then per-run overrides (R10).",
+  "cases": [
+    {
+      "name": "per-run and task limits combine to the tightest",
+      "per_run": {
+        "max_usd": 2.0,
+        "deadline": "5m"
+      },
+      "task_budget": {
+        "max_usd": 0.1,
+        "max_tool_calls": 20
+      },
+      "overrides": null,
+      "expect": {
+        "budget": {
+          "max_usd": 0.1,
+          "max_tokens": null,
+          "max_model_calls": null,
+          "max_tool_calls": 20,
+          "deadline": "5m"
+        }
+      }
+    },
+    {
+      "name": "a run may lower an overridable field",
+      "per_run": {
+        "max_usd": 2.0
+      },
+      "task_budget": {
+        "max_usd": 0.1,
+        "overridable": [
+          "max_usd"
+        ]
+      },
+      "overrides": {
+        "max_usd": 0.05
+      },
+      "expect": {
+        "budget": {
+          "max_usd": 0.05,
+          "max_tokens": null,
+          "max_model_calls": null,
+          "max_tool_calls": null,
+          "deadline": null
+        }
+      }
+    },
+    {
+      "name": "a run may not raise a field",
+      "per_run": {},
+      "task_budget": {
+        "max_usd": 0.1,
+        "overridable": [
+          "max_usd"
+        ]
+      },
+      "overrides": {
+        "max_usd": 0.5
+      },
+      "expect": {
+        "error": "bound_violation"
+      }
+    },
+    {
+      "name": "a run may not change a field that isn't overridable",
+      "per_run": {},
+      "task_budget": {
+        "deadline": "20s",
+        "overridable": [
+          "max_usd"
+        ]
+      },
+      "overrides": {
+        "deadline": "10s"
+      },
+      "expect": {
+        "error": "bound_violation"
+      }
+    },
+    {
+      "name": "a run may lower a duration",
+      "per_run": {},
+      "task_budget": {
+        "deadline": "20s",
+        "overridable": [
+          "deadline"
+        ]
+      },
+      "overrides": {
+        "deadline": "5s"
+      },
+      "expect": {
+        "budget": {
+          "max_usd": null,
+          "max_tokens": null,
+          "max_model_calls": null,
+          "max_tool_calls": null,
+          "deadline": "5s"
+        }
+      }
+    },
+    {
+      "name": "an override can't break a minimum bound",
+      "per_run": {},
+      "task_budget": {
+        "deadline": "20s",
+        "overridable": [
+          "deadline"
+        ]
+      },
+      "overrides": {
+        "deadline": "5s"
+      },
+      "bounds": {
+        "budgets.per_run.deadline": {
+          "min": "10s"
+        }
+      },
+      "expect": {
+        "error": "bound_violation"
+      }
+    },
+    {
+      "name": "an unlimited field can be given a limit",
+      "per_run": {},
+      "task_budget": {
+        "overridable": [
+          "max_usd"
+        ]
+      },
+      "overrides": {
+        "max_usd": 1.0
+      },
+      "expect": {
+        "budget": {
+          "max_usd": 1.0,
+          "max_tokens": null,
+          "max_model_calls": null,
+          "max_tool_calls": null,
+          "deadline": null
+        }
+      }
+    },
+    {
+      "name": "removing a limit is not lowering it",
+      "per_run": {},
+      "task_budget": {
+        "max_usd": 0.1,
+        "overridable": [
+          "max_usd"
+        ]
+      },
+      "overrides": {
+        "max_usd": null
+      },
+      "expect": {
+        "error": "bound_violation"
+      }
+    }
+  ]
+}

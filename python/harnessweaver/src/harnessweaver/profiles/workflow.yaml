@@ -1,0 +1,9 @@
+# Deterministic multi-step pipelines.
+apiVersion: harnessweaver/v1
+kind: Profile
+metadata: { name: workflow, version: 1.0.0, owner: harnessweaver }
+guardrails:
+  output:
+    - { id: workflow-secrets, use: secrets.scan, action: block }
+budgets:
+  per_run: { deadline: 5m }

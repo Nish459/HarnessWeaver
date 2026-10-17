@@ -1,0 +1,392 @@
+{
+  "suite": "levels",
+  "description": "Adoption levels a spec reaches and the level its risk tier requires.",
+  "cases": [
+    {
+      "name": "an empty spec is L0",
+      "risk_tier": "internal",
+      "spec": {},
+      "expect": {
+        "level": "L0",
+        "required": "L0",
+        "unmet": {
+          "L1": [
+            "L1.enforcing_guardrail"
+          ],
+          "L2": [
+            "L2.run_budget",
+            "L2.policy_rules"
+          ],
+          "L3": [
+            "L3.tasks"
+          ]
+        }
+      }
+    },
+    {
+      "name": "an enforcing guardrail reaches L1",
+      "risk_tier": "internal",
+      "spec": {
+        "guardrails": {
+          "input": [
+            {
+              "use": "pii.regex"
+            }
+          ]
+        }
+      },
+      "expect": {
+        "level": "L1",
+        "required": "L0",
+        "unmet": {
+          "L2": [
+            "L2.run_budget",
+            "L2.policy_rules"
+          ],
+          "L3": [
+            "L3.tasks"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a log_only guardrail doesn't count",
+      "risk_tier": "internal",
+      "spec": {
+        "guardrails": {
+          "input": [
+            {
+              "use": "pii.regex",
+              "mode": "log_only"
+            }
+          ]
+        }
+      },
+      "expect": {
+        "level": "L0",
+        "required": "L0",
+        "unmet": {
+          "L1": [
+            "L1.enforcing_guardrail"
+          ],
+          "L2": [
+            "L2.run_budget",
+            "L2.policy_rules"
+          ],
+          "L3": [
+            "L3.tasks"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a disabled guardrail doesn't count",
+      "risk_tier": "internal",
+      "spec": {
+        "guardrails": {
+          "input": [
+            {
+              "use": "pii.regex",
+              "enabled": false
+            }
+          ]
+        }
+      },
+      "expect": {
+        "level": "L0",
+        "required": "L0",
+        "unmet": {
+          "L1": [
+            "L1.enforcing_guardrail"
+          ],
+          "L2": [
+            "L2.run_budget",
+            "L2.policy_rules"
+          ],
+          "L3": [
+            "L3.tasks"
+          ]
+        }
+      }
+    },
+    {
+      "name": "every task needs an output for L1",
+      "risk_tier": "internal",
+      "spec": {
+        "guardrails": {
+          "input": [
+            {
+              "use": "pii.regex"
+            }
+          ]
+        },
+        "tasks": {
+          "a": {
+            "output": "str"
+          },
+          "b": {}
+        }
+      },
+      "expect": {
+        "level": "L0",
+        "required": "L0",
+        "unmet": {
+          "L1": [
+            "L1.task_outputs"
+          ],
+          "L2": [
+            "L2.run_budget",
+            "L2.policy_rules"
+          ],
+          "L4": [
+            "L4.task_evals"
+          ]
+        }
+      }
+    },
+    {
+      "name": "task-level guardrails count for L1",
+      "risk_tier": "internal",
+      "spec": {
+        "tasks": {
+          "a": {
+            "output": "str",
+            "guardrails": {
+              "input": [
+                {
+                  "use": "pii.regex"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "level": "L1",
+        "required": "L0",
+        "unmet": {
+          "L2": [
+            "L2.run_budget",
+            "L2.policy_rules"
+          ],
+          "L4": [
+            "L4.task_evals"
+          ]
+        }
+      }
+    },
+    {
+      "name": "L2 needs manifests, a run budget and policy rules",
+      "risk_tier": "internal",
+      "spec": {
+        "guardrails": {
+          "input": [
+            {
+              "use": "pii.regex"
+            }
+          ]
+        },
+        "budgets": {
+          "per_run": {
+            "max_usd": 1
+          }
+        },
+        "policy": {
+          "rules": [
+            {
+              "when": "true",
+              "effect": "allow"
+            }
+          ]
+        }
+      },
+      "expect": {
+        "level": "L2",
+        "required": "L0",
+        "unmet": {
+          "L3": [
+            "L3.tasks"
+          ]
+        }
+      }
+    },
+    {
+      "name": "turning off required manifests drops below L2",
+      "risk_tier": "internal",
+      "spec": {
+        "guardrails": {
+          "input": [
+            {
+              "use": "pii.regex"
+            }
+          ]
+        },
+        "budgets": {
+          "per_run": {
+            "max_usd": 1
+          }
+        },
+        "policy": {
+          "rules": [
+            {
+              "when": "true",
+              "effect": "allow"
+            }
+          ]
+        },
+        "tools": {
+          "require_manifest": false
+        }
+      },
+      "expect": {
+        "level": "L1",
+        "required": "L0",
+        "unmet": {
+          "L2": [
+            "L2.require_manifest"
+          ],
+          "L3": [
+            "L3.tasks"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a task reaches L3",
+      "risk_tier": "internal",
+      "spec": {
+        "guardrails": {
+          "input": [
+            {
+              "use": "pii.regex"
+            }
+          ]
+        },
+        "budgets": {
+          "per_run": {
+            "max_usd": 1
+          }
+        },
+        "policy": {
+          "rules": [
+            {
+              "when": "true",
+              "effect": "allow"
+            }
+          ]
+        },
+        "tasks": {
+          "a": {
+            "output": "str"
+          }
+        }
+      },
+      "expect": {
+        "level": "L3",
+        "required": "L0",
+        "unmet": {
+          "L4": [
+            "L4.task_evals"
+          ]
+        }
+      }
+    },
+    {
+      "name": "an eval suite for every task reaches L4",
+      "risk_tier": "internal",
+      "spec": {
+        "guardrails": {
+          "input": [
+            {
+              "use": "pii.regex"
+            }
+          ]
+        },
+        "budgets": {
+          "per_run": {
+            "max_usd": 1
+          }
+        },
+        "policy": {
+          "rules": [
+            {
+              "when": "true",
+              "effect": "allow"
+            }
+          ]
+        },
+        "tasks": {
+          "a": {
+            "output": "str"
+          }
+        },
+        "evals": {
+          "a": [
+            "evals/a.yaml"
+          ]
+        }
+      },
+      "expect": {
+        "level": "L4",
+        "required": "L0",
+        "unmet": {}
+      }
+    },
+    {
+      "name": "the required level comes from the risk tier",
+      "risk_tier": "customer_facing",
+      "spec": {
+        "require_level": {
+          "default": "L1",
+          "tiers": {
+            "customer_facing": "L2"
+          }
+        }
+      },
+      "expect": {
+        "level": "L0",
+        "required": "L2",
+        "unmet": {
+          "L1": [
+            "L1.enforcing_guardrail"
+          ],
+          "L2": [
+            "L2.run_budget",
+            "L2.policy_rules"
+          ],
+          "L3": [
+            "L3.tasks"
+          ]
+        }
+      }
+    },
+    {
+      "name": "other tiers use the default requirement",
+      "risk_tier": "internal",
+      "spec": {
+        "require_level": {
+          "default": "L1",
+          "tiers": {
+            "customer_facing": "L2"
+          }
+        }
+      },
+      "expect": {
+        "level": "L0",
+        "required": "L1",
+        "unmet": {
+          "L1": [
+            "L1.enforcing_guardrail"
+          ],
+          "L2": [
+            "L2.run_budget",
+            "L2.policy_rules"
+          ],
+          "L3": [
+            "L3.tasks"
+          ]
+        }
+      }
+    }
+  ]
+}

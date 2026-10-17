@@ -411,60 +411,90 @@ flowchart TD
     V -->|ok| OK[EffectiveSpec + provenance]
 ```
 
+### Documents
+
+Specs are YAML 1.2 (core schema), read the same way in every language: `no`, `on` and `2026-01-05` stay strings, and a repeated key is an error (ADR-0017).
+
+| Document | `kind` | Allowed top-level keys |
+| --- | --- | --- |
+| App spec (`harness.yaml`) | `Harness` | `apiVersion`, `kind`, `metadata`, `extends`, and the sections |
+| Profile (built-in, plugin or org) | `Profile` | The same, plus `locks`, `bounds` and `require_level` |
+| Environment overlay (`harness.<env>.yaml`) | `Overlay` (optional) | Sections only; no `metadata`, `extends`, `locks`, `bounds` or `require_level` |
+
+Any other key fails loading (R4). Profile `metadata` describes the profile and is never merged into the app's. An overlay that doesn't exist is not an error; `spec explain` lists the layers that were applied.
+
+Sections that pick a provider with `use:` (guards, routing stages, context sources, middleware, runners, `models`, `policy`, `approvals`, `state`, `observability`) keep the provider's own settings next to `use:`. Those settings are validated against the provider's config model when the harness loads, so unknown keys still fail (R4).
+
 ### Merge rules
 
 | Value type | Rule | Example |
 | --- | --- | --- |
-| Scalar | Later layer wins unless locked | App sets `models.default: fast` |
-| Map | Deep merge | App adds `context.kb` beside baseline settings |
-| Guard and middleware lists | Append by `id`. Baseline items can't be removed or reordered; later items run *inside* earlier ones | App's injection guard runs inside the baseline's `base-pii` |
-| Locked path | Any change is a load error (R1) | `observability.capture_content: true` fails |
-| Locked list item `path[id]` | Changing or removing that item is a load error | `guardrails.input[base-pii]` |
-| Bounded number or duration | A value outside the bound is a load error, never a clamp (R10) | `max_usd: 8.00` fails against `max: 5.00` |
-| Task budgets | Checked against the `budgets.per_run` bounds | A task can't exceed the org's per-run cap |
-| Per-run override | Only fields listed in `overridable`, and only downward | A caller can lower `max_usd`, never raise it |
+| Scalar | The later layer wins unless locked | App sets `models.default: fast` |
+| Map | Merged key by key | App adds `context.kb` beside baseline settings |
+| Plain list | Replaced by the later layer | `routing.<r>.options` |
+| Keyed list | Merged by `id`. A known id updates that item in place; new items are appended; earlier items keep their position and can't be removed. Later items run *inside* earlier ones | App's injection guard runs inside the baseline's `base-pii` |
+| Item without an `id` | Appended, then given `<use>#<n>` (`rule#<n>` in rule lists, `item#<n>` otherwise), skipping ids already taken | `pii.regex#1` |
+| `null` | Unsets a scalar. Can't remove a map or a keyed list | `models.default: null` |
+| Type change (map vs. scalar) | Replaces the whole subtree, unless that would change a locked value | Rare; usually a mistake |
+| Locked path | Changing it, or anything under it, is a load error (R1). Restating the same value is allowed (ADR-0018) | `observability.capture_content: true` fails |
+| Locked list item `path[id]` | Changing that item is a load error; other items can still be added | `guardrails.input[base-pii]` |
+| Locked list `path` | The list can't change or grow | `guardrails.input` |
+| Bounded number or duration | A value outside the bound is a load error, never a clamp (R10). Bounds from several profiles all apply | `max_usd: 8.00` fails against `max: 5.00` |
+| Task budgets | Also checked against the `budgets.per_run.<field>` bounds | A task can't exceed the org's per-run cap |
+| Per-run override | Only fields listed in the task's `budget.overridable`, only downward, and still within bounds | A caller can lower `max_usd`, never raise it or remove it |
 
-**Provenance.** Every effective value remembers the layer and file it came from. `harnessweaver spec explain` prints it, and `harnessweaver spec diff` compares two specs (and runs in CI on every PR).
+The keyed lists are `guardrails.<stage>`, `middleware`, `routing.<router>.cascade`, `policy.rules`, `validation.rules` and `tasks.<task>.guardrails.<stage>`. Shorthands are expanded before merging: `runner: session` becomes `runner: { use: session }`, and a single `tools.manifests` glob becomes a list. Lock and bound paths use `a.b[id].c`, with `*` matching any map key and `[*]` any item. The `merge` conformance suite pins down every rule above.
 
-**Adoption level.** `levels.py` computes the level the effective spec reaches:
+A layer's own locks bind only later layers. Only profiles can put middleware in the `baseline` band (S8). Every cel-lite rule is compiled when the spec loads, against the names it may use: `principal`, `tenant`, `task`, `tool`, `args` and `labels` for `policy.rules`, and `output`, `input` and `task` for `validation.rules`. A typo therefore fails at load, not mid-run (R4).
 
-| Level | Reached when the effective spec has |
-| --- | --- |
-| L0 Observe | observability (always on through defaults) |
-| L1 Guard | at least one enforcing guardrail and output validation for every task |
-| L2 Govern | tool manifests required, budgets, policy, approvals |
-| L3 Orchestrate | tasks with runners, plus routing where tasks have variants |
-| L4 Improve | eval suites for every task |
+**Provenance.** Every effective value remembers the layer and file it came from. `harnessweaver spec explain` prints it, with locks and bounds. `harnessweaver spec diff` compares two specs, including locks and the adoption level, and runs in CI on every PR.
 
-The baseline's `require_level` (per `risk_tier`) is enforced at load time.
+**Adoption level.** `levels.py` computes the level the effective spec reaches. Levels are cumulative, and each requirement has a stable code (the `levels` conformance suite):
+
+| Level | Code | Requirement |
+| --- | --- | --- |
+| L0 Observe | - | Observability is always on |
+| L1 Guard | `L1.enforcing_guardrail` | At least one enabled guardrail with `mode: enforce` |
+| L1 Guard | `L1.task_outputs` | Every task declares an `output` (`str` for plain text) |
+| L2 Govern | `L2.require_manifest` | `tools.require_manifest` is true |
+| L2 Govern | `L2.run_budget` | `budgets.per_run` sets at least one limit |
+| L2 Govern | `L2.policy_rules` | `policy.rules` has at least one rule |
+| L3 Orchestrate | `L3.tasks` | At least one task is defined |
+| L4 Improve | `L4.task_evals` | Every task has at least one eval suite |
+
+The baseline's `require_level` picks the required level by `metadata.risk_tier`. A spec below it fails to load with `LevelTooLow`, which lists the missing requirement codes.
 
 ### Spec shape (abridged)
 
 ```yaml
 apiVersion: harnessweaver/v1
-kind: Harness                         # or Profile, Tool
+kind: Harness                         # or Profile
 metadata: { name: support-assistant, owner: cx-team, risk_tier: customer_facing }
 extends: [ "org://acme-baseline@^2", "profile://rag" ]
 plugins:     { local: [ "app.harness_plugin" ], allow: [ openai, acme ] }   # allow is usually locked by the org baseline
-models:      { default: fast, provider: openai.chat, aliases: { fast: ..., strong: ... } }
+models:      { provider: openai.chat, default: fast, aliases: { fast: ..., strong: ... }, prices: {...} }
 middleware:  [ { use: acme.no_weekend_refunds, band: app } ]
 routing:     { <router>: { options: [...], cascade: [...], default: ... } }
-context:     { <name>: { use: memory, acl: tags, label: untrusted } }
+context:     { <name>: { use: memory, label: untrusted, max_items: 5 } }
 guardrails:  { input: [...], context: [...], tool_result: [...], output: [...], stream: [...] }
-validation:  { max_repairs: 1, on_failure: escalate }
-tools:       { manifests: "tools/*.tool.yaml", require_manifest: true }
-policy:      { use: cel_lite, rules: [...] }
-approvals:   { channel: memory, timeout: 24h, on_timeout: escalate }
+validation:  { max_repairs: 1, on_failure: escalate, rules: [ { when: "output.total >= 0", message: ... } ] }
+tools:       { manifests: [ "tools/*.tool.yaml" ], require_manifest: true }
+policy:      { use: cel_lite, rules: [ { when: "args.amount_usd > 100", effect: require_approval } ] }
+approvals:   { use: memory, timeout: 24h, on_timeout: escalate }
 budgets:     { per_run: { max_usd: 2.00, deadline: 5m } }
 state:       { use: sqlite, path: .harness/state.db }
 observability: { exporter: otlp, capture_content: false }
-evals:       { <task>: [ evals/golden.yaml ] }
+evals:       { <task>: [ evals/golden.yaml ], online: { sample_rate: 0.05 } }
 tasks:       { <task>: { version: 1.0.0, runner: direct, output: "app.schemas:Invoice", budget: {...} } }
 # Profiles only:
 require_level: { default: L1, tiers: { customer_facing: L2, takes_actions: L3 } }
 locks:  [ observability.capture_content, guardrails.input[base-pii] ]
-bounds: { budgets.per_run.max_usd: { max: 5.00 } }
+bounds: { budgets.per_run.max_usd: { max: 5.00 }, tasks.*.budget.max_tool_calls: { max: 50 } }
 ```
+
+The JSON Schemas `contracts/schemas/harness.schema.json` and `profile.schema.json` describe complete documents. Profiles and overlays are partial, so an editor may flag a profile that only tweaks part of a section.
+
+The built-in profiles are `defaults` (always the first layer), `extraction`, `rag`, `agent`, `workflow` and `chat`.
 
 ## 12. Module anatomy
 
@@ -998,6 +1028,9 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | **0014** | A middleware's `fail_mode` is a required argument | "Fail mode is declared, never implied" (R2) | Accepted |
 | **0015** | **Plugins are defined by design, not by name.** One contract (`hw.Plugin` exposed through the `harnessweaver.plugins` entry-point group, or `plugins.local` for in-repo code) for first-party, third-party and built-in contributions. Names are namespaced by the plugin; plugins are imported only when the spec references them; orgs can lock an allow-list | Anyone can build a plugin in their own repo and use it with no change to HarnessWeaver; one entry point per distribution keeps discovery cheap and lazy; namespaces make ownership unambiguous; allow-lists keep the supply chain governable | Accepted |
 | **0016** | Dependencies outside the core: the CLI uses `typer` and `rich` (plus `ruamel.yaml` once it edits specs); the sidecar uses `fastapi` and `uvicorn`; each first-party plugin depends only on the library it integrates (`openai`, `anthropic`, `pydantic-ai-slim`, `pydantic-monty`, `opentelemetry-sdk` with the OTLP HTTP exporter, `cel-python`); development uses `pytest`, `hypothesis`, `coverage`, `httpx` (FastAPI's test client), `ruff` and `pyright` | Widely used, typed tools; each heavy dependency stays out of the core (R6) and is only installed with the package that needs it (C10) | Accepted |
+| **0017** | Specs are read as YAML 1.2 (core schema): only `true`/`false` are booleans, there are no implicit dates or sexagesimal numbers, `012` is decimal, and duplicate keys are errors | PyYAML implements YAML 1.1 (`no` is false, `1:30` is 90), while JavaScript's `yaml` follows 1.2. One schema keeps a spec meaning the same in every language | Accepted |
+| **0018** | A lock forbids *changing* a value (or anything under it), not restating it. Bounds from several profiles accumulate and are never loosened by a later layer | Apps can repeat baseline values for readability without failing; stacking org profiles can only tighten | Accepted |
+| **0019** | One `models` section (`provider`, `default`, `aliases`, `allowed_aliases`, `prices`) replaces the guide's separate `model_access` and `models`. Provider settings sit next to `use:` and are validated by the provider. `evals.online` is a reserved key beside the per-task suite lists | One place to read model access; the guide's inline provider settings stay valid; the guide's `evals: {task: [files]}` form stays valid | Accepted |
 
 ## 29. Deviations from the design guide
 
@@ -1013,6 +1046,8 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | Sidecar with FastAPI + gRPC | HTTP/JSON first, proto kept for later gRPC | Scope (0007) |
 | `harness.yaml` guards enforce as written | Same, plus the CLI scaffolds shadow guards | (0008) |
 | A versioned price table in core | No built-in prices | Accuracy (0012) |
+| `model_access` (org) plus `models` (app) | One `models` section with `provider`, `aliases`, `allowed_aliases` | One place to read model access (0019) |
+| YAML parsed by whatever library a language has | YAML 1.2 core schema everywhere; duplicate keys fail | Same meaning in every language (0017) |
 
 ## 30. Open decisions
 

@@ -1,0 +1,14 @@
+# Typed extraction: one structured generate, validated with one repair.
+apiVersion: harnessweaver/v1
+kind: Profile
+metadata: { name: extraction, version: 1.0.0, owner: harnessweaver }
+guardrails:
+  input:
+    - { id: extraction-pii, use: pii.regex, action: redact }
+  output:
+    - { id: extraction-secrets, use: secrets.scan, action: block }
+validation:
+  max_repairs: 1
+  on_failure: escalate
+budgets:
+  per_run: { deadline: 1m }

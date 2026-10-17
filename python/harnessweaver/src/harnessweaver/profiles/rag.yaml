@@ -1,0 +1,15 @@
+# Retrieval-augmented answers: injection checks on input and retrieved context,
+# untrusted context, and an output secrets check.
+apiVersion: harnessweaver/v1
+kind: Profile
+metadata: { name: rag, version: 1.0.0, owner: harnessweaver }
+guardrails:
+  input:
+    - { id: rag-pii, use: pii.regex, action: redact }
+    - { id: rag-injection, use: injection.heuristic, action: block }
+  context:
+    - { id: rag-context-injection, use: injection.heuristic, action: block }
+  output:
+    - { id: rag-secrets, use: secrets.scan, action: block }
+budgets:
+  per_run: { deadline: 30s }

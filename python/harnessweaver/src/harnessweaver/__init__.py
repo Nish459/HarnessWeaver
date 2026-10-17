@@ -62,6 +62,7 @@ from harnessweaver.core.outcomes import Block, Continue, Escalate, Outcome, Retr
 from harnessweaver.core.retrieval import Acl, ContextItem
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest, RunStatus
 from harnessweaver.core.tools import Risk, SideEffect, ToolInfo, ToolResult
+from harnessweaver.spec import EffectiveSpec, HarnessSpec, Level, ProfileSpec, load_spec
 
 __version__: str = _version("harnessweaver")
 
@@ -83,16 +84,19 @@ __all__ = [
     "DecisionRequest",
     "Direction",
     "Duration",
+    "EffectiveSpec",
     "Envelope",
     "Escalate",
     "FakeClock",
     "Finding",
     "GuardAction",
     "GuardResult",
+    "HarnessSpec",
     "HookEvent",
     "HookPoint",
     "InputEvent",
     "Labels",
+    "Level",
     "Message",
     "ModelRequest",
     "ModelRequestEvent",
@@ -102,6 +106,7 @@ __all__ = [
     "OutputEvent",
     "PolicyEffect",
     "Principal",
+    "ProfileSpec",
     "Retry",
     "Risk",
     "Role",
@@ -125,6 +130,7 @@ __all__ = [
     "__version__",
     "errors",
     "format_duration",
+    "load_spec",
     "parse_duration",
     "tighten",
 ]

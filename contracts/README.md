@@ -19,6 +19,7 @@ make schemas-check    # report drift
 
 | Schema | Contract |
 | --- | --- |
+| `harness`, `profile` | The `harness.yaml` app spec and profile documents (complete documents; profiles and overlays may be partial) |
 | `envelope` | The immutable run context every hook event carries |
 | `hook-event` | The 13 hook event payloads, discriminated by `hook` |
 | `outcome` | What middleware returns: `continue`, `retry`, `escalate`, `suspend`, `block` |
@@ -56,6 +57,8 @@ The fields of a case depend on the suite:
 | `outcomes` | `outcome` or `outcomes: [...]` | `{severity}` or `{kind, index}` (first most severe; `null` when empty) |
 | `hook_order` | `directions` map, or `hook` + `middleware: [{name, band}]` | execution order of names |
 | `expr` | `expr`, optional `vars` | `{value, type?}` or `{error: "syntax" \| "eval"}` |
+| `merge` | `layers: [{name, kind, data}]`, or a run budget (`per_run`, `task_budget`, `overrides`, optional `bounds`) | merged `value` plus `provenance` (path to layer name), the `budget`, or `{error, lock?, bound?}` with `error` one of `lock_violation`, `bound_violation`, `spec_invalid` |
+| `levels` | `spec` sections and `risk_tier` | `{level, required, unmet}` with requirement codes by level |
 
 Expected values are written by hand from the design, never copied from an implementation's output. When `expect.type` is given for a number, implementations must also return that cel-lite type (`int` or `double`).
 

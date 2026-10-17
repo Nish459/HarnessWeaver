@@ -1,0 +1,26 @@
+# The framework defaults: the first layer of every app's effective spec.
+# Safe and minimal. Change them in a profile or in harness.yaml, never here.
+apiVersion: harnessweaver/v1
+kind: Profile
+metadata: { name: defaults, version: 1.0.0, owner: harnessweaver }
+observability:
+  exporter: none
+  capture_content: false   # R9: no raw content in telemetry
+  configure_sdk: false     # R5: the app owns its OpenTelemetry setup
+tools:
+  require_manifest: true   # S2: no tool runs without a manifest
+  max_output_bytes: 20000
+validation:
+  max_repairs: 1
+  on_failure: block
+policy:
+  use: cel_lite
+  default_effect: allow
+approvals:
+  use: memory
+  timeout: 24h
+  on_timeout: escalate
+state:
+  use: memory
+require_level:
+  default: L0

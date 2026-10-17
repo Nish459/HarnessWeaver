@@ -1,0 +1,13 @@
+# Conversational apps: streamed output is moderated as it is produced.
+apiVersion: harnessweaver/v1
+kind: Profile
+metadata: { name: chat, version: 1.0.0, owner: harnessweaver }
+guardrails:
+  input:
+    - { id: chat-pii, use: pii.regex, action: redact }
+  stream:
+    - { id: chat-stream-secrets, use: secrets.scan, action: block }
+  output:
+    - { id: chat-secrets, use: secrets.scan, action: block }
+budgets:
+  per_run: { deadline: 1m }

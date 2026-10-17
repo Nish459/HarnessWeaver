@@ -1,0 +1,725 @@
+{
+  "suite": "merge",
+  "description": "How layers merge: scalars, maps, keyed lists, nulls and shorthands.",
+  "cases": [
+    {
+      "name": "a later layer's scalar wins",
+      "layers": [
+        {
+          "name": "defaults",
+          "kind": "defaults",
+          "data": {
+            "models": {
+              "default": "fast"
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "models": {
+              "default": "strong"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "models": {
+            "default": "strong"
+          }
+        },
+        "provenance": {
+          "models.default": "app"
+        }
+      }
+    },
+    {
+      "name": "maps merge key by key",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "context": {
+              "kb": {
+                "use": "memory",
+                "label": "untrusted"
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "context": {
+              "faq": {
+                "use": "memory"
+              },
+              "kb": {
+                "max_items": 5
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "context": {
+            "kb": {
+              "use": "memory",
+              "label": "untrusted",
+              "max_items": 5
+            },
+            "faq": {
+              "use": "memory"
+            }
+          }
+        },
+        "provenance": {
+          "context.kb.use": "org",
+          "context.kb.max_items": "app",
+          "context.faq.use": "app"
+        }
+      }
+    },
+    {
+      "name": "keyed list items are appended after earlier ones",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "base-pii",
+                  "use": "pii.regex",
+                  "action": "redact"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "inject",
+                  "use": "injection.heuristic",
+                  "action": "block"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "guardrails": {
+            "input": [
+              {
+                "id": "base-pii",
+                "use": "pii.regex",
+                "action": "redact"
+              },
+              {
+                "id": "inject",
+                "use": "injection.heuristic",
+                "action": "block"
+              }
+            ]
+          }
+        },
+        "provenance": {
+          "guardrails.input[base-pii].action": "org",
+          "guardrails.input[inject].use": "app"
+        }
+      }
+    },
+    {
+      "name": "an item with a known id is updated in place and keeps its position",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "a",
+                  "use": "x"
+                },
+                {
+                  "id": "b",
+                  "use": "y"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "b",
+                  "threshold": 0.9
+                },
+                {
+                  "id": "c",
+                  "use": "z"
+                },
+                {
+                  "id": "a",
+                  "action": "block"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "guardrails": {
+            "input": [
+              {
+                "id": "a",
+                "use": "x",
+                "action": "block"
+              },
+              {
+                "id": "b",
+                "use": "y",
+                "threshold": 0.9
+              },
+              {
+                "id": "c",
+                "use": "z"
+              }
+            ]
+          }
+        },
+        "provenance": {
+          "guardrails.input[a].use": "org",
+          "guardrails.input[a].action": "app",
+          "guardrails.input[b].threshold": "app"
+        }
+      }
+    },
+    {
+      "name": "items without an id get <use>#<n> ids after merging",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "use": "pii.regex"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "use": "pii.regex"
+                },
+                {
+                  "use": "secrets.scan"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "guardrails": {
+            "input": [
+              {
+                "use": "pii.regex",
+                "id": "pii.regex#1"
+              },
+              {
+                "use": "pii.regex",
+                "id": "pii.regex#2"
+              },
+              {
+                "use": "secrets.scan",
+                "id": "secrets.scan#1"
+              }
+            ]
+          }
+        },
+        "provenance": {
+          "guardrails.input[pii.regex#1].use": "org",
+          "guardrails.input[pii.regex#2].use": "app"
+        }
+      }
+    },
+    {
+      "name": "generated ids skip ids that are already taken",
+      "layers": [
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "output": [
+                {
+                  "id": "pii.regex#1",
+                  "use": "regex.deny"
+                },
+                {
+                  "use": "pii.regex"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "guardrails": {
+            "output": [
+              {
+                "id": "pii.regex#1",
+                "use": "regex.deny"
+              },
+              {
+                "use": "pii.regex",
+                "id": "pii.regex#2"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "middleware, routing cascades and rule lists are keyed lists too",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "middleware": [
+              {
+                "id": "trace",
+                "use": "acme.trace",
+                "band": "baseline"
+              }
+            ],
+            "policy": {
+              "rules": [
+                {
+                  "id": "r1",
+                  "when": "true",
+                  "effect": "allow"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "middleware": [
+              {
+                "id": "audit",
+                "use": "acme.audit"
+              }
+            ],
+            "policy": {
+              "rules": [
+                {
+                  "id": "r2",
+                  "when": "false",
+                  "effect": "deny"
+                }
+              ]
+            },
+            "validation": {
+              "rules": [
+                {
+                  "when": "true",
+                  "message": "m"
+                }
+              ]
+            },
+            "routing": {
+              "r": {
+                "options": [
+                  "a"
+                ],
+                "cascade": [
+                  {
+                    "use": "rules"
+                  }
+                ]
+              }
+            },
+            "tasks": {
+              "t": {
+                "guardrails": {
+                  "input": [
+                    {
+                      "use": "pii.regex"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "middleware": [
+            {
+              "id": "trace",
+              "use": "acme.trace",
+              "band": "baseline"
+            },
+            {
+              "id": "audit",
+              "use": "acme.audit"
+            }
+          ],
+          "policy": {
+            "rules": [
+              {
+                "id": "r1",
+                "when": "true",
+                "effect": "allow"
+              },
+              {
+                "id": "r2",
+                "when": "false",
+                "effect": "deny"
+              }
+            ]
+          },
+          "validation": {
+            "rules": [
+              {
+                "when": "true",
+                "message": "m",
+                "id": "rule#1"
+              }
+            ]
+          },
+          "routing": {
+            "r": {
+              "options": [
+                "a"
+              ],
+              "cascade": [
+                {
+                  "use": "rules",
+                  "id": "rules#1"
+                }
+              ]
+            }
+          },
+          "tasks": {
+            "t": {
+              "guardrails": {
+                "input": [
+                  {
+                    "use": "pii.regex",
+                    "id": "pii.regex#1"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "plain lists are replaced, not merged",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "routing": {
+              "r": {
+                "options": [
+                  "a",
+                  "b"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "routing": {
+              "r": {
+                "options": [
+                  "c"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "routing": {
+            "r": {
+              "options": [
+                "c"
+              ]
+            }
+          }
+        },
+        "provenance": {
+          "routing.r.options": "app"
+        }
+      }
+    },
+    {
+      "name": "null unsets a scalar",
+      "layers": [
+        {
+          "name": "defaults",
+          "kind": "defaults",
+          "data": {
+            "models": {
+              "default": "fast"
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "models": {
+              "default": null
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "models": {
+            "default": null
+          }
+        },
+        "provenance": {
+          "models.default": "app"
+        }
+      }
+    },
+    {
+      "name": "null can't remove a map",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "context": {
+              "kb": {
+                "use": "memory"
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "context": null
+          }
+        }
+      ],
+      "expect": {
+        "error": "spec_invalid"
+      }
+    },
+    {
+      "name": "null can't remove a keyed list",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "base-pii",
+                  "use": "pii.regex",
+                  "action": "redact"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "input": null
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "spec_invalid"
+      }
+    },
+    {
+      "name": "a keyed list can't become a scalar",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "base-pii",
+                  "use": "pii.regex",
+                  "action": "redact"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "input": "none"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "spec_invalid"
+      }
+    },
+    {
+      "name": "keyed list items must be maps",
+      "layers": [
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "input": [
+                "pii.regex"
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "spec_invalid"
+      }
+    },
+    {
+      "name": "shorthands: a runner name and a single manifest glob",
+      "layers": [
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "tasks": {
+              "t": {
+                "runner": "session"
+              }
+            },
+            "tools": {
+              "manifests": "tools/*.tool.yaml"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "tasks": {
+            "t": {
+              "runner": {
+                "use": "session"
+              }
+            }
+          },
+          "tools": {
+            "manifests": [
+              "tools/*.tool.yaml"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a runner name updates a runner map from an earlier layer",
+      "layers": [
+        {
+          "name": "profile",
+          "kind": "profile",
+          "data": {
+            "tasks": {
+              "t": {
+                "runner": {
+                  "use": "direct",
+                  "max_steps": 5
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "tasks": {
+              "t": {
+                "runner": "session"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "tasks": {
+            "t": {
+              "runner": {
+                "use": "session",
+                "max_steps": 5
+              }
+            }
+          }
+        },
+        "provenance": {
+          "tasks.t.runner.use": "app",
+          "tasks.t.runner.max_steps": "profile"
+        }
+      }
+    }
+  ]
+}

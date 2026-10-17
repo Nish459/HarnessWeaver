@@ -1,0 +1,15 @@
+# Tool-using agents: governed tools, capped tool calls, sanitized tool output.
+apiVersion: harnessweaver/v1
+kind: Profile
+metadata: { name: agent, version: 1.0.0, owner: harnessweaver }
+guardrails:
+  input:
+    - { id: agent-injection, use: injection.heuristic, action: block }
+  tool_result:
+    - { id: agent-tool-secrets, use: secrets.scan, action: redact }
+  output:
+    - { id: agent-secrets, use: secrets.scan, action: block }
+tools:
+  require_manifest: true
+budgets:
+  per_run: { max_tool_calls: 20, deadline: 2m }

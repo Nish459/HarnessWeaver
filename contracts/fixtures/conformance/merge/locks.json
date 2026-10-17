@@ -1,0 +1,442 @@
+{
+  "suite": "merge",
+  "description": "Locks: later layers can't change what a profile locked (R1).",
+  "cases": [
+    {
+      "name": "changing a locked value fails",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "observability": {
+              "capture_content": false
+            },
+            "locks": [
+              "observability.capture_content"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "observability": {
+              "capture_content": true
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "lock_violation",
+        "lock": "observability.capture_content"
+      }
+    },
+    {
+      "name": "restating a locked value is allowed and keeps the profile's provenance",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "observability": {
+              "capture_content": false
+            },
+            "locks": [
+              "observability.capture_content"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "observability": {
+              "capture_content": false
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "observability": {
+            "capture_content": false
+          }
+        },
+        "provenance": {
+          "observability.capture_content": "org"
+        }
+      }
+    },
+    {
+      "name": "a lock covers everything below it",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "models": {
+              "provider": "openai.chat",
+              "base_url": "https://llm-gw.internal"
+            },
+            "locks": [
+              "models"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "models": {
+              "default": "fast"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "lock_violation",
+        "lock": "models"
+      }
+    },
+    {
+      "name": "a locked item can't change",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "base-pii",
+                  "use": "pii.regex",
+                  "action": "redact"
+                }
+              ]
+            },
+            "locks": [
+              "guardrails.input[base-pii]"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "base-pii",
+                  "mode": "log_only"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "lock_violation",
+        "lock": "guardrails.input[base-pii]"
+      }
+    },
+    {
+      "name": "items can be added next to a locked item",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "base-pii",
+                  "use": "pii.regex",
+                  "action": "redact"
+                }
+              ]
+            },
+            "locks": [
+              "guardrails.input[base-pii]"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "inject",
+                  "use": "injection.heuristic",
+                  "action": "block"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "guardrails": {
+            "input": [
+              {
+                "id": "base-pii",
+                "use": "pii.regex",
+                "action": "redact"
+              },
+              {
+                "id": "inject",
+                "use": "injection.heuristic",
+                "action": "block"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a locked list can't grow",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "base-pii",
+                  "use": "pii.regex",
+                  "action": "redact"
+                }
+              ]
+            },
+            "locks": [
+              "guardrails.input"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "inject",
+                  "use": "injection.heuristic",
+                  "action": "block"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "lock_violation",
+        "lock": "guardrails.input"
+      }
+    },
+    {
+      "name": "a lock on an unset path keeps it unset",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "locks": [
+              "budgets.per_run.max_usd"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "max_usd": 1
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "lock_violation",
+        "lock": "budgets.per_run.max_usd"
+      }
+    },
+    {
+      "name": "creating an empty section under a lock fails",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "locks": [
+              "context"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "context": {
+              "kb": {}
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "lock_violation",
+        "lock": "context"
+      }
+    },
+    {
+      "name": "a layer's own locks only bind later layers",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "observability": {
+              "capture_content": false
+            },
+            "locks": [
+              "observability.capture_content"
+            ]
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "observability": {
+            "capture_content": false
+          }
+        }
+      }
+    },
+    {
+      "name": "a later profile can't change what an earlier profile locked",
+      "layers": [
+        {
+          "name": "security",
+          "kind": "org",
+          "data": {
+            "observability": {
+              "capture_content": false
+            },
+            "locks": [
+              "observability.capture_content"
+            ]
+          }
+        },
+        {
+          "name": "team",
+          "kind": "org",
+          "data": {
+            "observability": {
+              "capture_content": true
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "lock_violation",
+        "lock": "observability.capture_content"
+      }
+    },
+    {
+      "name": "the environment overlay is bound by locks too",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "models": {
+              "base_url": "https://llm-gw.internal"
+            },
+            "locks": [
+              "models.base_url"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "models": {
+              "default": "fast"
+            }
+          }
+        },
+        {
+          "name": "overlay",
+          "kind": "overlay",
+          "data": {
+            "models": {
+              "base_url": "http://localhost:4000"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "lock_violation",
+        "lock": "models.base_url"
+      }
+    },
+    {
+      "name": "only profiles may declare locks",
+      "layers": [
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "locks": [
+              "models"
+            ]
+          }
+        }
+      ],
+      "expect": {
+        "error": "spec_invalid"
+      }
+    },
+    {
+      "name": "only profiles may declare bounds",
+      "layers": [
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "max": 1
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "spec_invalid"
+      }
+    },
+    {
+      "name": "locks must be a list of paths",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "locks": "models"
+          }
+        }
+      ],
+      "expect": {
+        "error": "spec_invalid"
+      }
+    }
+  ]
+}
