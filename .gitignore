@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.pyright/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+
+# TypeScript
+node_modules/
+typescript/**/dist/
+*.tsbuildinfo
+
+# Docs site
+site/
+
+# HarnessWeaver local run state (baselines under .harness/baselines are committed per example)
+.harness/state.db
+.harness/dev/
+*.db-journal
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+
+# Claude Code local files
+.claude/settings.local.json
+.claude/.cc-writes/
+
+# Secrets
+.env
+.env.*
+!.env.example
