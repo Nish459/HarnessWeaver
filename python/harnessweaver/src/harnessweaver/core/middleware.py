@@ -100,6 +100,8 @@ class MiddlewareDef:
     timeout: timedelta | None
     config: type[BaseModel] | None = None
     description: str | None = None
+    sample: Mapping[str, Any] | None = None
+    """Settings the conformance suite builds a class middleware with (T5)."""
 
     @property
     def is_class(self) -> bool:
@@ -148,6 +150,7 @@ def middleware(
     timeout: timedelta | str | float | None = None,
     name: str | None = None,
     config: type[BaseModel] | None = None,
+    sample: Mapping[str, Any] | None = None,
 ) -> Callable[[Callable[..., Any]], MiddlewareDef]:
     """Declare a middleware (DESIGNS No. 8).
 
@@ -190,6 +193,7 @@ def middleware(
             timeout=_timeout(timeout),
             config=config,
             description=inspect.getdoc(func),
+            sample=dict(sample) if sample is not None else None,
         )
 
     return declare

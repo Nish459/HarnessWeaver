@@ -116,7 +116,12 @@ def _first(group: BaseExceptionGroup[BaseException]) -> BaseException:
     return leaves[0]
 
 
-@runner("workflow", reaches=ALL_HOOKS, config=WorkflowConfig)
+@runner(
+    "workflow",
+    reaches=ALL_HOOKS,
+    config=WorkflowConfig,
+    sample={"steps": [{"id": "echo", "handler": "harnessweaver.testing.samples:echo_step"}]},
+)
 class WorkflowRunner:
     """Run a fixed graph of app functions, in parallel where the graph allows."""
 

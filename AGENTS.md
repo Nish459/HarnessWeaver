@@ -57,13 +57,14 @@ uv sync --all-packages          # install every workspace package + dev tools in
 
 | Task | Command |
 | --- | --- |
-| Everything CI runs (lint, format check, types, tests) | `make check` |
+| Everything CI runs (lint, format check, types, tests, conformance) | `make check` |
 | Tests only | `make test` (or `uv run pytest -q`) |
 | One test | `uv run pytest python/harnessweaver/tests/test_bus.py::test_onion_order -q` |
 | Lint / auto-fix / format | `make lint`, `make fmt` |
 | Type check | `make typecheck` (pyright; strict on `core/` and `spec/`) |
 | Regenerate contract schemas | `make schemas` (then commit `contracts/schemas`); `make schemas-check` reports drift |
 | Conformance fixtures only | `uv run pytest python/harnessweaver/tests/conformance -q` |
+| Plugin conformance (T5) | `make conformance`, or `uv run pytest --harnessweaver-conformance=<namespace>` |
 | Run an example offline | `HARNESSWEAVER_ENV=offline uv run python examples/01_invoice_extraction/run.py` |
 | CLI from source | `uv run harnessweaver --help` |
 | TypeScript | `pnpm -C typescript install && pnpm -C typescript test && pnpm -C typescript build` |
@@ -105,7 +106,7 @@ flowchart LR
 
 ### Add a provider for an existing port
 1. Write a Pydantic config model and a class that satisfies the port Protocol in `core/ports.py`.
-2. Decorate it with `@hw.provider(port=..., name="area.capability", config=..., contract=">=1.0,<2", deterministic=..., latency_class=...)`.
+2. Decorate it with `@hw.provider(port=..., name="area.capability", config=..., contract=">=1.0,<2", deterministic=..., latency_class=...)`. If the config has required fields, add `sample={...}` so the conformance suite can build it.
 3. Add it to the owning plugin's `hw.Plugin(providers=[...])`. Its name must sit in that plugin's namespace (`acme.pii`); core providers belong to the built-in plugin and use the reserved area namespaces (DESIGNS No. 13).
 4. Add unit tests, and make it pass `--harnessweaver-conformance=<name>` (T5).
 5. If its behavior is part of a contract (built-in guards, cel-lite, the governor), add JSON fixtures and make the TypeScript implementation pass them too (R11, T4).
@@ -147,7 +148,8 @@ A plugin is defined by its design, not its name (DESIGNS No. 13, ADR-0015). Firs
 
 ## Testing
 
-- Offline only (R14, T2): `ScriptedModel`, `FakeTool`, `FakeDecider`, cassettes. `HARNESSWEAVER_TEST_MODE=1` makes live providers refuse network calls.
+- Offline only (R14, T2): `harnessweaver.testing` has `harness_for_test`, `scripted` (`text`, `output`, `tool_call`), `FakeTool`, `FakeDecider`, `assert_trace`, `assert_no_content` and `Cassette`. `HARNESSWEAVER_TEST_MODE=1` (set for every test by the root `conftest.py`) makes live providers refuse network calls.
+- Every first-party plugin passes `make conformance` (T5); it is part of `make check`.
 - Async tests: `@pytest.mark.anyio`. Fake clocks, not sleeps (T8).
 - Property tests (Hypothesis) for merge, outcome and expression logic (T3).
 - A bug fix starts with a failing test (T1).

@@ -55,7 +55,7 @@ from harnessweaver.core.messages import StreamChunk
 from harnessweaver.core.middleware import Registration
 from harnessweaver.core.outcomes import Retry
 from harnessweaver.core.plugins import AdapterInfo, namespace_of
-from harnessweaver.core.ports import Runner, StateStore, ToolBackend
+from harnessweaver.core.ports import ModelProvider, Runner, StateStore, ToolBackend
 from harnessweaver.core.registry import PluginCatalog, Registry
 from harnessweaver.core.results import RunEvent, RunResult
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest, RunStatus
@@ -242,11 +242,15 @@ class Harness:
         tools: ToolBackend | None = None,
         catalog: PluginCatalog | None = None,
         telemetry: Telemetry | None = None,
+        model: ModelProvider | None = None,
     ) -> Self:
         """Build a harness from an already loaded spec. See :meth:`load`.
 
         ``telemetry`` replaces the harness's own (for example to use specific
         OpenTelemetry providers); ``observability.capture_content`` still applies.
+        ``model`` replaces ``models.provider`` with a provider object, for tests
+        and offline runs (``harnessweaver.testing.harness_for_test``); aliases,
+        prices and allow-lists still apply.
         """
         spec = effective.spec
         unsupported = _unsupported(spec)
@@ -268,7 +272,7 @@ class Harness:
         if telemetry is not None:
             telemetry.capture_content = spec.observability.capture_content
         telemetry = telemetry or built
-        models = cls._model_access(spec, registry)
+        models = cls._model_access(spec, registry, model)
         bus = HookBus()
         install_guardrails(effective, registry, bus)
         install_validation(effective, bus)
@@ -309,10 +313,12 @@ class Harness:
         return Telemetry(capture_content=settings.capture_content)
 
     @staticmethod
-    def _model_access(spec: HarnessSpec, registry: Registry) -> ModelAccess:
+    def _model_access(
+        spec: HarnessSpec, registry: Registry, override: ModelProvider | None = None
+    ) -> ModelAccess:
         models = spec.models
-        provider = None
-        if models.provider is not None:
+        provider: ModelProvider | None = override
+        if provider is None and models.provider is not None:
             provider = registry.provider("ModelProvider", models.provider).build(
                 models.provider_settings()
             )
@@ -324,7 +330,13 @@ class Harness:
             aliases=dict(models.aliases),
             allowed_aliases=allowed,
             prices=prices.get if prices else None,
-            provider_name=namespace_of(models.provider) if models.provider else None,
+            provider_name=(
+                type(override).__name__
+                if override is not None
+                else namespace_of(models.provider)
+                if models.provider
+                else None
+            ),
         )
 
     @staticmethod

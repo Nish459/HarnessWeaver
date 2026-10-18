@@ -37,3 +37,9 @@ answer = await client.chat.completions.create(model="gpt-x-mini", messages=[...]
 ```
 
 `chat.completions.create` calls are governed: traced, costed, budgeted and guarded (`input.before` on the messages, `output.before` on the answer), with redactions written back. Everything else passes through. Streaming through an instrumented client is *planned* and raises for now.
+
+## Conformance
+
+```bash
+uv run pytest --harnessweaver-conformance=openai
+```

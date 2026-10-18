@@ -109,7 +109,7 @@ strict = [
 [tool.pytest.ini_options]
 minversion = "9.0"
 testpaths = ["python"]
-addopts = ["-ra", "--strict-markers", "--strict-config", "--import-mode=importlib"]
+addopts = ["-ra", "--strict-markers", "--strict-config", "--import-mode=importlib", "-p", "pytester"]
 xfail_strict = true
 markers = [
     "conformance_suite(name): run once per case in contracts/fixtures/conformance/<name>",

@@ -39,3 +39,9 @@ message = await client.messages.create(model="claude-opus-5-5", max_tokens=1024,
 ```
 
 `messages.create` calls are governed: traced, budgeted and guarded (`input.before` on the system prompt and message text, `output.before` on the answer), with redactions written back. Everything else, including `client.beta.messages`, passes through. Streaming through an instrumented client is *planned* and raises for now.
+
+## Conformance
+
+```bash
+uv run pytest --harnessweaver-conformance=anthropic
+```

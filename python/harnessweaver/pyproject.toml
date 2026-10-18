@@ -39,5 +39,8 @@ cli = ["harnessweaver-cli>=0.1.0"]
 sidecar = ["harnessweaver-sidecar>=0.1.0"]
 all = ["harnessweaver[openai,anthropic,pydantic-ai,monty,otel,cel,cli,sidecar]"]
 
+[project.entry-points.pytest11]
+harnessweaver = "harnessweaver.testing.pytest_plugin"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/harnessweaver"]

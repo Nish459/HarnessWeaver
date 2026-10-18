@@ -692,8 +692,30 @@ flowchart TD
    - `harnessweaver.testing`
 
    This surface is versioned with the contract (V1, V2), so a plugin keeps working across core releases within `harnessweaver/v1`.
-3. Run `pytest --harnessweaver-conformance=acme`.
+3. Run `pytest --harnessweaver-conformance=acme` (see *Conformance* below).
 4. Publish under any name. Apps `uv add` the package and reference `acme.*` in `harness.yaml`. `harnessweaver plugin list` shows each installed plugin, its namespace, version and whether its contract range is compatible.
+
+### Conformance
+
+Installing `harnessweaver` adds a pytest plugin (through the `pytest11` entry point; it does nothing unless asked). `pytest --harnessweaver-conformance=<namespace>` collects a suite shipped in `harnessweaver.testing` that checks one plugin: an installed namespace, `harnessweaver` for the built-in plugin, or `module:attribute` for an in-repo one (T5). The checks are plain functions in `harnessweaver.testing.conformance`, so they also run outside pytest.
+
+| Check | Applies to |
+| --- | --- |
+| Metadata: entry point, contract range (V5), names in the namespace, profiles and templates exist | the plugin |
+| Importing it opens no sockets, writes no files and installs no global OpenTelemetry provider (S8) | the plugin |
+| Builds from its config model alone, or from its declared `sample` settings (C11) | every contribution |
+| Results validate against the port's contract (a state store also passes a round-trip contract) | guardrails, deciders, model providers, state stores |
+| Fresh instances give the same results for the same input | `deterministic=True` providers |
+| A guard that runs past its timeout blocks when it fails closed, and is cancellable | guardrails |
+| A canary string passed through never reaches logs, spans or traces (R9) | guardrails, model providers |
+| p95 latency within the declared class (`fast` 25 ms, `medium` 250 ms, `slow` 5 s) | guardrails, deciders, offline model providers, state stores |
+| Answers every declared hook with an outcome, never by raising | middleware |
+| A task runs to a final state and fires only hooks the runner declares (R4) | runners |
+| One call fires every declared hook (except conditional ones such as `run.error`), in lifecycle order (R4) | adapters |
+
+Live model providers must refuse the network in test mode (`HARNESSWEAVER_TEST_MODE=1`, R14), which the suite counts as passing for the call-based checks. A contribution whose config has required fields declares `sample=` settings in its decorator; an adapter declares `sample=`, a function returning an `AdapterSample` (an offline target and one call through it).
+
+The rest of the test kit (`harnessweaver.testing`) is what plugin and app tests use: `harness_for_test` (offline, a fake clock, a model and fakes injected), `scripted` with `text`, `output` and `tool_call`, `FakeTool`, `FakeDecider`, `assert_trace` (expected events in order, or `exact=True`), `assert_no_content` (R9), and `Cassette`, which records a real model's answers once and replays them offline, matching requests by digest.
 
 ### TypeScript plugins
 

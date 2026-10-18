@@ -185,6 +185,8 @@ class ProviderInfo:
     latency_class: str
     stages: tuple[str, ...] = ()
     kind: Literal["class", "function"] = "class"
+    sample: Mapping[str, Any] | None = None
+    """Settings the conformance suite builds the provider with (T5)."""
 
     def build(self, settings: Mapping[str, Any] | None = None) -> Any:
         """Return a ready instance (or, for a function provider, the function).
@@ -213,10 +215,13 @@ def provider[T](
     deterministic: bool = False,
     latency_class: str = "medium",
     stages: Iterable[str] = (),
+    sample: Mapping[str, Any] | None = None,
 ) -> Callable[[type[T]], type[T]]:
     """Declare a class as a provider for ``port`` (DESIGNS No. 12).
 
     The class must be constructible from its config model alone (RULES C11).
+    ``sample`` gives settings for the conformance suite when the config model
+    has required fields (T5).
 
     Raises:
         ValueError: For an unknown port or latency class, a malformed name or
@@ -242,6 +247,7 @@ def provider[T](
             deterministic=deterministic,
             latency_class=latency_class,
             stages=stage_names,
+            sample=dict(sample) if sample is not None else None,
         )
         setattr(cls, _PROVIDER_ATTR, info)
         return cls
@@ -305,6 +311,8 @@ class RunnerInfo:
     config: type[BaseModel] | None
     contract: VersionRange
     resumable: bool = False
+    sample: Mapping[str, Any] | None = None
+    """Settings the conformance suite runs a task with (T5)."""
 
     def build(self, settings: Mapping[str, Any] | None = None) -> Any:
         """Return a ready runner, with its settings validated (RULES C11)."""
@@ -318,6 +326,7 @@ def runner[T](
     config: type[BaseModel] | None = None,
     contract: str = _DEFAULT_CONTRACT,
     resumable: bool = False,
+    sample: Mapping[str, Any] | None = None,
 ) -> Callable[[type[T]], type[T]]:
     """Declare a class as a runner (DESIGNS No. 15).
 
@@ -331,7 +340,8 @@ def runner[T](
     def declare(cls: type[T]) -> type[T]:
         if not inspect.isclass(cls):
             raise TypeError("@runner decorates a class")
-        info = RunnerInfo(checked, cls, hooks, config, range_, resumable)
+        settings = dict(sample) if sample is not None else None
+        info = RunnerInfo(checked, cls, hooks, config, range_, resumable, settings)
         setattr(cls, _RUNNER_ATTR, info)
         return cls
 
@@ -354,6 +364,9 @@ class AdapterInfo:
     wraps: tuple[str, ...]
     reaches: frozenset[HookPoint]
     contract: VersionRange
+    sample: Callable[[], Any] | None = None
+    """Returns ``(target, call)`` for the conformance suite: an object to wrap and an
+    async function that makes one call through the wrapped object (T5)."""
 
 
 def adapter[T](
@@ -362,6 +375,7 @@ def adapter[T](
     wraps: Iterable[str],
     reaches: Iterable[HookPoint | str],
     contract: str = _DEFAULT_CONTRACT,
+    sample: Callable[[], Any] | None = None,
 ) -> Callable[[type[T]], type[T]]:
     """Declare a class as an adapter for ``harness.wrap()`` / ``harness.instrument()``.
 
@@ -374,7 +388,7 @@ def adapter[T](
     def declare(cls: type[T]) -> type[T]:
         if not inspect.isclass(cls):
             raise TypeError("@adapter decorates a class")
-        setattr(cls, _ADAPTER_ATTR, AdapterInfo(checked, cls, types, hooks, range_))
+        setattr(cls, _ADAPTER_ATTR, AdapterInfo(checked, cls, types, hooks, range_, sample))
         return cls
 
     return declare

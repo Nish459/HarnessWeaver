@@ -141,7 +141,43 @@ class GovernedClient:
         return getattr(self._client, name)
 
 
-@hw.adapter("client", wraps=["openai.OpenAI", "openai.AsyncOpenAI"], reaches=REACHES)
+def conformance_sample() -> Any:
+    """An offline ``AsyncOpenAI`` client and one call, for the conformance suite (T5)."""
+    import httpx2
+    from openai import AsyncOpenAI
+
+    from harnessweaver.testing import AdapterSample
+
+    body = {
+        "id": "chatcmpl-conformance",
+        "object": "chat.completion",
+        "created": 0,
+        "model": "gpt-conformance",
+        "choices": [
+            {"index": 0, "message": {"role": "assistant", "content": "hi"}, "finish_reason": "stop"}
+        ],
+        "usage": {"prompt_tokens": 3, "completion_tokens": 1, "total_tokens": 4},
+    }
+    transport = httpx2.MockTransport(lambda request: httpx2.Response(200, json=body))
+    client = AsyncOpenAI(
+        api_key="sk-test-conformance",
+        max_retries=0,
+        http_client=httpx2.AsyncClient(transport=transport),
+    )
+
+    async def call(wrapped: Any) -> Any:
+        messages = [{"role": "user", "content": "hello"}]
+        return await wrapped.chat.completions.create(model="gpt-conformance", messages=messages)
+
+    return AdapterSample(client, call)
+
+
+@hw.adapter(
+    "client",
+    wraps=["openai.OpenAI", "openai.AsyncOpenAI"],
+    reaches=REACHES,
+    sample=conformance_sample,
+)
 class OpenAIClientAdapter:
     """Governs ``chat.completions.create`` on an ``OpenAI`` or ``AsyncOpenAI`` client."""
 

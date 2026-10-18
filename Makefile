@@ -1,12 +1,12 @@
 # Common development tasks. `make check` is what CI runs (RULES G5).
 UV ?= uv
 
-.PHONY: sync check ascii lint fmt fmt-check typecheck test cov schemas schemas-check
+.PHONY: sync check ascii lint fmt fmt-check typecheck test conformance cov schemas schemas-check
 
 sync:
 	$(UV) sync --all-packages
 
-check: ascii lint fmt-check typecheck test
+check: ascii lint fmt-check typecheck test conformance
 
 ascii:
 	$(UV) run python scripts/check_ascii.py
@@ -27,8 +27,13 @@ typecheck:
 test:
 	$(UV) run pytest -q
 
+# RULES T5: every first-party plugin passes the conformance suite.
+CONFORMANCE_PLUGINS := harnessweaver,openai,anthropic,otel
+conformance:
+	$(UV) run pytest -q --harnessweaver-conformance=$(CONFORMANCE_PLUGINS) python/harnessweaver/src/harnessweaver/testing/conformance_suite.py
+
 cov:
-	$(UV) run coverage run -m pytest -q
+	$(UV) run coverage run -m pytest -q --harnessweaver-conformance=$(CONFORMANCE_PLUGINS)
 	$(UV) run coverage report
 
 # Contract JSON Schemas are generated from the Pydantic models and checked in (ADR-0005).

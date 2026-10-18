@@ -154,7 +154,45 @@ class GovernedClient:
         return getattr(self._client, name)
 
 
-@hw.adapter("client", wraps=["anthropic.Anthropic", "anthropic.AsyncAnthropic"], reaches=REACHES)
+def conformance_sample() -> Any:
+    """An offline ``AsyncAnthropic`` client and one call, for the conformance suite (T5)."""
+    import httpx2
+    from anthropic import AsyncAnthropic
+
+    from harnessweaver.testing import AdapterSample
+
+    body = {
+        "id": "msg_conformance",
+        "type": "message",
+        "role": "assistant",
+        "model": "claude-opus-5-5",
+        "content": [{"type": "text", "text": "hi"}],
+        "stop_reason": "end_turn",
+        "stop_sequence": None,
+        "usage": {"input_tokens": 3, "output_tokens": 1},
+    }
+    transport = httpx2.MockTransport(lambda request: httpx2.Response(200, json=body))
+    client = AsyncAnthropic(
+        api_key="sk-ant-test-conformance",
+        max_retries=0,
+        http_client=httpx2.AsyncClient(transport=transport),
+    )
+
+    async def call(wrapped: Any) -> Any:
+        messages = [{"role": "user", "content": "hello"}]
+        return await wrapped.messages.create(
+            model="claude-opus-5-5", max_tokens=64, messages=messages
+        )
+
+    return AdapterSample(client, call)
+
+
+@hw.adapter(
+    "client",
+    wraps=["anthropic.Anthropic", "anthropic.AsyncAnthropic"],
+    reaches=REACHES,
+    sample=conformance_sample,
+)
 class AnthropicClientAdapter:
     """Governs ``messages.create`` on an ``Anthropic`` or ``AsyncAnthropic`` client."""
 

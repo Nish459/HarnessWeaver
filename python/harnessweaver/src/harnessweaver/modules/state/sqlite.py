@@ -48,6 +48,7 @@ class SqliteStateConfig(BaseModel):
     port="StateStore",
     name="sqlite",
     config=SqliteStateConfig,
+    sample={"path": ":memory:"},
     deterministic=True,
     latency_class="fast",
 )

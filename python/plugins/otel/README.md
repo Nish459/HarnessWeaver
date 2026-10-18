@@ -18,3 +18,9 @@ observability:
 ```
 
 `otel.sdk` installs SDK tracer and meter providers with the chosen exporter, once, when the harness loads. If the app already installed SDK providers it changes nothing (one owner, RULES R5). The OTLP exporters also read the standard `OTEL_EXPORTER_OTLP_*` environment variables. With `HARNESSWEAVER_TEST_MODE=1` the OTLP exporter isn't installed (R14).
+
+## Conformance
+
+```bash
+uv run pytest --harnessweaver-conformance=otel
+```

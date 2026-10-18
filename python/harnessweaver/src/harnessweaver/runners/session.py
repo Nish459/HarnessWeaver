@@ -31,7 +31,12 @@ class SessionRunnerConfig(BaseModel):
     handler: str = Field(description="'package.module:function' taking (session, input).")
 
 
-@runner("session", reaches=ALL_HOOKS, config=SessionRunnerConfig)
+@runner(
+    "session",
+    reaches=ALL_HOOKS,
+    config=SessionRunnerConfig,
+    sample={"handler": "harnessweaver.testing.samples:echo"},
+)
 class SessionRunner:
     """Call an app function with a governed session."""
 

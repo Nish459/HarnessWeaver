@@ -110,6 +110,7 @@ class ScriptedConfig(BaseModel):
     port="ModelProvider",
     name="scripted",
     config=ScriptedConfig,
+    sample={"replies": [{"text": "ok"}]},
     deterministic=True,
     latency_class="fast",
 )
