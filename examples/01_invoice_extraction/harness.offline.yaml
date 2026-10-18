@@ -1,0 +1,30 @@
+# HARNESSWEAVER_ENV=offline: a scripted model in place of the gateway, so the
+# example runs with no network and no keys (R14). Its first answer has a date
+# that isn't a date and a total that isn't a number; the harness asks for one
+# repair, and the second answer is valid.
+models:
+  provider: scripted
+  replies:
+    - output:
+        invoice_number: INV-2026-0042
+        vendor: Northwind Supplies Ltd
+        issued_on: 30 Sept
+        currency: EUR
+        line_items:
+          - { description: Ergonomic chair, quantity: 3, unit_price: 250.00, amount: 750.00 }
+          - { description: Standing desk, quantity: 2, unit_price: 400.00, amount: 800.00 }
+        subtotal: 1550.00
+        tax: 310.00
+        total: EUR 1860
+    - output:
+        invoice_number: INV-2026-0042
+        vendor: Northwind Supplies Ltd
+        issued_on: "2026-09-30"
+        due_on: "2026-10-30"
+        currency: EUR
+        line_items:
+          - { description: Ergonomic chair, quantity: 3, unit_price: 250.00, amount: 750.00 }
+          - { description: Standing desk, quantity: 2, unit_price: 400.00, amount: 800.00 }
+        subtotal: 1550.00
+        tax: 310.00
+        total: 1860.00

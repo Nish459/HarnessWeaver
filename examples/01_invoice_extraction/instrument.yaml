@@ -1,0 +1,15 @@
+# The spec for l0_instrument.py: an existing app that governs the client it
+# already has, before it moves to tasks. The extraction profile's PII redaction
+# and secrets check apply to every call. There are no tasks and no business
+# rules here: the client's answers are text, and harness.yaml's rules are about
+# a typed Invoice (a rule that can't be checked fails closed, ADR-0023).
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata:
+  name: invoice-extraction-l0
+  owner: finance-platform
+  risk_tier: internal
+extends: ["profile://extraction"]
+
+budgets:
+  per_run: { max_usd: 0.02 }   # each instrumented call is one run

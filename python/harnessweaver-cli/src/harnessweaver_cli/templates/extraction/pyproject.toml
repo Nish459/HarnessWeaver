@@ -1,0 +1,13 @@
+[project]
+name = "__app_name__"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["harnessweaver[openai]>=0.1.0"]
+
+[dependency-groups]
+dev = ["harnessweaver-cli>=0.1.0", "pytest>=9"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib"]

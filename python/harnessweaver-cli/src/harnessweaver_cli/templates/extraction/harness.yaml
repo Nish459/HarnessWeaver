@@ -1,0 +1,33 @@
+# __app_name__: typed extraction from support messages.
+# The extraction profile redacts PII in the input, blocks secrets in the output,
+# and repairs an invalid answer once before escalating.
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata:
+  name: __app_name__
+  owner: your-team
+  risk_tier: internal
+extends: ["profile://extraction"]
+
+models:
+  provider: openai.chat              # any OpenAI-compatible endpoint, usually LiteLLM Proxy
+  base_url: http://localhost:4000    # the gateway holds the provider keys (RULES S1)
+  api_key_env: LITELLM_API_KEY
+  default: fast
+  aliases: { fast: your-fast-model }
+
+tasks:
+  extract:
+    version: 1.0.0
+    runner: direct
+    input: app.models:Message
+    output: app.models:TicketSummary
+    prompt: extract@1
+    budget: { max_model_calls: 3, max_usd: 0.05 }
+
+validation:
+  rules:
+    - { id: summary-length, when: "size(output.summary) > 200", message: "keep the summary under 200 characters" }
+
+evals:
+  extract: [evals/golden.yaml]

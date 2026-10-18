@@ -52,6 +52,21 @@ client = harness.instrument(AsyncOpenAI(base_url=LITELLM_URL))
 result = await harness.run("extract_invoice", InvoiceDoc(text=doc), principal=user)
 ```
 
+## Try it
+
+```bash
+uv sync --all-packages
+HARNESSWEAVER_ENV=offline uv run python examples/01_invoice_extraction/run.py   # offline, no keys
+uv run harnessweaver init ../my-app     # your own project, from the extraction template
+uv run harnessweaver test ../my-app     # its tests, offline
+```
+
+| Example | Shows |
+| --- | --- |
+| [01 Invoice extraction](examples/01_invoice_extraction/README.md) | L1 in the Run style: typed output with repair, PII redaction, a secrets check, budgets; L0 in three lines |
+| [Org baseline](examples/_org/README.md) | The profile a platform team publishes: locks, bounds and a required level per risk tier |
+| 02-04 *(planned)* | Support assistant (L2), refund agent with approvals (L3), a TypeScript app through the sidecar |
+
 ## Packages
 
 | Package | What it is |

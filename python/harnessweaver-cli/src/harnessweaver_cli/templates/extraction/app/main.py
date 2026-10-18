@@ -1,0 +1,21 @@
+"""Run the extraction once: HARNESSWEAVER_ENV=offline python -m app.main"""
+
+import asyncio
+from pathlib import Path
+
+import harnessweaver as hw
+from app.models import Message
+
+SPEC = Path(__file__).resolve().parents[1] / "harness.yaml"
+SAMPLE = "Hi, I was charged twice for my Pro plan this month. Please refund one. - ann@example.com"
+
+
+async def main() -> None:
+    harness = hw.load(SPEC)
+    result = await harness.run("extract", Message(text=SAMPLE), principal="demo")
+    print(f"status: {result.status.value}")
+    print(f"output: {result.output}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

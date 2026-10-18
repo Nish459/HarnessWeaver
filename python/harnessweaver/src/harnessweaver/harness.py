@@ -54,7 +54,7 @@ from harnessweaver.core.ids import new_id
 from harnessweaver.core.messages import StreamChunk
 from harnessweaver.core.middleware import Registration
 from harnessweaver.core.outcomes import Retry
-from harnessweaver.core.plugins import AdapterInfo, namespace_of
+from harnessweaver.core.plugins import AdapterInfo, RunnerInfo, namespace_of
 from harnessweaver.core.ports import ModelProvider, Runner, StateStore, ToolBackend
 from harnessweaver.core.registry import PluginCatalog, Registry
 from harnessweaver.core.results import RunEvent, RunResult
@@ -437,6 +437,14 @@ class Harness:
     def explain(self) -> list[ExplainRow]:
         """Every effective value with its layer, lock and bounds (``spec explain``)."""
         return self._effective.explain()
+
+    def runner_of(self, task: str) -> RunnerInfo:
+        """The runner a task uses, with the hook points it reaches.
+
+        Raises:
+            NotFound: For an unknown task.
+        """
+        return self._registry.runner(self._task(task).runner_name)
 
     def hooks(self, task: str | None = None) -> dict[HookPoint, list[Registration]]:
         """The middleware chain of every hook point, in execution order."""

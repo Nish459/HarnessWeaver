@@ -118,6 +118,11 @@ async def test_an_invalid_answer_is_repaired_once(build: Builder, testkit: Any) 
     repair = testkit.RECORDER.requests[1].messages[-1]
     assert "words" in repair.content
     assert "not accepted" in repair.content
+    notes = [e for e in result.trace if e.code == "repair"]
+    assert [(n.kind, n.hook, n.source) for n in notes] == [
+        (TraceKind.NOTE, hw.HookPoint.OUTPUT_BEFORE, "harness.validation")
+    ]
+    assert notes[0].reason == "repair 1: words: Field required"
 
 
 async def test_a_retry_at_output_before_repairs(build: Builder, testkit: Any) -> None:

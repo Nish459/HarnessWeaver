@@ -84,8 +84,10 @@ known-first-party = ["harnessweaver", "harnessweaver_*"]
 "**/tests/**" = ["S", "T20", "TID251"]
 # Fixtures only say that an input is invalid, not which message it produces.
 "**/tests/conformance/**" = ["PT011"]
-# Repository scripts are command-line tools.
+# Repository scripts, examples and project templates are command-line programs.
 "scripts/**" = ["T20"]
+"examples/**" = ["T20"]
+"**/templates/**" = ["T20"]
 
 # --- pyright ----------------------------------------------------------------
 
@@ -94,10 +96,11 @@ pythonVersion = "3.12"
 typeCheckingMode = "standard"
 venvPath = "."
 venv = ".venv"
-include = ["python", "scripts"]
-exclude = ["**/__pycache__", "**/.venv"]
-# The runtime tests load this plugin module through plugins.local.
-extraPaths = ["python/harnessweaver/tests/fixtures"]
+include = ["python", "scripts", "examples"]
+# Templates are copied into new projects, where their own imports resolve.
+exclude = ["**/__pycache__", "**/.venv", "**/templates/**"]
+# The runtime tests load this plugin module through plugins.local; examples import their own code.
+extraPaths = ["python/harnessweaver/tests/fixtures", "examples/01_invoice_extraction"]
 # RULES C1: strict on the contract-heavy core.
 strict = [
     "python/harnessweaver/src/harnessweaver/core",
@@ -108,7 +111,9 @@ strict = [
 
 [tool.pytest.ini_options]
 minversion = "9.0"
-testpaths = ["python"]
+# RULES T6: examples are tests. Templates are tested by rendering them (harnessweaver-cli).
+testpaths = ["python", "examples"]
+norecursedirs = [".*", "*.egg", "build", "dist", "node_modules", "venv", "templates"]
 addopts = ["-ra", "--strict-markers", "--strict-config", "--import-mode=importlib", "-p", "pytester"]
 xfail_strict = true
 markers = [

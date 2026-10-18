@@ -98,8 +98,14 @@ async def check_output(
     return value, None
 
 
-def repair_message(problem: str) -> Message:
-    """The message that asks the model to fix its answer."""
+def repair_message(ctx: RunContext, problem: str, attempt: int) -> Message:
+    """Trace repair ``attempt`` (from 1, R13) and return the message that asks for it."""
+    ctx.trace.note(
+        "harness.validation",
+        f"repair {attempt}: {problem}",
+        hook=HookPoint.OUTPUT_BEFORE,
+        code="repair",
+    )
     return Message.user(
         f"Your previous answer was not accepted: {problem}. "
         "Reply again with a corrected answer in the required format."

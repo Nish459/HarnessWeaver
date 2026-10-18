@@ -1,0 +1,18 @@
+# Golden cases for extract_invoice. The evals module grades them (harnessweaver eval run).
+suite: golden
+task: extract_invoice
+graders: [schema_valid, { field_equals: invoice_number }, { field_equals: total }]
+thresholds: { pass_rate: 0.95 }
+cases:
+  - id: two-lines-with-vat
+    input:
+      text: |
+        INVOICE INV-2026-0042  Northwind Supplies Ltd  Issued 2026-09-30
+        3 x Ergonomic chair 750.00; 2 x Standing desk 800.00
+        Subtotal 1550.00 VAT 310.00 Total EUR 1860.00
+    expect: { invoice_number: INV-2026-0042, total: 1860.00 }
+  - id: no-tax
+    input:
+      text: |
+        Invoice 7781 from Contoso Paper, 2026-08-01. 10 reams A4 at 5.00 = 50.00. Total USD 50.00
+    expect: { invoice_number: "7781", total: 50.00 }

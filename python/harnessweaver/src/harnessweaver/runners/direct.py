@@ -150,5 +150,5 @@ class DirectRunner:
                     give_up(ctx, problem, state["attempt"])
                 state["attempt"] += 1
                 state["repairing"] = True
-                messages.append(repair_message(problem))
+                messages.append(repair_message(ctx, problem, state["attempt"]))
                 state["phase"] = "model"

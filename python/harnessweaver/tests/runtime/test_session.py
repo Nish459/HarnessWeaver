@@ -43,6 +43,9 @@ async def test_generate_repairs_and_gives_up(build: Builder, testkit: Any) -> No
     assert session.result is not None
     assert session.result.status is hw.RunStatus.BLOCKED
     assert len(testkit.RECORDER.requests) == 2
+    assert [e.reason for e in session.result.trace if e.code == "repair"] == [
+        "repair 1: title: Field required; words: Field required"
+    ]
 
 
 async def test_streaming_fires_stream_chunk(build: Builder) -> None:

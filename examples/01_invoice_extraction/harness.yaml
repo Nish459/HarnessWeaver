@@ -1,0 +1,52 @@
+# Example 01: typed invoice extraction at adoption level L1 (Guard).
+#
+# The app code only calls harness.run(). Everything else is here: PII redaction
+# of the input, a secrets check on the output, the typed Invoice with one
+# repair, business rules, budgets and tracing. No app-level retry or tracing code.
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata:
+  name: invoice-extraction
+  owner: finance-platform
+  risk_tier: internal
+  description: Turns the text of a supplier invoice into a typed Invoice.
+
+# extraction: pii.regex redacts the input, secrets.scan blocks the output, one
+# repair, then escalate to a person.
+extends: ["profile://extraction"]
+
+models:
+  provider: openai.chat              # any OpenAI-compatible endpoint; here LiteLLM Proxy
+  base_url: http://localhost:4000    # the gateway holds the provider keys (S1) and owns retries (R5)
+  api_key_env: LITELLM_API_KEY
+  default: fast
+  aliases: { fast: fast-chat, strong: strong-chat }   # model names the gateway serves
+  prices:                            # used when the gateway doesn't report a cost
+    fast-chat: { input_per_mtok: 0.25, output_per_mtok: 2.00 }
+    strong-chat: { input_per_mtok: 3.00, output_per_mtok: 15.00 }
+
+tasks:
+  extract_invoice:
+    version: 1.0.0
+    runner: direct
+    input: invoices.models:InvoiceDoc
+    output: invoices.models:Invoice
+    prompt: extract_invoice@1
+    budget: { max_model_calls: 3, max_usd: 0.02, deadline: 30s, overridable: [max_usd] }
+
+# Business rules the schema can't express. A violated rule asks for a repair
+# like a schema error does, and counts against the same max_repairs.
+validation:
+  rules:
+    - id: positive-total
+      when: "output.total <= 0"
+      message: "the total must be positive"
+    - id: no-negative-lines
+      when: "output.line_items.exists(item, item.amount < 0)"
+      message: "a line item amount can't be negative"
+    - id: total-adds-up
+      when: "output.subtotal + output.tax - output.total > 0.005 || output.total - output.subtotal - output.tax > 0.005"
+      message: "the subtotal plus the tax must equal the total"
+
+evals:
+  extract_invoice: [evals/golden.yaml]

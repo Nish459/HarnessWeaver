@@ -198,7 +198,7 @@ class Session:
             attempt += 1
             history += [
                 Message.assistant(text_of(candidate), extensions=response.extensions),
-                repair_message(problem),
+                repair_message(self._ctx, problem, attempt),
             ]
 
     async def tool(self, name: str, /, **arguments: JsonValue) -> JsonValue:

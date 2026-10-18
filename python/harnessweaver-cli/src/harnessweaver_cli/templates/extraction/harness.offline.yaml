@@ -1,0 +1,10 @@
+# The offline overlay: HARNESSWEAVER_ENV=offline swaps the model for a scripted one,
+# so tests and demos need no network and no keys (RULES R14).
+models:
+  provider: scripted
+  replies:
+    - output:
+        category: billing
+        priority: 2
+        product: Pro plan
+        summary: The customer was charged twice for the Pro plan and wants a refund.
