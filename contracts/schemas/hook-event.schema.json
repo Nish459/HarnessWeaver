@@ -537,6 +537,14 @@
           ],
           "default": null,
           "title": "Name"
+        },
+        "extensions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Provider data to replay unchanged with this message, keyed by provider namespace (for example a model's own reasoning blocks). Opaque to the harness.",
+          "title": "Extensions",
+          "type": "object"
         }
       },
       "required": [
@@ -736,6 +744,14 @@
           ],
           "default": null,
           "title": "Finish Reason"
+        },
+        "extensions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Provider data the next request should replay with this answer; runners copy it onto the assistant message they add to the history.",
+          "title": "Extensions",
+          "type": "object"
         }
       },
       "title": "ModelResponse",

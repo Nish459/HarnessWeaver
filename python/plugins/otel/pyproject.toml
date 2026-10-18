@@ -27,5 +27,8 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.45",
 ]
 
+[project.entry-points."harnessweaver.plugins"]
+otel = "harnessweaver_otel:plugin"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/harnessweaver_otel"]

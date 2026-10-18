@@ -64,6 +64,7 @@ The fields of a case depend on the suite:
 | `bus` | `hook`, a starting `value`, and `middleware: [{name, band, fail_mode, does}]` | the combined `outcome`, the middleware that `ran`, what each one `saw`, the final `value` and the per-middleware `trace`, or `{error}` |
 | `budgets` | `limits` and `ops` (`model.before`, `model.after`, `tool.before`), or a `cost` lookup | the limit each op breached, the `meter` afterwards and what is `remaining`; or the cost's `usd` and `source` |
 | `plugins` | `owner_of`, `qualify`, `owns`, `allowed` or `namespace` | the owning namespace, the qualified name, or `true`/`false` |
+| `guards` | `guard` + `config` + `content`, or a pipeline: `stage`, `guards: [{id, use, config, action, mode, parallel}]`, `content` | the provider's `{action, content, findings, score}`, or the combined `outcome`, the payload's `content` afterwards and a trace `note` |
 
 Expected values are written by hand from the design, never copied from an implementation's output. When `expect.type` is given for a number, implementations must also return that cel-lite type (`int` or `double`).
 

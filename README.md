@@ -38,7 +38,7 @@ flowchart LR
 | Adopting it | Route your app through it | One line for tracing, then grow level by level |
 | Languages | Usually one | Python, TypeScript, and any language through the sidecar |
 
-## A taste *(planned API)*
+## A taste
 
 ```python
 import harnessweaver as hw
@@ -48,7 +48,7 @@ harness = hw.load("harness.yaml")        # spec + org baseline + env overlay, va
 # Level 0 - keep your code, add tracing and cost in one line
 client = harness.instrument(AsyncOpenAI(base_url=LITELLM_URL))
 
-# Level 3 - let the harness own the lifecycle: budgets, guards, tool governance, approvals
+# Level 3 - let the harness own the lifecycle: budgets, guards, repair, approvals
 result = await harness.run("extract_invoice", InvoiceDoc(text=doc), principal=user)
 ```
 

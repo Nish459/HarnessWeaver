@@ -11,10 +11,10 @@ checks that the runner reaches every hook the baseline needs (R4). Anything
 wrong fails here, at load, never at run time.
 """
 
+import contextlib
 import logging
 import math
 from collections.abc import AsyncIterator, Mapping, Sequence
-from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 from datetime import timedelta
 from pathlib import Path
@@ -24,9 +24,11 @@ from typing import Any, Literal, Self
 import anyio
 from anyio.abc import TaskGroup
 from anyio.streams.memory import MemoryObjectSendStream
+from opentelemetry.trace import Span
 from pydantic import BaseModel, JsonValue, ValidationError
 
 from harnessweaver._imports import import_object
+from harnessweaver.adapters import Binding
 from harnessweaver.core.budgets import BudgetMeter
 from harnessweaver.core.bus import HookBus
 from harnessweaver.core.context import ModelAccess, RunContext, TaskInfo
@@ -41,6 +43,7 @@ from harnessweaver.core.errors import (
     RunInterrupted,
     RunSuspended,
     SpecError,
+    UnknownProvider,
     UnreachableHook,
     ValidationFailed,
     classify,
@@ -51,13 +54,17 @@ from harnessweaver.core.ids import new_id
 from harnessweaver.core.messages import StreamChunk
 from harnessweaver.core.middleware import Registration
 from harnessweaver.core.outcomes import Retry
+from harnessweaver.core.plugins import AdapterInfo, namespace_of
 from harnessweaver.core.ports import Runner, StateStore, ToolBackend
 from harnessweaver.core.registry import PluginCatalog, Registry
 from harnessweaver.core.results import RunEvent, RunResult
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest, RunStatus
 from harnessweaver.core.state import Checkpoint, Grant, RunRecord
+from harnessweaver.core.telemetry import Telemetry
 from harnessweaver.core.trace import RunTrace, TraceEvent
+from harnessweaver.modules.guardrails import install_guardrails
 from harnessweaver.modules.prompts import PromptStore
+from harnessweaver.modules.validation import install_validation
 from harnessweaver.runners._output import to_json
 from harnessweaver.session import Session
 from harnessweaver.spec.explain import ExplainRow
@@ -79,16 +86,9 @@ def _unsupported(spec: HarnessSpec) -> list[str]:
     Loading such a spec fails rather than silently skipping a control (R4).
     """
     found: list[str] = []
-    guards = list(spec.guardrails.all())
     for name, task in spec.tasks.items():
-        if task.guardrails is not None and task.guardrails.all():
-            found.append(f"tasks.{name}.guardrails")
         if task.approvals is not None and task.approvals.tools:
             found.append(f"tasks.{name}.approvals.tools")
-    if guards:
-        found.append("guardrails")
-    if spec.validation.rules:
-        found.append("validation.rules")
     if spec.policy.rules or spec.policy.use != "cel_lite":
         found.append("policy")
     if spec.approvals.use != "memory":
@@ -99,8 +99,6 @@ def _unsupported(spec: HarnessSpec) -> list[str]:
         found.append("routing")
     if spec.context:
         found.append("context")
-    if spec.observability.exporter != "none" or spec.observability.configure_sdk:
-        found.append("observability.exporter")
     if spec.evals.online is not None and spec.evals.online.sample_rate > 0:
         found.append("evals.online")
     if spec.sidecar.url is not None:
@@ -117,6 +115,16 @@ def _import_type(path: str | None, what: str) -> type[Any] | None:
     if not isinstance(value, type):
         raise SpecError(f"{what}: {path!r} is not a type")
     return value
+
+
+def _required_hooks(bus: HookBus, budget: Budget, task: str | None) -> set[HookPoint]:
+    """Hooks a runner or adapter must reach: baseline middleware and budgets (R4)."""
+    required = set(bus.hooks_in_band(Band.BASELINE, task))
+    if budget.max_tool_calls is not None:
+        required.add(HookPoint.TOOL_BEFORE)
+    if any(getattr(budget, limit) is not None for limit in _MODEL_LIMITS):
+        required.update({HookPoint.MODEL_BEFORE, HookPoint.MODEL_AFTER})
+    return required
 
 
 def _middleware_name(item: MiddlewareSpec, duplicates: set[str]) -> str:
@@ -181,8 +189,10 @@ class Harness:
         prompts: PromptStore,
         tools: ToolBackend | None,
         clock: Clock,
+        telemetry: Telemetry | None = None,
     ) -> None:
         self._effective = effective
+        self._telemetry = telemetry or Telemetry()
         self._registry = registry
         self._bus = bus
         self._tasks = dict(tasks)
@@ -207,6 +217,7 @@ class Harness:
         clock: Clock | None = None,
         tools: ToolBackend | None = None,
         catalog: PluginCatalog | None = None,
+        telemetry: Telemetry | None = None,
     ) -> Self:
         """Load ``harness.yaml`` (with profiles and overlay) and build the harness.
 
@@ -218,7 +229,9 @@ class Harness:
         """
         catalog = catalog or PluginCatalog.default()
         effective = load_spec(path, env=env, profile_dirs=profile_dirs, catalog=catalog)
-        return cls.from_spec(effective, clock=clock, tools=tools, catalog=catalog)
+        return cls.from_spec(
+            effective, clock=clock, tools=tools, catalog=catalog, telemetry=telemetry
+        )
 
     @classmethod
     def from_spec(
@@ -228,8 +241,13 @@ class Harness:
         clock: Clock | None = None,
         tools: ToolBackend | None = None,
         catalog: PluginCatalog | None = None,
+        telemetry: Telemetry | None = None,
     ) -> Self:
-        """Build a harness from an already loaded spec. See :meth:`load`."""
+        """Build a harness from an already loaded spec. See :meth:`load`.
+
+        ``telemetry`` replaces the harness's own (for example to use specific
+        OpenTelemetry providers); ``observability.capture_content`` still applies.
+        """
         spec = effective.spec
         unsupported = _unsupported(spec)
         if unsupported:
@@ -246,8 +264,15 @@ class Harness:
         state = registry.provider("StateStore", spec.state.use).build(
             spec.state.provider_settings()
         )
+        built = cls._build_telemetry(spec, registry)
+        if telemetry is not None:
+            telemetry.capture_content = spec.observability.capture_content
+        telemetry = telemetry or built
         models = cls._model_access(spec, registry)
-        bus = cls._install_middleware(spec, registry)
+        bus = HookBus()
+        install_guardrails(effective, registry, bus)
+        install_validation(effective, bus)
+        cls._install_middleware(spec, registry, bus)
         prompts = PromptStore(base / spec.prompts.dir)
         tasks = {
             name: cls._build_task(effective, name, task, registry, bus, models, prompts, tools)
@@ -263,7 +288,25 @@ class Harness:
             prompts=prompts,
             tools=tools,
             clock=clock or SystemClock(),
+            telemetry=telemetry,
         )
+
+    @staticmethod
+    def _build_telemetry(spec: HarnessSpec, registry: Registry) -> Telemetry:
+        settings = spec.observability
+        if settings.configure_sdk:
+            setup = registry.provider("Telemetry", "otel.sdk").build(settings.provider_settings())
+            setup.configure(
+                service_name=settings.service_name or spec.metadata.name,
+                exporter=settings.exporter,
+                endpoint=settings.endpoint,
+            )
+        elif settings.exporter != "none":
+            raise SpecError(
+                f"observability.exporter: {settings.exporter} needs observability.configure_sdk: "
+                "true; otherwise the app's own OpenTelemetry setup decides where spans go (R5)"
+            )
+        return Telemetry(capture_content=settings.capture_content)
 
     @staticmethod
     def _model_access(spec: HarnessSpec, registry: Registry) -> ModelAccess:
@@ -281,11 +324,11 @@ class Harness:
             aliases=dict(models.aliases),
             allowed_aliases=allowed,
             prices=prices.get if prices else None,
+            provider_name=namespace_of(models.provider) if models.provider else None,
         )
 
     @staticmethod
-    def _install_middleware(spec: HarnessSpec, registry: Registry) -> HookBus:
-        bus = HookBus()
+    def _install_middleware(spec: HarnessSpec, registry: Registry, bus: HookBus) -> None:
         uses = [item.use for item in spec.middleware]
         duplicates = {use for use in uses if uses.count(use) > 1}
         for item in spec.middleware:
@@ -309,7 +352,6 @@ class Harness:
                     timeout=item.timeout if item.timeout is not None else declared.timeout,
                 )
             )
-        return bus
 
     @staticmethod
     def _build_task(
@@ -325,12 +367,7 @@ class Harness:
         where = f"tasks.{name}"
         info = registry.runner(task.runner.use)
         runner = info.build(task.runner.provider_settings())
-        required = set(bus.hooks_in_band(Band.BASELINE, name))
-        budget = effective.run_budget(name)
-        if budget.max_tool_calls is not None:
-            required.add(HookPoint.TOOL_BEFORE)
-        if any(getattr(budget, limit) is not None for limit in _MODEL_LIMITS):
-            required.update({HookPoint.MODEL_BEFORE, HookPoint.MODEL_AFTER})
+        required = _required_hooks(bus, effective.run_budget(name), name)
         missing = sorted(h.value for h in required - info.reaches)
         if missing:
             raise UnreachableHook(
@@ -441,6 +478,7 @@ class Harness:
 
         def on_trace(event: TraceEvent) -> None:
             self._publish(run_id, channel, "trace", trace=event)
+            self._telemetry.trace_event(event)
 
         def on_chunk(chunk: StreamChunk) -> None:
             self._publish(run_id, channel, "chunk", chunk=chunk)
@@ -458,6 +496,7 @@ class Harness:
             on_chunk=on_chunk,
             harness=self,
             can_suspend=can_suspend,
+            telemetry=self._telemetry,
         )
 
     async def _new_run(
@@ -630,6 +669,18 @@ class Harness:
         checkpoint: Checkpoint | None,
         answered: tuple[ApprovalRequest, ApprovalDecision] | None,
     ) -> RunResult:
+        with self._telemetry.run_scope(run.ctx.envelope) as span:
+            run.ctx.set_trace_id(Telemetry.trace_id(span))
+            result = await self._execute_steps(run, checkpoint, answered)
+            Telemetry.run_done(span, result)
+            return result
+
+    async def _execute_steps(
+        self,
+        run: _Run,
+        checkpoint: Checkpoint | None,
+        answered: tuple[ApprovalRequest, ApprovalDecision] | None,
+    ) -> RunResult:
         ctx = run.ctx
         with ctx.activate():
             try:
@@ -665,7 +716,9 @@ class Harness:
             ctx.halt_on(start)
             await self._set_status(run, RunStatus.RUNNING)
             run.input = await ctx.check_input(run.input)
+            ctx.input = run.input
         else:
+            ctx.input = run.input
             await self._set_status(run, RunStatus.RUNNING)
             if answered is not None:
                 request, decision = answered
@@ -816,6 +869,7 @@ class Harness:
             time_left=ctx.time_left(),
         )
         await self._state.put_checkpoint(checkpoint)
+        self._telemetry.approval(ctx.run_id, approval.approval_id, "requested")
         ctx.trace.note(
             "harness.approvals",
             pending.reason,
@@ -902,6 +956,7 @@ class Harness:
         if answer.decision == "edit" and checkpoint.approval_hook != HookPoint.TOOL_BEFORE.value:
             raise ValidationFailed("only a tool call's arguments can be edited")
         run = await self._restore(record, checkpoint)
+        self._telemetry.approval(run_id, approval_id, answer.decision)
         if request.expires_at is not None and self._clock.now() > request.expires_at:
             return await self._expire(run)
         grants = list(checkpoint.grants)
@@ -1037,6 +1092,66 @@ class Harness:
                     continue
                 yield event
 
+    # --- wrap style -------------------------------------------------------------------------
+
+    def instrument[T](
+        self,
+        client: T,
+        *,
+        task: str | None = None,
+        principal: Principal | str = "anonymous",
+        tenant: str = "default",
+        attributes: Mapping[str, str] | None = None,
+        adapter: str | None = None,
+    ) -> T:
+        """Return a governed version of ``client`` (DESIGNS No. 15, L0).
+
+        The adapter is found from the client's type: the plugin whose namespace
+        is the client's top-level package (``openai``, ``anthropic``) is loaded
+        and asked for an adapter that wraps the type. Name one with ``adapter``.
+
+        Raises:
+            UnknownProvider: If no installed plugin wraps the client's type.
+            PluginNotAllowed: If that plugin isn't in ``plugins.allow``.
+            UnreachableHook: If the adapter can't reach a hook the baseline or
+                the budgets need (R4).
+        """
+        info = self._adapter_for(client, adapter)
+        if task is not None and task in self._tasks:
+            budget = self._effective.run_budget(task)
+        else:
+            budget = self._effective.spec.budgets.per_run
+        missing = sorted(h.value for h in _required_hooks(self._bus, budget, task) - info.reaches)
+        if missing:
+            raise UnreachableHook(
+                f"adapter {info.name} can't reach {', '.join(missing)}, which the baseline "
+                f"needs (RULES R4)",
+                hooks=list[JsonValue](missing),
+            )
+        binding = Binding(self, task, principal, tenant, dict(attributes or {}))
+        return info.target().bind(client, binding)
+
+    def _adapter_for(self, target: object, name: str | None) -> AdapterInfo:
+        if name is not None:
+            return self._registry.adapter(name)
+        kind = type(target)
+        for cls in kind.__mro__:
+            root = cls.__module__.split(".", 1)[0]
+            if root == "builtins":
+                continue
+            try:
+                self._registry.ensure(root)
+            except UnknownProvider:
+                continue
+            names = {f"{root}.{cls.__name__}", f"{cls.__module__}.{cls.__qualname__}"}
+            for info in self._registry.adapters():
+                if names & set(info.wraps):
+                    return info
+        raise UnknownProvider(
+            f"no installed plugin has an adapter for {kind.__module__}.{kind.__qualname__}",
+            type=f"{kind.__module__}.{kind.__qualname__}",
+        )
+
     # --- sessions ---------------------------------------------------------------------------
 
     def session(
@@ -1078,8 +1193,11 @@ class Harness:
         )
         assert isinstance(run, _Run)
         pending.run = run
-        pending.activation = run.ctx.activate()
-        pending.activation.__enter__()
+        stack = contextlib.ExitStack()
+        span = stack.enter_context(self._telemetry.run_scope(run.ctx.envelope))
+        run.ctx.set_trace_id(Telemetry.trace_id(span))
+        stack.enter_context(run.ctx.activate())
+        pending.stack, pending.span = stack, span
         start = await run.ctx.emit(HookPoint.RUN_START, RunStartEvent(task=pending.task))
         try:
             run.ctx.halt_on(start)
@@ -1111,9 +1229,11 @@ class Harness:
                 else:
                     result = await self._finish(run, RunStatus.CANCELLED)
         finally:
-            if pending.activation is not None:
-                pending.activation.__exit__(None, None, None)
-                pending.activation = None
+            if result is not None and pending.span is not None:
+                Telemetry.run_done(pending.span, result)
+            if pending.stack is not None:
+                pending.stack.close()
+                pending.stack = None
         assert result is not None
         pending.result = result
         return result
@@ -1129,5 +1249,6 @@ class _PendingSession:
     budget: Budget
     attributes: Mapping[str, str] | None
     run: _Run | None = None
-    activation: AbstractContextManager[RunContext] | None = None
+    stack: contextlib.ExitStack | None = None
+    span: Span | None = None
     result: RunResult | None = None

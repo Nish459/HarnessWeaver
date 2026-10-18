@@ -26,5 +26,8 @@ dependencies = [
     "openai>=3.26",
 ]
 
+[project.entry-points."harnessweaver.plugins"]
+openai = "harnessweaver_openai:plugin"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/harnessweaver_openai"]

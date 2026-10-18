@@ -38,13 +38,10 @@ def org_profile(tmp_path: Path, **body: Any) -> str:
 @pytest.mark.parametrize(
     ("section", "value", "named"),
     [
-        ("guardrails", {"input": [{"use": "pii.regex"}]}, "guardrails"),
-        ("validation", {"rules": [{"when": "true", "message": "m"}]}, "validation.rules"),
         ("policy", {"rules": [{"when": "true", "effect": "deny"}]}, "policy"),
         ("routing", {"r": {"options": ["a"]}}, "routing"),
         ("context", {"kb": {"use": "memory"}}, "context"),
         ("tools", {"manifests": ["tools/*.yaml"]}, "tools.manifests"),
-        ("observability", {"exporter": "otlp"}, "observability.exporter"),
         ("evals", {"online": {"sample_rate": 0.1}}, "evals.online"),
         ("sidecar", {"url": "http://127.0.0.1:7070"}, "sidecar"),
         ("approvals", {"use": "slack"}, "approvals.use"),
@@ -58,14 +55,17 @@ def test_sections_without_a_module_fail_to_load(
     assert named in caught.value.details["sections"]  # type: ignore[operator]
 
 
-def test_task_guardrails_and_approval_tools_are_unsupported(build: Builder) -> None:
-    task = {
-        "runner": "direct",
-        "guardrails": {"output": [{"use": "secrets.scan"}]},
-        "approvals": {"tools": ["refund"]},
-    }
-    with pytest.raises(SpecError, match=r"tasks\.t\.guardrails, tasks\.t\.approvals\.tools"):
+def test_task_approval_tools_are_unsupported(build: Builder) -> None:
+    task = {"runner": "direct", "approvals": {"tools": ["refund"]}}
+    with pytest.raises(SpecError, match=r"tasks\.t\.approvals\.tools"):
         build(spec(models=MODELS, tasks={"t": task}))
+
+
+def test_an_exporter_needs_the_sdk_setup(build: Builder) -> None:
+    with pytest.raises(SpecError, match="configure_sdk"):
+        build(spec(models=MODELS, observability={"exporter": "otlp"}))
+    with pytest.raises(UnknownProvider, match="otel"):
+        build(spec(models=MODELS, observability={"configure_sdk": True}))
 
 
 def test_unknown_names_fail(build: Builder) -> None:

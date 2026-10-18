@@ -289,8 +289,9 @@ def test_registry_resolves_names_by_namespace() -> None:
     assert registry.catalog is not None
     with pytest.raises(UnknownProvider, match=r"it provides: acme\.pii"):
         registry.provider("Guardrail", "acme.secrets")
+    assert registry.provider("Guardrail", "pii.regex").deterministic
     with pytest.raises(UnknownProvider):
-        registry.provider("Guardrail", "pii.regex")
+        registry.provider("Guardrail", "pii.presidio")
 
 
 def test_registry_enforces_allow_lists_and_contracts() -> None:
@@ -369,4 +370,12 @@ def test_built_in_names_are_reserved() -> None:
         "workflow",
         "memory",
         "sqlite",
+        "scripted",
+        "regex.deny",
+        "pii.regex",
+        "secrets.scan",
+        "injection.heuristic",
+        "size.limit",
+        "topic.deny",
+        "llm.judge",
     }

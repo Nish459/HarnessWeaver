@@ -5,9 +5,10 @@ and are versioned with the contract (V1, V2). They use only HarnessWeaver types
 (R7). Ports for modules that arrive later are added here as they land.
 """
 
+import os
 from collections.abc import AsyncIterator, Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Final, Protocol, runtime_checkable
 
 from pydantic import JsonValue
 
@@ -23,15 +24,26 @@ if TYPE_CHECKING:
     from harnessweaver.core.context import RunContext
 
 __all__ = [
+    "TEST_MODE_ENV",
     "Decider",
     "Guardrail",
     "ModelProvider",
     "Runner",
     "StateStore",
     "StreamingModelProvider",
+    "TelemetrySetup",
     "ToolBackend",
     "ToolDescription",
+    "network_allowed",
 ]
+
+TEST_MODE_ENV: Final = "HARNESSWEAVER_TEST_MODE"
+"""Set to ``1`` to make live providers refuse network calls (R14)."""
+
+
+def network_allowed() -> bool:
+    """Whether live providers may call out. False when ``HARNESSWEAVER_TEST_MODE=1`` (R14)."""
+    return os.environ.get(TEST_MODE_ENV) != "1"
 
 
 class ModelProvider(Protocol):
@@ -109,6 +121,16 @@ class Decider(Protocol):
     """Port ``Decider``: one routing stage (DESIGNS No. 19)."""
 
     async def __call__(self, request: DecisionRequest) -> Decision: ...
+
+
+class TelemetrySetup(Protocol):
+    """Port ``Telemetry``: sets up an OpenTelemetry SDK and exporter (R5, ADR-0010).
+
+    Used only when ``observability.configure_sdk`` is true; the core itself only
+    uses the OpenTelemetry API.
+    """
+
+    def configure(self, *, service_name: str, exporter: str, endpoint: str | None) -> None: ...
 
 
 class Runner(Protocol):

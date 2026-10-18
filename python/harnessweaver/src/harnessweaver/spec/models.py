@@ -178,7 +178,9 @@ class GuardrailsSpec(_Strict):
 
 class ValidationRule(_Strict):
     id: str | None = None
-    when: str = Field(description="cel-lite predicate over `output`, `input` and `task`.")
+    when: str = Field(
+        description="cel-lite predicate over `output`, `input` and `task`; true means a violation."
+    )
     message: str
 
 

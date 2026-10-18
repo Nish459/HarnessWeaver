@@ -12,12 +12,15 @@ produces a new one (DESIGNS No. 10).
 
 import contextlib
 import logging
+import time
 from collections.abc import Callable, Generator, Iterable, Mapping
+from contextlib import AbstractContextManager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any, NoReturn, Protocol
 
+from opentelemetry.trace import Span
 from pydantic import JsonValue
 
 from harnessweaver.core.budgets import BudgetMeter, PriceLookup, breach_block, resolve_cost
@@ -66,6 +69,7 @@ from harnessweaver.core.ports import (
 from harnessweaver.core.retrieval import ContextItem
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest
 from harnessweaver.core.state import Grant, call_digest, output_digest
+from harnessweaver.core.telemetry import Telemetry, elapsed
 from harnessweaver.core.tools import ToolInfo, ToolResult
 from harnessweaver.core.trace import RunTrace
 
@@ -112,6 +116,8 @@ class ModelAccess:
     aliases: Mapping[str, str] = field(default_factory=dict[str, str])
     allowed_aliases: frozenset[str] | None = None
     prices: PriceLookup | None = None
+    provider_name: str | None = None
+    """For telemetry: ``gen_ai.provider.name``, e.g. ``openai`` or ``anthropic``."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -167,6 +173,7 @@ class RunContext:
         grants: Approvals already given (when resuming).
         on_chunk: Called with each streamed chunk after ``stream.chunk``.
         harness: The owning harness, for runners that build sessions.
+        telemetry: Where spans and metrics go; ``None`` records none.
         can_suspend: Whether ``Suspend`` may pause this run. Standalone sessions
             can't be resumed, so there it escalates instead (DESIGNS No. 15).
     """
@@ -186,6 +193,7 @@ class RunContext:
         on_chunk: Callable[[StreamChunk], None] | None = None,
         harness: object = None,
         can_suspend: bool = True,
+        telemetry: Telemetry | None = None,
     ) -> None:
         self._envelope = envelope
         self.bus = bus
@@ -199,6 +207,9 @@ class RunContext:
         self.on_chunk = on_chunk
         self.harness = harness
         self.can_suspend = can_suspend
+        self.telemetry = telemetry
+        self.input: JsonValue = None
+        """The run's input after ``input.before``, for validation rules."""
         self.pending: PendingApproval | None = None
         self.resume_point: dict[str, JsonValue] = {}
         self.output: JsonValue = None
@@ -242,6 +253,11 @@ class RunContext:
             yield self
         finally:
             _CURRENT.reset(token)
+
+    def set_trace_id(self, trace_id: str | None) -> None:
+        """Correlate the envelope with the run's OpenTelemetry trace."""
+        if trace_id is not None and self._envelope.trace_id is None:
+            self._envelope = self._envelope.model_copy(update={"trace_id": trace_id})
 
     def set_resume_point(self, state: Mapping[str, JsonValue]) -> None:
         """Tell the harness where to resume if the next step suspends."""
@@ -345,6 +361,8 @@ class RunContext:
             hook=HookPoint.ROUTE_DECIDE,
             details=details,
         )
+        if self.telemetry is not None:
+            self.telemetry.decision(request, decision)
         return decision
 
     async def context_after(
@@ -385,11 +403,26 @@ class RunContext:
         )
         raise RunBlocked(reason, hook=HookPoint.MODEL_BEFORE.value, code="model_not_allowed")
 
-    async def generate(self, request: ModelRequest) -> ModelResponse:
+    def _model_span(
+        self, request: ModelRequest, provider: str | None
+    ) -> AbstractContextManager[Span | None]:
+        if self.telemetry is None:
+            return contextlib.nullcontext(None)
+        return self.telemetry.model_span(request, provider)
+
+    def _tool_span(self, call: ToolCall, tool: ToolInfo) -> AbstractContextManager[Span | None]:
+        if self.telemetry is None:
+            return contextlib.nullcontext(None)
+        return self.telemetry.tool_span(call, tool)
+
+    async def generate(
+        self, request: ModelRequest, *, provider: ModelProvider | None = None
+    ) -> ModelResponse:
         """Make one governed model call: ``model.before``, the provider, ``model.after``.
 
         Budgets are checked before the call and after it. A ``Retry`` at
         ``model.after`` re-asks the model up to :data:`MODEL_RETRIES` times.
+        Adapters pass ``provider`` to send the call through the client they wrap.
 
         Raises:
             RunInterrupted: When a hook or a budget halts the run.
@@ -407,23 +440,38 @@ class RunContext:
             if sent.alias != request.alias:
                 sent = self._resolve_model(sent.model_copy(update={"model": None}))
             self.meter.start_model_call()
-            response = await self._call_provider(sent)
-            cost, source = resolve_cost(response, sent, self.models.prices)
-            over = self.meter.record_model_call(response.usage, cost)
-            usage: dict[str, JsonValue] = {
-                "input_tokens": response.usage.input_tokens,
-                "output_tokens": response.usage.output_tokens,
-                "cost_source": source,
-            }
-            if cost is not None:
-                usage["cost_usd"] = cost
-            self.trace.note(
-                "harness.budget", "model usage", hook=HookPoint.MODEL_AFTER, details=usage
-            )
-            self._refresh_budget()
-            after = await self.emit(
-                HookPoint.MODEL_AFTER, ModelResponseEvent(request=sent, response=response)
-            )
+            name = self.models.provider_name
+            with self._model_span(sent, name) as span:
+                started = time.perf_counter()
+                response = await self._call_provider(sent, provider)
+                cost, source = resolve_cost(response, sent, self.models.prices)
+                over = self.meter.record_model_call(response.usage, cost)
+                usage: dict[str, JsonValue] = {
+                    "input_tokens": response.usage.input_tokens,
+                    "output_tokens": response.usage.output_tokens,
+                    "cost_source": source,
+                }
+                if cost is not None:
+                    usage["cost_usd"] = cost
+                self.trace.note(
+                    "harness.budget", "model usage", hook=HookPoint.MODEL_AFTER, details=usage
+                )
+                if span is not None and self.telemetry is not None:
+                    self.telemetry.model_done(
+                        span,
+                        sent,
+                        response,
+                        name,
+                        cost=cost,
+                        cost_source=source,
+                        seconds=elapsed(started),
+                    )
+                self._refresh_budget()
+                after = await self.emit(
+                    HookPoint.MODEL_AFTER, ModelResponseEvent(request=sent, response=response)
+                )
+                if span is not None and self.telemetry is not None:
+                    self.telemetry.model_output(span, after.event.response)
             if over is not None:
                 self._budget_stop(HookPoint.MODEL_AFTER, over)
             if isinstance(after.outcome, Retry) and retries < MODEL_RETRIES:
@@ -444,8 +492,10 @@ class RunContext:
             self.halt_on(after)
             return after.event.response
 
-    async def _call_provider(self, request: ModelRequest) -> ModelResponse:
-        provider = self.models.provider
+    async def _call_provider(
+        self, request: ModelRequest, override: ModelProvider | None
+    ) -> ModelResponse:
+        provider = override or self.models.provider
         if provider is None:
             raise SpecError("no model provider is configured; set models.provider")
         try:
@@ -525,22 +575,26 @@ class RunContext:
         call = before.event.call
         self.meter.start_tool_call()
         self._refresh_budget()
-        try:
-            result = await self.tools.execute(call, self._envelope)
-        except Exception as exc:
-            # The model sees that the tool failed, not why: the message may hold content (R9).
-            self.trace.note(
-                "harness.tools",
-                f"tool {call.name} raised {type(exc).__name__}",
-                hook=HookPoint.TOOL_AFTER,
-                code="tool_error",
+        with self._tool_span(call, description.info) as span:
+            try:
+                result = await self.tools.execute(call, self._envelope)
+            except Exception as exc:
+                # The model sees that the tool failed, not why: the message may hold content (R9).
+                self.trace.note(
+                    "harness.tools",
+                    f"tool {call.name} raised {type(exc).__name__}",
+                    hook=HookPoint.TOOL_AFTER,
+                    code="tool_error",
+                )
+                result = ToolResult(
+                    call_id=call.id, output={"error": type(exc).__name__}, is_error=True
+                )
+            after = await self.emit(
+                HookPoint.TOOL_AFTER,
+                ToolResultEvent(call=call, tool=description.info, result=result),
             )
-            result = ToolResult(
-                call_id=call.id, output={"error": type(exc).__name__}, is_error=True
-            )
-        after = await self.emit(
-            HookPoint.TOOL_AFTER, ToolResultEvent(call=call, tool=description.info, result=result)
-        )
+            if span is not None and self.telemetry is not None:
+                self.telemetry.tool_done(span, after.event.result)
         self.halt_on(after)
         final = after.event.result
         if final.untrusted:

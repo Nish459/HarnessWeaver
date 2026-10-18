@@ -50,6 +50,11 @@ class Message(_Contract):
     tool_calls: tuple[ToolCall, ...] = ()
     tool_call_id: str | None = Field(default=None, description="Set on tool-result messages.")
     name: str | None = None
+    extensions: dict[str, JsonValue] = Field(
+        default_factory=dict[str, JsonValue],
+        description="Provider data to replay unchanged with this message, keyed by provider "
+        "namespace (for example a model's own reasoning blocks). Opaque to the harness.",
+    )
 
     @model_validator(mode="after")
     def _check_role_fields(self) -> Self:
@@ -68,8 +73,18 @@ class Message(_Contract):
         return cls(role=Role.USER, content=content)
 
     @classmethod
-    def assistant(cls, content: str = "", tool_calls: tuple[ToolCall, ...] = ()) -> Self:
-        return cls(role=Role.ASSISTANT, content=content, tool_calls=tool_calls)
+    def assistant(
+        cls,
+        content: str = "",
+        tool_calls: tuple[ToolCall, ...] = (),
+        extensions: dict[str, JsonValue] | None = None,
+    ) -> Self:
+        return cls(
+            role=Role.ASSISTANT,
+            content=content,
+            tool_calls=tool_calls,
+            extensions=extensions or {},
+        )
 
     @classmethod
     def tool(cls, tool_call_id: str, content: str) -> Self:
@@ -131,6 +146,11 @@ class ModelResponse(_Contract):
         default=None, ge=0, description="Cost reported by the provider, if it reports one."
     )
     finish_reason: str | None = None
+    extensions: dict[str, JsonValue] = Field(
+        default_factory=dict[str, JsonValue],
+        description="Provider data the next request should replay with this answer; runners "
+        "copy it onto the assistant message they add to the history.",
+    )
 
 
 class StreamChunk(_Contract):

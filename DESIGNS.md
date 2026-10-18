@@ -494,7 +494,7 @@ middleware:  [ { use: acme.no_weekend_refunds, band: app } ]
 routing:     { <router>: { options: [...], cascade: [...], default: ... } }
 context:     { <name>: { use: memory, label: untrusted, max_items: 5 } }
 guardrails:  { input: [...], context: [...], tool_result: [...], output: [...], stream: [...] }
-validation:  { max_repairs: 1, on_failure: escalate, rules: [ { when: "output.total >= 0", message: ... } ] }
+validation:  { max_repairs: 1, on_failure: escalate, rules: [ { when: "output.total < 0", message: "the total can't be negative" } ] }
 tools:       { manifests: [ "tools/*.tool.yaml" ], require_manifest: true }
 policy:      { use: cel_lite, rules: [ { when: "args.amount_usd > 100", effect: require_approval } ] }
 approvals:   { use: memory, timeout: 24h, on_timeout: escalate }
@@ -768,6 +768,7 @@ flowchart LR
 - **`direct`** sends the task's prompt, rendered from the input (ADR-0013), as the system message and the input as the user message, and offers the task's tools. `max_steps` (default 8) caps the model calls of the tool loop; repairs don't count. Reaching it blocks the run with code `max_steps`. With a task `output` model, the answer is parsed and repaired as No. 20 describes.
 - **`session`** calls `runner: { use: session, handler: "pkg.mod:fn" }` as `await fn(session, input)`.
 - **`workflow`** takes `steps` (each an `id`, a `handler` and the steps it `needs`). Steps that are ready together run in parallel. A step with an `evaluator` loops up to `max_rounds`, passing `feedback` and `round` back to the handler, then applies `on_reject` (`escalate`, `block` or `accept`). `output` names the step whose output is the result (default: the last step).
+- **Wrap style.** `harness.instrument(client)` loads the plugin whose namespace is the client's top-level package and asks it for an adapter that wraps the type (`openai.AsyncOpenAI`, `anthropic.Anthropic`, ...); `adapter=` names one. The adapter's `reaches` is checked against the baseline and budgets (R4). Outside a run, each call becomes a small run of its own: `run.start`, `input.before` on the message texts, `model.before`, `model.after`, `output.before` on the answer, `run.end`. Inside a run or session it is one governed model call of that run. Redactions are written back into the request the API receives and the answer the app gets. Streaming through an instrumented client is *planned*; until then it raises rather than running ungoverned.
 - **Standalone sessions** (`async with harness.session(...) as s`) offer `generate`, `tool`, `decide`, `context(source).check(items)`, `guard`, `validate` and `prompt`. Their app code can't be resumed later, so `Suspend` escalates there. A halting outcome reaches the app's code as a `RunInterrupted` error (ADR-0020).
 
 ## 16. Models
@@ -777,7 +778,10 @@ flowchart LR
 - **Native Anthropic.** `anthropic.messages` (from `harnessweaver-anthropic`) calls the Messages API directly for teams without a gateway.
 - **Aliases.** Apps request `fast`, `strong`, `reasoning` or `embed`. Env overlays map aliases to concrete models.
 - **Typed output.** `s.generate(output=Schema)` and every runner validate against a Pydantic model, then hand failures to `validation`'s bounded repair.
-- **Offline.** The `scripted` provider (also exported as `ScriptedModel` in the test kit) answers from a script or from rule matchers, so every example runs with no network (R14).
+- **Offline.** The `scripted` provider (also exported as `ScriptedModel` in the test kit) answers from a script or from rule matchers, so every example runs with no network (R14). It ignores settings meant for a real provider, so an offline overlay can switch `models.provider` without repeating the section. With `HARNESSWEAVER_TEST_MODE=1`, live providers refuse to call out.
+- **`openai.chat`.** Chat Completions through `openai.AsyncOpenAI`: `base_url` (the gateway), the key from `api_key_env` (S1), retries off by default (R5), the gateway's `x-litellm-response-cost` header used before any price table (ADR-0012), streaming with usage. Output schemas go as `response_format` (non-strict JSON Schema).
+- **`anthropic.messages`.** The Messages API through `anthropic.AsyncAnthropic`, with adaptive thinking, optional `effort`, and server-side refusal fallbacks (`fallbacks: default`) on by default. A request the model still declines ends the run `blocked` with code `model_refusal`. Sampling parameters are sent only with `sampling: true`, since current models reject them. Output schemas go in the system prompt unless `structured_outputs: true` (the schema must then meet the API's structured-output rules).
+- **Provider extensions (ADR-0022).** A model's own per-turn data, such as Claude's thinking blocks, travels in `ModelResponse.extensions` and is copied onto the assistant message the runner adds, so the provider replays it unchanged on the next request. When the harness changed that answer (a redaction), the provider rebuilds the turn without it, and does so on every later request, so the history stays append-only.
 
 ## 17. Tool governance
 
@@ -907,10 +911,13 @@ async def vip_rules(req: hw.DecisionRequest) -> hw.Decision:
 | Tool result | truncate, `secrets.scan` | PII redaction | redact |
 | Output | Pydantic schema, business rules | `grounded.citations`, `llm.judge` | repair once, then escalate or block |
 
-- **Pipeline semantics.** Items run in list order (baseline items first). `parallel: true` items run concurrently as a group. Redactions chain. The most severe action wins.
+- **Pipeline semantics** (fixtures suite `guards`). Each guard is one middleware on its stage's hook (`input.before`, `context.after`, `tool.after`, `output.before`, `stream.chunk`), so items run in list order (baseline items first), redactions chain and the most severe action wins. Every string in a structured payload is checked. Consecutive `parallel: true` items in one band run concurrently as a group; their redactions are then applied in list order. At the context stage a `block` drops the item, not the run.
+- **Actions.** A provider proposes an action; the spec's `action` overrides it whenever the provider flags something. Asking to redact what a provider can't redact blocks. `repair` asks for a repair at the output stage and blocks anywhere else.
+- **Bands.** A guard's band comes from the layer that declared it: org profiles -> `baseline`, built-in profiles -> `platform`, the app -> `app`, a task's own guards -> `task`. Baseline guards must fail closed (R2).
+- **Built-in guards.** `regex.deny`, `pii.regex` (e-mail, phone, Luhn-checked card numbers, US SSN, IPv4), `secrets.scan` (private keys, cloud and API keys, tokens, JWTs, credential assignments), `injection.heuristic` (weighted phrases; cheap and easy to evade), `size.limit`, `topic.deny` and `llm.judge` (a governed, budgeted model call; its own explanation isn't kept, R9). Their patterns are part of the contract, written in regex syntax Python and TypeScript share.
 - **Location transparency.** `where: local | sidecar` picks where a guard runs. App code doesn't change.
 - **Shadow mode (R8).** `mode: log_only` records "would have fired" without enforcing. The evals module reports would-fire rates and false positives; promotion to `enforce` is a reviewed one-line change.
-- **Validation.** Pydantic schema validation, then up to `max_repairs` (default 1) repair attempts. Each attempt sends the validation errors back to the model. Then `on_failure: escalate | block`. Business rules are cel-lite expressions over `output`.
+- **Validation.** Pydantic schema validation, then up to `max_repairs` (default 1) repair attempts. Each attempt sends the validation errors back to the model. Then `on_failure: escalate | block`. Business rules are cel-lite expressions over `output`, `input` and `task` installed as `output.before` middleware: a rule's `when` describes a violation, like a policy rule's `when` (ADR-0023). A true `when`, or one that can't be evaluated, asks for a repair with the rule's `message`.
 
 ## 21. Context and memory
 
@@ -920,11 +927,12 @@ async def vip_rules(req: hw.DecisionRequest) -> hw.Decision:
 
 ## 22. Observability
 
-- **Spans** follow the OpenTelemetry GenAI conventions, with the version pinned in one constant (`SEMCONV_VERSION`) because the conventions are still in Development: `chat {model}`, `execute_tool {tool}`, `invoke_agent {agent}`, `invoke_workflow {name}`. The framework adds its own spans: `harness.run`, `harness.decision`, `harness.guard`, `harness.approval`.
+- **Spans** follow the OpenTelemetry GenAI conventions, pinned in one constant (`SEMCONV_VERSION = "1.42.0"`): in semantic-conventions 1.42.0 they moved to the separate `semantic-conventions-genai` repository, which has no tagged release yet and keeps them in Development. A test compares the names with the installed `opentelemetry-semantic-conventions` package. Spans: `chat {model}`, `execute_tool {tool}` (and, with agent adapters, `invoke_agent {agent}`, `invoke_workflow {name}`). The framework adds its own spans: `harness.run`, `harness.decision`, `harness.guard`, `harness.approval`. Middleware outcomes other than `Continue`, and failures, are added to the current span as `harness.outcome` events.
 - **Attributes** use the GenAI namespace (`gen_ai.operation.name`, `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.response.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.tool.name`) plus `harness.*` (`harness.run.id`, `harness.task`, `harness.tenant`, `harness.hook`, `harness.outcome`, `harness.band`, `harness.cost.usd`, `harness.decision.*`, `harness.guard.*`).
-- **Metrics:** token usage, operation duration, cost.
-- **Content.** `capture_content: false` by default (R9). It is usually locked by the org baseline.
-- **One owner (R5).** The core uses only the OTel *API*. The `otel.sdk` provider from `harnessweaver-otel` configures the SDK and exporters only when `observability.configure_sdk: true`, so apps that already configure OTel aren't double-configured.
+- **Metrics:** `gen_ai.client.token.usage`, `gen_ai.client.operation.duration`, and `harness.cost` (USD, for calls whose cost is known).
+- **Content.** `capture_content: false` by default (R9). It is usually locked by the org baseline. When on, `gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.tool.call.arguments` and `gen_ai.tool.call.result` hold the content after `model.before`, `model.after`, `tool.before` and `tool.after` middleware, so redactions apply.
+- **Errors.** Spans record an error's type (`error.type`), never its message (R9).
+- **One owner (R5).** The core uses only the OTel *API*. The `otel.sdk` provider from `harnessweaver-otel` configures the SDK and the `exporter` (`console` or `otlp` at `endpoint`) only when `observability.configure_sdk: true`, and leaves an app's own SDK setup alone, so apps that already configure OTel aren't double-configured. An `exporter` without `configure_sdk` is a load error.
 - **RunTrace.** A framework-neutral, in-memory record of every hook outcome is always kept on the `RunResult`. It powers `assert_trace` in tests and `harnessweaver replay`.
 
 ## 23. Evals
@@ -1064,6 +1072,8 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | **0019** | One `models` section (`provider`, `default`, `aliases`, `allowed_aliases`, `prices`) replaces the guide's separate `model_access` and `models`. Provider settings sit next to `use:` and are validated by the provider. `evals.online` is a reserved key beside the per-task suite lists | One place to read model access; the guide's inline provider settings stay valid; the guide's `evals: {task: [files]}` form stays valid | Accepted |
 | **0020** | A hook that halts a run raises a taxonomy error: `RunBlocked`, `RunEscalated` or `RunSuspended`, all `RunInterrupted` (codes `blocked`, `escalated`, `suspended`). In run style the harness turns it into the run's status; in session style the app's code sees it. `NotFound` (code `not_found`) covers unknown tasks, runs and approvals | One mechanism stops every integration style, apps can catch one base class, and only taxonomy errors cross a public boundary (C5) | Accepted |
 | **0021** | An approved step resumes from its checkpoint in `direct`, and by running the interrupted handler or workflow step again in `session` and `workflow`. Approvals are matched by tool name and arguments, or by the output's content, so the repeated call doesn't ask twice | App code can't be resumed in the middle of a function. Running the step again, as LangGraph's interrupts do, keeps handlers plain async functions | Accepted |
+| **0022** | `Message` and `ModelResponse` carry `extensions`: provider data keyed by namespace that the harness treats as opaque and replays unchanged with the message | Some APIs require a model's own per-turn data back on the next request (Claude's thinking blocks must be replayed unchanged for reasoning to carry over). A neutral, JSON-only field keeps SDK types out of contracts (R7) and survives checkpoints | Accepted |
+| **0023** | A `validation.rules[].when` expression describes a violation (true means the output breaks the rule), like `policy.rules[].when`; an expression that can't be evaluated counts as broken | One reading of `when` across the spec; failing closed on a rule that can't be checked | Accepted |
 
 ## 29. Deviations from the design guide
 

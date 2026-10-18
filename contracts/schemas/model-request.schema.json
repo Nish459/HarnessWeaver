@@ -48,6 +48,14 @@
           ],
           "default": null,
           "title": "Name"
+        },
+        "extensions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Provider data to replay unchanged with this message, keyed by provider namespace (for example a model's own reasoning blocks). Opaque to the harness.",
+          "title": "Extensions",
+          "type": "object"
         }
       },
       "required": [

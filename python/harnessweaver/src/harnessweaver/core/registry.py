@@ -368,6 +368,12 @@ class Registry:
         assert isinstance(item, RunnerInfo)
         return item
 
+    def adapter(self, name: str) -> AdapterInfo:
+        """The adapter ``name`` (see :meth:`provider` for what it raises)."""
+        item = self._lookup("adapter", name, "adapter").item
+        assert isinstance(item, AdapterInfo)
+        return item
+
     def adapters(self) -> list[AdapterInfo]:
         """Adapters from the plugins registered so far."""
         return [c.item for c in self._items.values() if isinstance(c.item, AdapterInfo)]

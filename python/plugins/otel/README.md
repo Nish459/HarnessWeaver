@@ -1,11 +1,20 @@
 # harnessweaver-otel
 
-A first-party [HarnessWeaver](../../../README.md) plugin for OpenTelemetry SDK. It contributes `otel.sdk`, which configures the OpenTelemetry SDK and OTLP exporter when `observability.configure_sdk: true`.
-
-It is built on the same plugin contract any third-party plugin uses: one `hw.Plugin` object, published through the `harnessweaver.plugins` entry point under the namespace `otel` (see DESIGNS.md No. 13).
+A first-party [HarnessWeaver](../../../README.md) plugin that sets up the OpenTelemetry SDK. It is built on the same plugin contract any third-party plugin uses (see DESIGNS.md No. 13).
 
 ```bash
-uv add harnessweaver-otel        # or: uv add "harnessweaver[otel]"
+uv add harnessweaver-otel          # or: uv add "harnessweaver[otel]"
 ```
 
-> Status: package skeleton. The plugin's contributions are not implemented yet.
+The core only uses the OpenTelemetry API, so its spans and metrics go wherever the app's own SDK setup sends them. If the app has none, ask the harness to set it up:
+
+```yaml
+observability:
+  configure_sdk: true
+  exporter: otlp                     # none | console | otlp
+  endpoint: http://otel-collector:4318
+  service_name: invoice-extractor    # default: metadata.name
+  export_interval: 30s               # metrics, default 60s
+```
+
+`otel.sdk` installs SDK tracer and meter providers with the chosen exporter, once, when the harness loads. If the app already installed SDK providers it changes nothing (one owner, RULES R5). The OTLP exporters also read the standard `OTEL_EXPORTER_OTLP_*` environment variables. With `HARNESSWEAVER_TEST_MODE=1` the OTLP exporter isn't installed (R14).

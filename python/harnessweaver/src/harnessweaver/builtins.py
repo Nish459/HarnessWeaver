@@ -8,6 +8,16 @@ bare names and the reserved namespaces in ``harnessweaver.RESERVED_NAMESPACES``.
 from importlib.metadata import version
 
 from harnessweaver.core.plugins import BUILTIN_NAMESPACE, Plugin
+from harnessweaver.modules.guardrails import (
+    InjectionHeuristic,
+    LlmJudge,
+    PiiRegex,
+    RegexDeny,
+    SecretsScan,
+    SizeLimit,
+    TopicDeny,
+)
+from harnessweaver.modules.models import ScriptedModel
 from harnessweaver.modules.state import MemoryStateStore, SqliteStateStore
 from harnessweaver.runners import DirectRunner, SessionRunner, WorkflowRunner
 
@@ -16,7 +26,18 @@ __all__ = ["plugin"]
 plugin = Plugin(
     namespace=BUILTIN_NAMESPACE,
     version=version("harnessweaver"),
-    providers=[MemoryStateStore, SqliteStateStore],
+    providers=[
+        MemoryStateStore,
+        SqliteStateStore,
+        ScriptedModel,
+        RegexDeny,
+        PiiRegex,
+        SecretsScan,
+        InjectionHeuristic,
+        SizeLimit,
+        TopicDeny,
+        LlmJudge,
+    ],
     runners=[DirectRunner, SessionRunner, WorkflowRunner],
     description="Runners and providers that ship with the harnessweaver core.",
 )

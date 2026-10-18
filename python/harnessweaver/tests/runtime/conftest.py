@@ -10,6 +10,7 @@ import pytest
 
 import harnessweaver as hw
 from harnessweaver.core.registry import PluginCatalog
+from harnessweaver.core.telemetry import Telemetry
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 
@@ -60,6 +61,7 @@ def build(tmp_path: Path, testkit: ModuleType) -> Builder:
         clock: hw.Clock | None = None,
         prompts: dict[str, str] | None = None,
         catalog: PluginCatalog | None = None,
+        telemetry: Telemetry | None = None,
     ) -> hw.Harness:
         for name, text in (prompts or {"reply@1": "Route {route}. Customer: {customer}"}).items():
             (tmp_path / "prompts").mkdir(exist_ok=True)
@@ -69,6 +71,7 @@ def build(tmp_path: Path, testkit: ModuleType) -> Builder:
             clock=clock or hw.FakeClock(),
             tools=testkit.FakeTools() if tools == "fake" else tools,
             catalog=catalog or PluginCatalog(),
+            telemetry=telemetry,
         )
 
     return make

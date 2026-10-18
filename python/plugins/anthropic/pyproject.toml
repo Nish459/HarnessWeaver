@@ -26,5 +26,8 @@ dependencies = [
     "anthropic>=1.12",
 ]
 
+[project.entry-points."harnessweaver.plugins"]
+anthropic = "harnessweaver_anthropic:plugin"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/harnessweaver_anthropic"]

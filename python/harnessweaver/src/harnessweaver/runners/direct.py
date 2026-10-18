@@ -116,13 +116,17 @@ class DirectRunner:
                 else:
                     state["step"] += 1
                 if response.tool_calls:
-                    messages.append(Message.assistant(response.text, response.tool_calls))
+                    messages.append(
+                        Message.assistant(response.text, response.tool_calls, response.extensions)
+                    )
                     state["phase"] = "tools"
                     state["calls"] = [c.model_dump(mode="json") for c in response.tool_calls]
                     state["index"] = 0
                 else:
                     candidate = candidate_of(response)
-                    messages.append(Message.assistant(text_of(candidate)))
+                    messages.append(
+                        Message.assistant(text_of(candidate), extensions=response.extensions)
+                    )
                     state["phase"] = "output"
                     state["candidate"] = candidate
             elif state["phase"] == "tools":

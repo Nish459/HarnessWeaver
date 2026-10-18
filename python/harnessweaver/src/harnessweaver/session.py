@@ -196,7 +196,10 @@ class Session:
             if attempt >= max_repairs:
                 give_up(self._ctx, problem, attempt)
             attempt += 1
-            history += [Message.assistant(text_of(candidate)), repair_message(problem)]
+            history += [
+                Message.assistant(text_of(candidate), extensions=response.extensions),
+                repair_message(problem),
+            ]
 
     async def tool(self, name: str, /, **arguments: JsonValue) -> JsonValue:
         """Call a tool, governed (``tool.before`` / ``tool.after``). Returns its output."""
