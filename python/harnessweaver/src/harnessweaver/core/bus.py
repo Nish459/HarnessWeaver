@@ -12,12 +12,12 @@ Rules (fixtures suites ``hook_order`` and ``bus``):
 6. The most severe outcome wins; every outcome is traced (R13).
 """
 
-import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
 import anyio
+from loguru import logger
 
 from harnessweaver.core.envelope import Envelope
 from harnessweaver.core.errors import SpecError
@@ -36,7 +36,6 @@ from harnessweaver.core.trace import RunTrace
 
 __all__ = ["HookBus", "HookResult"]
 
-_log = logging.getLogger("harnessweaver.bus")
 
 _OUTCOME_TYPES = (Continue, Retry, Escalate, Suspend, Block)
 
@@ -164,8 +163,8 @@ class HookBus:
                     timed_out=timed_out,
                 )
                 # Only the exception type: its message may hold raw content (R9).
-                _log.warning(
-                    "middleware %s failed on %s (%s); fail_mode=%s",
+                logger.warning(
+                    "middleware {} failed on {} ({}); fail_mode={}",
                     registration.name,
                     hook.value,
                     error_type,

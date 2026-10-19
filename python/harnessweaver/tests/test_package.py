@@ -5,7 +5,7 @@ import harnessweaver
 
 # RULES R6: the core depends on exactly these packages. Anything else
 # belongs in a plugin, the CLI or the sidecar.
-ALLOWED_CORE_DEPENDENCIES = {"pydantic", "opentelemetry-api", "pyyaml", "anyio"}
+ALLOWED_CORE_DEPENDENCIES = {"pydantic", "opentelemetry-api", "pyyaml", "anyio", "loguru"}
 
 
 def _normalize(name: str) -> str:
@@ -22,6 +22,6 @@ def _requirement_name(requirement: str) -> str:
     return _normalize(match.group(0))
 
 
-def test_core_runtime_dependencies_are_only_the_allowed_four() -> None:
+def test_core_runtime_dependencies_are_only_the_allowed_five() -> None:
     runtime = [r for r in requires("harnessweaver") or [] if "extra ==" not in r]
     assert {_requirement_name(r) for r in runtime} == ALLOWED_CORE_DEPENDENCIES

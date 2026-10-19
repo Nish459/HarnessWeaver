@@ -9,6 +9,8 @@ change between releases.
 
 from importlib.metadata import version as _version
 
+from loguru import logger as _logger
+
 from harnessweaver import errors
 from harnessweaver.contracts import API_VERSION
 from harnessweaver.core.context import RunContext, current_run
@@ -78,6 +80,10 @@ from harnessweaver.core.trace import RunTrace, TraceEvent, TraceKind
 from harnessweaver.harness import Harness
 from harnessweaver.session import Session
 from harnessweaver.spec import EffectiveSpec, HarnessSpec, Level, ProfileSpec, load_spec
+
+# A library stays silent until the app opts in with logger.enable("harnessweaver"),
+# as loguru recommends for libraries (ADR-0024).
+_logger.disable(__name__)
 
 __version__: str = _version("harnessweaver")
 

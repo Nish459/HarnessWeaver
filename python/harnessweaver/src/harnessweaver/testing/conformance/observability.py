@@ -5,6 +5,8 @@ import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 
+from loguru import logger
+
 from harnessweaver.core.errors import ProviderError, RunInterrupted
 from harnessweaver.core.plugins import (
     ProviderInfo,
@@ -26,7 +28,12 @@ __all__ = ["check_latency", "check_no_raw_content"]
 
 
 @contextmanager
-def _captured_logs() -> Iterator[list[str]]:
+def _captured_logs(module: str) -> Iterator[list[str]]:
+    """Everything logged meanwhile, through loguru and the standard library.
+
+    The harness's and the plugin's loguru logs are off by default (ADR-0024), so
+    they are turned on for the check and back off afterwards.
+    """
     lines: list[str] = []
 
     class Collect(logging.Handler):
@@ -38,9 +45,18 @@ def _captured_logs() -> Iterator[list[str]]:
     previous = root.level
     root.addHandler(handler)
     root.setLevel(logging.DEBUG)
+    names = sorted({"harnessweaver", module.split(".")[0]})
+    for name in names:
+        logger.enable(name)
+    sink = logger.add(
+        lines.append, level="TRACE", format="{level} {name} {message} {extra} {exception}"
+    )
     try:
         yield lines
     finally:
+        logger.remove(sink)
+        for name in names:
+            logger.disable(name)
         root.removeHandler(handler)
         root.setLevel(previous)
 
@@ -76,7 +92,7 @@ async def check_no_raw_content(subject: Subject) -> None:
         return
     otel = _otel()
     telemetry, spans = otel if otel is not None else (None, lambda: list[str]())
-    with _captured_logs() as logs:
+    with _captured_logs(subject.plugin.source.module) as logs:
         if item.port == "Guardrail":
             guard = {"id": "g", "use": subject.name, **sample_settings(item.sample)}
             harness = harness_for_test(

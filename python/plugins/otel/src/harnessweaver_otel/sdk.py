@@ -19,11 +19,11 @@ standard ``OTEL_EXPORTER_OTLP_*`` variables (headers, certificates). With
 ``HARNESSWEAVER_TEST_MODE=1`` the OTLP exporter isn't installed (R14).
 """
 
-import logging
 from collections.abc import Callable
 from datetime import timedelta
 from typing import Any
 
+from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field
 
 import harnessweaver as hw
@@ -31,7 +31,6 @@ from harnessweaver.ports import network_allowed
 
 __all__ = ["OtelSdk", "OtelSdkConfig"]
 
-_log = logging.getLogger("harnessweaver.otel")
 
 type Installer = Callable[[Any, Any], None]
 """Makes ``(tracer_provider, meter_provider)`` the process-wide providers."""
@@ -77,7 +76,7 @@ class OtelSdk:
     def configure(self, *, service_name: str, exporter: str, endpoint: str | None) -> None:
         """Install SDK providers with ``exporter``; leave an app's own setup alone (R5)."""
         if self._install is _install_globals and _sdk_already_configured():
-            _log.info("OpenTelemetry SDK is already configured; otel.sdk leaves it as it is")
+            logger.info("OpenTelemetry SDK is already configured; otel.sdk leaves it as it is")
             return
         from opentelemetry.sdk.metrics import MeterProvider
         from opentelemetry.sdk.metrics.export import (
@@ -106,7 +105,7 @@ class OtelSdk:
             )
         elif exporter == "otlp":
             if not network_allowed():
-                _log.warning("test mode: the OTLP exporter isn't installed (R14)")
+                logger.warning("test mode: the OTLP exporter isn't installed (R14)")
             else:
                 from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
                     OTLPMetricExporter,

@@ -97,7 +97,7 @@ flowchart LR
 - Async first with `anyio`. No blocking I/O on the event loop.
 - No global mutable state. Use the injected `Clock`, never `datetime.now()` in logic.
 - Raise only `harnessweaver.errors` taxonomy errors across public boundaries.
-- `logging.getLogger("harnessweaver.<area>")`, no `print`, never raw content in logs (R9).
+- Log with loguru (`from loguru import logger`); a package that logs calls `logger.disable(__name__)` in its top-level `__init__` so it is silent until the app enables it. No `print`, never raw content in logs (R9).
 - Keep modules small: when a module grows past about 350 lines, turn it into a package of focused modules whose `__init__` exports only what other code imports.
 - Public API lives in `harnessweaver/__init__.py`. Anything prefixed `_` is private.
 - Names: hook points `tool.before`; providers `area.capability` (`pii.regex`); spec keys `snake_case`; env vars `HARNESSWEAVER_*`.

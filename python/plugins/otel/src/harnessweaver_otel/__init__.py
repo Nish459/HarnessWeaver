@@ -7,8 +7,13 @@ imports nothing from the SDK (RULES S8).
 
 from importlib.metadata import version as _version
 
+from loguru import logger as _logger
+
 import harnessweaver as hw
 from harnessweaver_otel.sdk import OtelSdk, OtelSdkConfig
+
+# Silent until the app opts in: logger.enable("harnessweaver_otel") (ADR-0024).
+_logger.disable(__name__)
 
 __version__: str = _version("harnessweaver-otel")
 

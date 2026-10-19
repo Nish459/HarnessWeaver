@@ -1,11 +1,11 @@
 """Running tasks: ``run``, ``submit``, ``result``, and how a run starts and ends."""
 
-import logging
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from typing import Any
 
 import anyio
+from loguru import logger
 from pydantic import BaseModel, JsonValue, ValidationError
 
 from harnessweaver.core.budgets import BudgetMeter
@@ -39,8 +39,6 @@ from harnessweaver.harness.records import (
 from harnessweaver.runners._output import to_json
 
 __all__ = ["RunMixin"]
-
-_log = logging.getLogger("harnessweaver.harness")
 
 
 class RunMixin(EndingMixin, ABC):
@@ -248,7 +246,7 @@ class RunMixin(EndingMixin, ABC):
             except TimeoutError:
                 return await self._fail(run, DeadlineExceeded("the run passed its deadline"))
             except Exception as exc:
-                _log.warning("run %s failed with %s", ctx.run_id, type(exc).__name__)
+                logger.warning("run {} failed with {}", ctx.run_id, type(exc).__name__)
                 return await self._fail(run, from_known(exc) or classify(exc))
             return await self._finish(run, RunStatus.COMPLETED, output=output)
 

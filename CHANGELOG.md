@@ -58,10 +58,11 @@ All notable changes to the HarnessWeaver packages are recorded here. The format 
 - Hypothesis property tests for outcome combination, cel-lite arithmetic and logic, durations and versions (T3).
 - uv workspace with the core package `harnessweaver`, the developer tooling `harnessweaver-cli` (the `harnessweaver` command), the sidecar `harnessweaver-sidecar` (`harnessd`; `GET /v1/health` so far), and package skeletons for the first-party plugins `harnessweaver-openai`, `harnessweaver-anthropic`, `harnessweaver-pydantic-ai`, `harnessweaver-monty`, `harnessweaver-otel` and `harnessweaver-cel`.
 - Core extras that pull in first-party plugins: `harnessweaver[openai]`, `[anthropic]`, `[pydantic-ai]`, `[monty]`, `[otel]`, `[cel]`, `[cli]`, `[sidecar]` and `[all]`.
-- A test that keeps the core's runtime dependencies to `pydantic`, `opentelemetry-api`, `pyyaml` and `anyio` (RULES R6).
+- A test that keeps the core's runtime dependencies to `pydantic`, `opentelemetry-api`, `pyyaml`, `anyio` and `loguru` (RULES R6).
 - `make check` (ruff, ruff format, pyright, pytest), CI on Python 3.12-3.14 with SHA-pinned actions, pre-commit hooks and a pull request template.
 - `make check` also rejects characters that aren't on a standard keyboard (`scripts/check_ascii.py`, RULES D5).
 
 ### Changed
 
+- Logging goes through loguru (ADR-0024), which becomes the core's fifth dependency (RULES R6). The core and `harnessweaver-otel` are silent until the app opts in with `logger.enable("harnessweaver")` / `logger.enable("harnessweaver_otel")`, and never add sinks. The conformance suite's raw-content check (R9) captures loguru and `logging` output alike.
 - Large modules are now packages of focused modules, each package's `__init__` exporting what other code imports: `harnessweaver.harness` (the `Harness` class is built from mixins for runs, endings, approvals and sessions), `core.context`, `core.plugins`, `core.registry`, `core.telemetry`, `spec.loader`, `spec.merge`, `spec.models`, `modules.guardrails.pipeline`, `modules.guardrails.providers` (one module per built-in guard) and `testing.conformance`; `core.expr` gains `grammar`, `declared` and `operations` modules. The public API (`import harnessweaver as hw`) is unchanged.

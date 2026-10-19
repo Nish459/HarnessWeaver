@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from loguru import logger
 from opentelemetry import trace
 from opentelemetry.sdk.metrics.export import ConsoleMetricExporter
 from opentelemetry.sdk.trace import TracerProvider
@@ -45,7 +46,19 @@ def test_console_and_none_exporters() -> None:
 
 
 def test_otlp_is_not_installed_in_test_mode(monkeypatch: pytest.MonkeyPatch) -> None:
-    sdk, _ = configured("otlp", "http://collector:4318")
+    lines: list[str] = []
+    sink = logger.add(lines.append, format="{name} | {message}")
+    try:
+        configured("otlp", "http://collector:4318")
+        assert lines == []  # the plugin is silent until the app opts in (ADR-0024)
+        logger.enable("harnessweaver_otel")
+        sdk, _ = configured("otlp", "http://collector:4318")
+    finally:
+        logger.remove(sink)
+        logger.disable("harnessweaver_otel")
+    assert [line.strip() for line in lines] == [
+        "harnessweaver_otel.sdk | test mode: the OTLP exporter isn't installed (R14)"
+    ]
     assert sdk.tracer_provider is not None
     # Outside test mode the OTLP exporters are built; stand-ins keep this test offline (R14).
     endpoints: list[str | None] = []

@@ -88,7 +88,7 @@ Every feature request is tested against these ten goals. **When two goals confli
 3. **Incremental.** Each adoption level (observe, guard, govern, orchestrate, improve) is useful on its own. One line of code gets you level 0.
 4. **Composable.** Every capability is a module behind a port. Apps pick modules; modules pick providers.
 5. **Declarative first, code when needed.** Common setup is a YAML spec. Anything the spec can't express is a plain Python or TypeScript function registered as a plugin.
-6. **Small core.** The core depends only on Pydantic, the OpenTelemetry API, PyYAML and anyio. Everything heavy is a plugin. (R6)
+6. **Small core.** The core depends only on Pydantic, the OpenTelemetry API, PyYAML, anyio and loguru. Everything heavy is a plugin. (R6)
 7. **Polyglot by contract.** One spec format and one set of wire contracts serve Python, TypeScript and any language that can call HTTP. (R11)
 8. **Testable.** Every module runs against fakes. Every plugin passes a shared conformance suite. (R14, T5)
 9. **Stable extension surface.** Hook points, ports and the spec are versioned and change slowly. Internals can change freely. (V1-V5)
@@ -956,6 +956,7 @@ async def vip_rules(req: hw.DecisionRequest) -> hw.Decision:
 - **Errors.** Spans record an error's type (`error.type`), never its message (R9).
 - **One owner (R5).** The core uses only the OTel *API*. The `otel.sdk` provider from `harnessweaver-otel` configures the SDK and the `exporter` (`console` or `otlp` at `endpoint`) only when `observability.configure_sdk: true`, and leaves an app's own SDK setup alone, so apps that already configure OTel aren't double-configured. An `exporter` without `configure_sdk` is a load error.
 - **RunTrace.** A framework-neutral, in-memory record of every hook outcome is always kept on the `RunResult`. It powers `assert_trace` in tests and `harnessweaver replay`.
+- **Logs** go through loguru and are off until the app turns them on: `logger.enable("harnessweaver")`, plus `"harnessweaver_<plugin>"` for a plugin's own logs (ADR-0024). The harness never adds a sink, so where logs go is the app's choice; an app on the standard `logging` module adds a loguru sink that forwards each record. Logs carry ids and error types, never content (R9); the conformance suite checks loguru and `logging` output alike.
 
 ## 23. Evals
 
@@ -1075,7 +1076,7 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | --- | --- | --- | --- |
 | **0001** | Ship as **HarnessWeaver**: `harnessweaver`, `harnessweaver-cli` (command `harnessweaver`), `harnessweaver-sidecar`, first-party plugins `harnessweaver-<name>`, `@harnessweaver/core`, `@harnessweaver/<name>` | `harnesskit` is taken on PyPI and npm; the new names were free when checked (2026-10-17) | Accepted |
 | **0002** | Support Python `>=3.12`; develop on 3.14 | Wide adoption while allowing modern typing (PEP 695 generics) | Accepted |
-| **0003** | Core dependencies are `pydantic`, `opentelemetry-api`, `pyyaml`, `anyio` | The guide's two, plus the YAML parser the spec format needs and the async library the guide names. HTTP uses the stdlib via `anyio.to_thread` | Accepted |
+| **0003** | Core dependencies are `pydantic`, `opentelemetry-api`, `pyyaml`, `anyio` (`loguru` added by ADR-0024) | The guide's two, plus the YAML parser the spec format needs and the async library the guide names. HTTP uses the stdlib via `anyio.to_thread` | Accepted |
 | **0004** | Built-in **cel-lite** expression language (a CEL subset) for policy, rules, approvals and business rules; full CEL as the `cel.policy` provider in `harnessweaver-cel`. It covers literals, field/index access, `has()`, arithmetic, comparison, `in`, `&&`/`\|\|` with CEL's error absorption, `?:`, `size`, `int`, `double`, `string`, `startsWith`, `endsWith`, `contains`, `matches`, and the `exists`, `all`, `exists_one`, `map`, `filter` macros. Unknown functions and (when declared) unknown variables fail at compile time. Three deliberate differences from CEL keep Python and TypeScript identical: mixed int/double arithmetic gives a double instead of an error; integral floats in *data* are treated as ints (JSON numbers have no int/double distinction in JavaScript); `string(double)` prints like JavaScript's `Number#toString` | `cel-python` pulls in `google-re2` and `pendulum`. A CEL-compatible subset keeps rules portable to TS and real CEL engines, sharing fixtures (suite `expr`) | Accepted |
 | **0005** | Contract models are Pydantic. JSON Schemas are generated, checked in under `contracts/schemas`, and drift-tested. Behavioral contracts live in JSON fixtures | One authoring language without losing a reviewed, language-neutral contract. Revisit schema-first codegen if a third native SDK appears | Accepted |
 | **0006** | uv workspace with separate core, CLI, sidecar and first-party plugin packages; plugins are exposed as core extras for convenience | Keeps the core small (R6) and lets each plugin version on its own | Accepted |
@@ -1096,6 +1097,7 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | **0021** | An approved step resumes from its checkpoint in `direct`, and by running the interrupted handler or workflow step again in `session` and `workflow`. Approvals are matched by tool name and arguments, or by the output's content, so the repeated call doesn't ask twice | App code can't be resumed in the middle of a function. Running the step again, as LangGraph's interrupts do, keeps handlers plain async functions | Accepted |
 | **0022** | `Message` and `ModelResponse` carry `extensions`: provider data keyed by namespace that the harness treats as opaque and replays unchanged with the message | Some APIs require a model's own per-turn data back on the next request (Claude's thinking blocks must be replayed unchanged for reasoning to carry over). A neutral, JSON-only field keeps SDK types out of contracts (R7) and survives checkpoints | Accepted |
 | **0023** | A `validation.rules[].when` expression describes a violation (true means the output breaks the rule), like `policy.rules[].when`; an expression that can't be evaluated counts as broken | One reading of `when` across the spec; failing closed on a rule that can't be checked | Accepted |
+| **0024** | Logging goes through **loguru** in the core and the first-party plugins, and it becomes the core's fifth dependency (amends ADR-0003, R6 and C6). Each package that logs calls `logger.disable(__name__)` when it is imported, so it is silent until the app calls `logger.enable(...)`; library code never adds sinks. Messages carry ids and error types, never content (R9) | One logging API that is simpler to use and to configure than `logging.getLogger` per area. Disabling by default follows loguru's own advice for libraries, so an app's log output is its own decision. loguru is pure Python with no dependencies outside Windows, so the core stays small | Accepted |
 
 ## 29. Deviations from the design guide
 
@@ -1103,7 +1105,7 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | --- | --- | --- |
 | Working name `harnesskit`, CLI `harness` | `harnessweaver`, CLI `harnessweaver` | Name taken; brand decision (0001) |
 | Python 3.11+ | Python 3.12+ | User decision (0002) |
-| Core depends only on Pydantic and the OTel API | Adds PyYAML and anyio | The spec format and deadlines need them (0003) |
+| Core depends only on Pydantic and the OTel API | Adds PyYAML, anyio and loguru | The spec format and deadlines need the first two (0003); logging uses loguru (0024) |
 | `cel-python` in the core | Built-in cel-lite; full CEL as a plugin | Dependency weight (0004) |
 | JSON Schema is the source, Pydantic generated from it | Pydantic generates JSON Schema, which is drift-tested | Single authoring path (0005) |
 | Monorepo of independent packages under `python/`, `typescript/` | Same idea: uv + pnpm workspaces, with plugins as separate packages | - (0006) |
