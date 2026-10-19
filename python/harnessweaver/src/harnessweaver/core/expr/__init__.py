@@ -16,9 +16,11 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 
 from harnessweaver.core.errors import ExpressionEvalError
-from harnessweaver.core.expr.evaluator import EvalFailure, evaluate, format_double
+from harnessweaver.core.expr.evaluator import evaluate
+from harnessweaver.core.expr.grammar import GLOBAL_FUNCTIONS, MACROS, METHODS
 from harnessweaver.core.expr.nodes import Node
-from harnessweaver.core.expr.parser import GLOBAL_FUNCTIONS, MACROS, METHODS, parse
+from harnessweaver.core.expr.operations import EvalFailure, format_double
+from harnessweaver.core.expr.parser import parse
 from harnessweaver.core.expr.values import ConversionError, Value, from_host, type_name
 
 __all__ = [

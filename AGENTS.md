@@ -34,7 +34,7 @@ This file is for AI coding agents (and humans) working **on** the HarnessWeaver 
 |   |       |-- runners/            #   direct, session, workflow
 |   |       |-- testing/            #   ScriptedModel, FakeTool, assert_trace, cassettes, conformance plugin
 |   |       |-- profiles/           #   built-in profiles (YAML)
-|   |       |-- harness.py          #   Harness: load, run, session, wrap, instrument, approve, ...
+|   |       |-- harness/            #   Harness: load, run, session, instrument, approve, ... (one mixin per concern)
 |   |       `-- session.py
 |   |-- harnessweaver-cli/          # `harnessweaver` command + templates + gateway generators
 |   |-- harnessweaver-sidecar/      # harnessd (FastAPI)
@@ -98,6 +98,7 @@ flowchart LR
 - No global mutable state. Use the injected `Clock`, never `datetime.now()` in logic.
 - Raise only `harnessweaver.errors` taxonomy errors across public boundaries.
 - `logging.getLogger("harnessweaver.<area>")`, no `print`, never raw content in logs (R9).
+- Keep modules small: when a module grows past about 350 lines, turn it into a package of focused modules whose `__init__` exports only what other code imports.
 - Public API lives in `harnessweaver/__init__.py`. Anything prefixed `_` is private.
 - Names: hook points `tool.before`; providers `area.capability` (`pii.regex`); spec keys `snake_case`; env vars `HARNESSWEAVER_*`.
 - Match the surrounding code's style, naming and comment density. Comments explain *why*.

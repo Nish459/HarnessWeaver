@@ -61,3 +61,7 @@ All notable changes to the HarnessWeaver packages are recorded here. The format 
 - A test that keeps the core's runtime dependencies to `pydantic`, `opentelemetry-api`, `pyyaml` and `anyio` (RULES R6).
 - `make check` (ruff, ruff format, pyright, pytest), CI on Python 3.12-3.14 with SHA-pinned actions, pre-commit hooks and a pull request template.
 - `make check` also rejects characters that aren't on a standard keyboard (`scripts/check_ascii.py`, RULES D5).
+
+### Changed
+
+- Large modules are now packages of focused modules, each package's `__init__` exporting what other code imports: `harnessweaver.harness` (the `Harness` class is built from mixins for runs, endings, approvals and sessions), `core.context`, `core.plugins`, `core.registry`, `core.telemetry`, `spec.loader`, `spec.merge`, `spec.models`, `modules.guardrails.pipeline`, `modules.guardrails.providers` (one module per built-in guard) and `testing.conformance`; `core.expr` gains `grammar`, `declared` and `operations` modules. The public API (`import harnessweaver as hw`) is unchanged.

@@ -41,7 +41,7 @@ from harnessweaver.runners._output import (
 )
 
 if TYPE_CHECKING:
-    from harnessweaver.harness import Harness, _PendingSession  # pyright: ignore[reportPrivateUsage]
+    from harnessweaver.harness import Harness, PendingSession
 
 __all__ = ["ContextSource", "Session"]
 
@@ -75,7 +75,7 @@ class Session:
         ctx: RunContext | None,
         *,
         harness: "Harness | None" = None,
-        pending: "_PendingSession | None" = None,
+        pending: "PendingSession | None" = None,
         step: str | None = None,
     ) -> None:
         self._bound = ctx

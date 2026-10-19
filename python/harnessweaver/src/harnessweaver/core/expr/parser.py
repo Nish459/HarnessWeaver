@@ -13,9 +13,18 @@ Precedence, lowest to highest (as in CEL)::
 """
 
 from collections.abc import Collection
-from typing import Final
 
 from harnessweaver.core.errors import ExpressionSyntaxError
+from harnessweaver.core.expr.declared import check_declared
+from harnessweaver.core.expr.grammar import (
+    GLOBAL_FUNCTIONS,
+    MACROS,
+    MAX_DEPTH,
+    MAX_LENGTH,
+    METHODS,
+    RELATIONS,
+    RESERVED,
+)
 from harnessweaver.core.expr.lexer import Token, TokenKind, tokenize
 from harnessweaver.core.expr.nodes import (
     Binary,
@@ -33,43 +42,6 @@ from harnessweaver.core.expr.nodes import (
     Unary,
 )
 from harnessweaver.core.expr.values import INT64_MAX, INT64_MIN
-
-__all__ = ["GLOBAL_FUNCTIONS", "MACROS", "MAX_DEPTH", "MAX_LENGTH", "METHODS", "parse"]
-
-MAX_LENGTH: Final = 10_000
-"""Longest accepted expression, in characters."""
-
-MAX_DEPTH: Final = 64
-"""Deepest accepted nesting."""
-
-GLOBAL_FUNCTIONS: Final[dict[str, int]] = {
-    "size": 1,
-    "int": 1,
-    "double": 1,
-    "string": 1,
-    "matches": 2,
-}
-"""Global functions and their arity. ``has()`` is a macro handled separately."""
-
-METHODS: Final[dict[str, int]] = {
-    "size": 0,
-    "startsWith": 1,
-    "endsWith": 1,
-    "contains": 1,
-    "matches": 1,
-}
-"""Receiver-style functions and their arity."""
-
-MACROS: Final = frozenset({"exists", "all", "exists_one", "map", "filter"})
-"""Comprehension macros: ``list.exists(x, predicate)``."""
-
-_RELATIONS: Final = frozenset({"==", "!=", "<", "<=", ">", ">="})
-_RESERVED: Final = frozenset(
-    {
-        "as", "break", "const", "continue", "else", "for", "function", "if", "import", "let",
-        "loop", "package", "namespace", "return", "var", "void", "while",
-    }
-)  # fmt: skip
 
 
 class _Parser:
@@ -152,7 +124,7 @@ class _Parser:
     def relation(self) -> Node:
         left = self.addition()
         while True:
-            if self.at_op(*_RELATIONS):
+            if self.at_op(*RELATIONS):
                 token = self.advance()
                 left = Binary(token.text, left, self.addition(), token.pos)
             elif self.at_in():
@@ -262,7 +234,7 @@ class _Parser:
                 return Const(token.text == "true", token.pos)
             if token.text == "null":
                 return Const(None, token.pos)
-            if token.text in _RESERVED or token.text == "in":
+            if token.text in RESERVED or token.text == "in":
                 raise self.error(f"{token.text!r} is a reserved word", token.pos)
             if self.at_op("("):
                 return self.global_call(token)
@@ -317,45 +289,6 @@ class _Parser:
         return MapExpr(tuple(entries), pos)
 
 
-def _check_declared(node: Node, declared: Collection[str], bound: frozenset[str]) -> None:
-    match node:
-        case Ident(name=name, pos=pos):
-            if name not in bound and name not in declared:
-                raise ExpressionSyntaxError(
-                    f"undeclared reference {name!r} at position {pos}", position=pos
-                )
-        case Const():
-            pass
-        case Select(operand=operand) | Presence(operand=operand):
-            _check_declared(operand, declared, bound)
-        case Index(operand=operand, index=index):
-            _check_declared(operand, declared, bound)
-            _check_declared(index, declared, bound)
-        case Call(target=target, args=args):
-            if target is not None:
-                _check_declared(target, declared, bound)
-            for arg in args:
-                _check_declared(arg, declared, bound)
-        case ListExpr(items=items):
-            for item in items:
-                _check_declared(item, declared, bound)
-        case MapExpr(entries=entries):
-            for key, value in entries:
-                _check_declared(key, declared, bound)
-                _check_declared(value, declared, bound)
-        case Unary(operand=operand):
-            _check_declared(operand, declared, bound)
-        case Binary(left=left, right=right):
-            _check_declared(left, declared, bound)
-            _check_declared(right, declared, bound)
-        case Conditional(condition=condition, then=then, otherwise=otherwise):
-            for part in (condition, then, otherwise):
-                _check_declared(part, declared, bound)
-        case Comprehension(target=target, var=var, body=body):
-            _check_declared(target, declared, bound)
-            _check_declared(body, declared, bound | {var})
-
-
 def parse(source: str, *, declared: Collection[str] | None = None) -> Node:
     """Parse a cel-lite expression into a syntax tree.
 
@@ -371,5 +304,5 @@ def parse(source: str, *, declared: Collection[str] | None = None) -> Node:
         raise ExpressionSyntaxError(f"expression is longer than {MAX_LENGTH} characters")
     node = _Parser(source).parse()
     if declared is not None:
-        _check_declared(node, declared, frozenset())
+        check_declared(node, declared, frozenset())
     return node

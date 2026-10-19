@@ -9,7 +9,6 @@ import pytest
 from pydantic import BaseModel
 
 import harnessweaver as hw
-from harnessweaver.core import registry as registry_module
 from harnessweaver.core.decisions import Decision, DecisionRequest
 from harnessweaver.core.plugins import (
     ENTRY_POINT_GROUP,
@@ -19,6 +18,7 @@ from harnessweaver.core.plugins import (
     runner_info,
 )
 from harnessweaver.core.registry import PluginCatalog, PluginSource, Registry
+from harnessweaver.core.registry import catalog as catalog_module
 from harnessweaver.core.semver import VersionRange
 from harnessweaver.errors import (
     IncompatibleContract,
@@ -351,7 +351,7 @@ def _probabilistic_policy() -> type:
 
 def test_discover_reads_entry_point_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
     point = EntryPoint(name="acme", value="acme_harness:plugin", group=ENTRY_POINT_GROUP)  # type: ignore[attr-defined]
-    monkeypatch.setattr(registry_module, "entry_points", lambda group: [point])
+    monkeypatch.setattr(catalog_module, "entry_points", lambda group: [point])
     found = PluginCatalog.discover()
     (acme,) = found.sources()["acme"]
     assert acme.target == "acme_harness:plugin"

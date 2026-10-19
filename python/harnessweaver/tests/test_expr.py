@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from harnessweaver.core.errors import ExpressionEvalError, ExpressionSyntaxError
 from harnessweaver.core.expr import compile_expression
-from harnessweaver.core.expr.parser import MAX_DEPTH, MAX_LENGTH
+from harnessweaver.core.expr.grammar import MAX_DEPTH, MAX_LENGTH
 
 
 def test_declared_variables_are_checked_at_compile_time() -> None:
