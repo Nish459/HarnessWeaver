@@ -27,6 +27,9 @@ make schemas-check    # report drift
 | `guard-result` | A guardrail's verdict and its seven actions |
 | `model-request`, `model-response`, `tool-call` | Neutral model-call contracts (R7) |
 | `tool-info`, `tool-result` | Tool facts policies decide on, and tool output |
+| `tool-manifest`, `tool-verdict` | A `kind: Tool` manifest (S2), and the governor's decision about one call |
+| `policy-request`, `policy-decision` | What a `PolicyEngine` is asked and answers |
+| `sandbox-result` | What a `Sandbox` returns for code it ran |
 | `context-item` | A retrieved item with its ACL |
 | `approval-request`, `approval-decision` | Human-in-the-loop approvals |
 | `trace-event` | One entry in a run's trace: a hook that fired, a middleware's outcome or failure, or a framework note |
@@ -65,6 +68,7 @@ The fields of a case depend on the suite:
 | `budgets` | `limits` and `ops` (`model.before`, `model.after`, `tool.before`), or a `cost` lookup | the limit each op breached, the `meter` afterwards and what is `remaining`; or the cost's `usd` and `source` |
 | `plugins` | `owner_of`, `qualify`, `owns`, `allowed` or `namespace` | the owning namespace, the qualified name, or `true`/`false` |
 | `guards` | `guard` + `config` + `content`, or a pipeline: `stage`, `guards: [{id, use, config, action, mode, parallel}]`, `content` | the provider's `{action, content, findings, score}`, or the combined `outcome`, the payload's `content` afterwards and a trace `note` |
+| `governor` | a `definition`; a `rate`; a `schema` and `value`; `rules`, `default_effect` and a policy `request`; a `tool` (manifest fields) with `args` and the run's `principal`, `tenant`, `task`, `labels`, `policy`, `tools`, `task_approvals`, `previous_calls`, `approved`; or an `output` with an output `policy` | the `canonical` text and `digest`; `{count, seconds}`; `{valid, locations}` or `{error}`; the `{effect, rule}`; the `{decision, step, code}`; or the sanitized `{output, truncated, untrusted}` |
 
 Expected values are written by hand from the design, never copied from an implementation's output. When `expect.type` is given for a number, implementations must also return that cel-lite type (`int` or `double`).
 

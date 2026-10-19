@@ -2,28 +2,38 @@
 
 from harnessweaver.core.ports import (
     TEST_MODE_ENV,
+    ApprovalChannel,
     Decider,
+    GovernedRun,
     Guardrail,
     ModelProvider,
+    PolicyEngine,
     Runner,
+    Sandbox,
     StateStore,
     StreamingModelProvider,
     TelemetrySetup,
     ToolBackend,
     ToolDescription,
+    ToolGovernor,
     network_allowed,
 )
 
 __all__ = [
     "TEST_MODE_ENV",
+    "ApprovalChannel",
     "Decider",
+    "GovernedRun",
     "Guardrail",
     "ModelProvider",
+    "PolicyEngine",
     "Runner",
+    "Sandbox",
     "StateStore",
     "StreamingModelProvider",
     "TelemetrySetup",
     "ToolBackend",
     "ToolDescription",
+    "ToolGovernor",
     "network_allowed",
 ]

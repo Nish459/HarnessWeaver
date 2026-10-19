@@ -378,4 +378,8 @@ def test_built_in_names_are_reserved() -> None:
         "size.limit",
         "topic.deny",
         "llm.judge",
+        "cel_lite",
+        "callback",
+        "console",
+        "webhook",
     }

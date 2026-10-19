@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:policy-decision",
+  "title": "PolicyDecision",
+  "$defs": {
+    "PolicyEffect": {
+      "description": "The outcome of a policy check, from most to least permissive.",
+      "enum": [
+        "allow",
+        "require_approval",
+        "deny"
+      ],
+      "title": "PolicyEffect",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A ``PolicyEngine``'s answer, with the rule that decided it.",
+  "properties": {
+    "effect": {
+      "$ref": "#/$defs/PolicyEffect"
+    },
+    "rule": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The deciding rule's id; None if default.",
+      "title": "Rule"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reason"
+    }
+  },
+  "required": [
+    "effect"
+  ],
+  "type": "object"
+}

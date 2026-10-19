@@ -28,3 +28,6 @@ dependencies = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/harnessweaver_cel"]
+
+[project.entry-points."harnessweaver.plugins"]
+cel = "harnessweaver_cel:plugin"

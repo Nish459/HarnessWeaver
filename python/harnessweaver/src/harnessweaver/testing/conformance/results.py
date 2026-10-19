@@ -1,5 +1,6 @@
 """Checks on what contributions return: valid results, determinism, timeouts."""
 
+import contextlib
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import timedelta
@@ -19,10 +20,12 @@ from harnessweaver.core.outcomes import Block
 from harnessweaver.core.plugins import (
     ProviderInfo,
 )
+from harnessweaver.core.policy import PolicyDecision
 from harnessweaver.core.ports import StreamingModelProvider
 from harnessweaver.core.results import RunEvent
 from harnessweaver.core.runs import RunStatus
 from harnessweaver.core.state import Checkpoint, RunRecord
+from harnessweaver.core.tools import SandboxLimits, SandboxResult
 from harnessweaver.modules.guardrails import Guard, guard_handler
 from harnessweaver.testing.conformance.builds import build
 from harnessweaver.testing.conformance.common import Subject, conformance_env, expect
@@ -30,8 +33,10 @@ from harnessweaver.testing.kit import harness_for_test, output, scripted
 from harnessweaver.testing.samples import (
     CANARY,
     SAMPLE_TEXTS,
+    sample_approval_request,
     sample_decision_request,
     sample_event,
+    sample_policy_requests,
     sample_request,
 )
 
@@ -103,6 +108,23 @@ async def _state_contract(store: Any) -> None:
     await store.aclose()
 
 
+async def _policy_results(engine: Any) -> list[PolicyDecision]:
+    decisions = [await engine.decide(request) for request in sample_policy_requests()]
+    for decision in decisions:
+        expect(isinstance(decision, PolicyDecision), f"got {type(decision).__name__}")
+    return decisions
+
+
+async def _sandbox_contract(name: str, sandbox: Any) -> None:
+    """Code runs and returns its value; it can't read the host's files (S4)."""
+    limits = SandboxLimits(timeout=timedelta(seconds=10))
+    ran = await sandbox.run("sum(numbers)", {"numbers": [1, 2, 3]}, limits)
+    expect(isinstance(ran, SandboxResult), f"{name} returned {type(ran).__name__}")
+    expect(ran.error is None and ran.value == 6, f"{name} didn't return the code's value")
+    escaped = await sandbox.run("open('/etc/hosts').read()", {}, limits)
+    expect(escaped.error is not None, f"{name} let sandboxed code read a host file (S4)")
+
+
 async def check_results(subject: Subject) -> None:
     """Results validate against the contract for the provider's port."""
     item = subject.item
@@ -130,6 +152,15 @@ async def check_results(subject: Subject) -> None:
             ModelResponse.model_validate(response.model_dump())
     elif item.port == "StateStore":
         await _state_contract(provider)
+    elif item.port == "PolicyEngine":
+        for decision in await _policy_results(provider):
+            PolicyDecision.model_validate(decision.model_dump())
+    elif item.port == "Sandbox":
+        await _sandbox_contract(item.name, provider)
+    elif item.port == "ApprovalChannel":
+        # A live channel refuses the network in test mode (R14).
+        with contextlib.suppress(ProviderError):
+            await provider.notify(sample_approval_request(), conformance_env())
     elif item.port == "Telemetry":
         expect(
             callable(getattr(provider, "configure", None)), "a Telemetry setup needs configure()"
@@ -152,6 +183,10 @@ async def check_deterministic(subject: Subject) -> None:
             await build(subject.contribution)(sample_decision_request())
             == await build(subject.contribution)(sample_decision_request())
         )
+    elif item.port == "PolicyEngine":
+        first_policy = await _policy_results(build(subject.contribution))
+        second_policy = await _policy_results(build(subject.contribution))
+        expect(first_policy == second_policy, f"{item.name} decided differently the second time")
     elif item.port == "ModelProvider":
         first_model = await model_results(build(subject.contribution))
         second_model = await model_results(build(subject.contribution))

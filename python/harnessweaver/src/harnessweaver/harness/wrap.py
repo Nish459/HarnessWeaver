@@ -73,6 +73,7 @@ class WrapMixin(ApprovalMixin):
         start = await run.ctx.emit(HookPoint.RUN_START, RunStartEvent(task=pending.task))
         try:
             run.ctx.halt_on(start)
+            await run.ctx.authorize_run()
         except RunInterrupted as exc:
             await self._close_session(pending, exc)
             raise

@@ -87,6 +87,26 @@ async def test_fake_tool_behaviors() -> None:
     assert description.info.name == "sync"
 
 
+async def test_fake_tools_carry_a_manifest_the_governor_reads() -> None:
+    refund = FakeTool(
+        "refund",
+        result={"ok": True},
+        risk=hw.Risk.HIGH,
+        untrusted=False,
+        governance={"approval": {"when": "args.amount_usd > 100", "approver_role": "finance"}},
+    )
+    assert refund.manifest().spec.output.label == "trusted"
+    model = scripted(tool_call("refund", amount_usd=500), text("done"))
+    harness = harness_for_test(
+        {"tasks": {"t": {"runner": "direct", "tools": ["refund"]}}}, model=model, tools=[refund]
+    )
+    result = await harness.run("t", "refund")
+    assert result.status is hw.RunStatus.AWAITING_APPROVAL
+    assert result.approval is not None
+    assert result.approval.approver_role == "finance"
+    assert refund.calls == []
+
+
 async def test_fake_deciders_answer_their_router() -> None:
     billing = FakeDecider("billing")
     harness = harness_for_test(

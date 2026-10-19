@@ -37,6 +37,12 @@ from harnessweaver.harness.build import (
     required_hooks,
     unsupported_sections,
 )
+from harnessweaver.harness.governance import (
+    build_channel,
+    build_governor,
+    build_policy,
+    build_tools,
+)
 from harnessweaver.harness.records import PendingSession
 from harnessweaver.harness.wrap import WrapMixin
 from harnessweaver.modules.guardrails import install_guardrails
@@ -129,6 +135,10 @@ class Harness(WrapMixin):
         install_validation(effective, bus)
         install_middleware(spec, registry, bus)
         prompts = PromptStore(base / spec.prompts.dir)
+        policy = build_policy(spec, registry)
+        tools, manifests = build_tools(spec, registry, base, tools)
+        governor = build_governor(spec, registry, policy, manifests)
+        approvals = build_channel(spec, registry)
         tasks = {
             name: build_task(effective, name, task, registry, bus, models, prompts, tools)
             for name, task in spec.tasks.items()
@@ -144,6 +154,9 @@ class Harness(WrapMixin):
             tools=tools,
             clock=clock or SystemClock(),
             telemetry=telemetry,
+            governor=governor,
+            policy=policy,
+            approvals=approvals,
         )
 
     # --- lifecycle --------------------------------------------------------------------------

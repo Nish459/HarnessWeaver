@@ -8,6 +8,12 @@ bare names and the reserved namespaces in ``harnessweaver.RESERVED_NAMESPACES``.
 from importlib.metadata import version
 
 from harnessweaver.core.plugins import BUILTIN_NAMESPACE, Plugin
+from harnessweaver.modules.approvals import (
+    CallbackChannel,
+    ConsoleChannel,
+    MemoryChannel,
+    WebhookChannel,
+)
 from harnessweaver.modules.guardrails import (
     InjectionHeuristic,
     LlmJudge,
@@ -18,6 +24,7 @@ from harnessweaver.modules.guardrails import (
     TopicDeny,
 )
 from harnessweaver.modules.models import ScriptedModel
+from harnessweaver.modules.policy import CelLitePolicy
 from harnessweaver.modules.state import MemoryStateStore, SqliteStateStore
 from harnessweaver.runners import DirectRunner, SessionRunner, WorkflowRunner
 
@@ -37,6 +44,11 @@ plugin = Plugin(
         SizeLimit,
         TopicDeny,
         LlmJudge,
+        CelLitePolicy,
+        MemoryChannel,
+        CallbackChannel,
+        ConsoleChannel,
+        WebhookChannel,
     ],
     runners=[DirectRunner, SessionRunner, WorkflowRunner],
     description="Runners and providers that ship with the harnessweaver core.",

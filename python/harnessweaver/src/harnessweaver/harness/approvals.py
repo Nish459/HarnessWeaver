@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 
+from loguru import logger
 from pydantic import JsonValue, ValidationError
 
 from harnessweaver.core.budgets import BudgetMeter
@@ -86,7 +87,32 @@ class ApprovalMixin(RunMixin):
         result = self._result(run, RunStatus.AWAITING_APPROVAL, approval=approval)
         await self._store(run, RunStatus.AWAITING_APPROVAL, result)
         await self._event(run, "approval", approval=approval)
+        result = await self._notify(run, approval, result)
         self._close(run.channel)
+        return result
+
+    async def _notify(
+        self, run: LiveRun, approval: ApprovalRequest, result: RunResult
+    ) -> RunResult:
+        """Tell approvers through ``approvals.use``. The request is already saved, so a
+        failing channel is traced (R13) and the run keeps waiting."""
+        channel = self._approval_channel
+        if channel is None:
+            return result
+        try:
+            await channel.notify(approval, run.ctx.envelope)
+        except Exception as exc:
+            reason = f"the approval channel failed ({type(exc).__name__}); the request is saved"
+            run.ctx.trace.note(
+                "harness.approvals",
+                reason,
+                code="approval_notify_failed",
+                details={"approval_id": approval.approval_id},
+            )
+            logger.warning("run {} approval {}: {}", run.ctx.run_id, approval.approval_id, reason)
+            result = self._result(run, RunStatus.AWAITING_APPROVAL, approval=approval)
+            run.record = run.record.model_copy(update={"result": result})
+            await self._state.put_run(run.record)
         return result
 
     async def _restore(self, record: RunRecord, checkpoint: Checkpoint) -> LiveRun:

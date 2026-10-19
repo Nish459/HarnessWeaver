@@ -9,6 +9,8 @@ from harnessweaver.core.durations import Duration
 from harnessweaver.core.envelope import Budget
 from harnessweaver.core.guards import GuardAction
 from harnessweaver.core.hooks import Band, HookPoint
+from harnessweaver.core.policy import PolicyRule
+from harnessweaver.core.tools import Risk
 from harnessweaver.spec.models.base import ProviderModel, StrictModel
 
 __all__ = [
@@ -32,6 +34,7 @@ __all__ = [
     "RoutingStage",
     "SidecarSpec",
     "StateSpec",
+    "ToolJudgeSpec",
     "ToolsSpec",
     "ValidationRule",
     "ValidationSpec",
@@ -147,17 +150,25 @@ class ValidationSpec(StrictModel):
 # --- tools, policy, approvals ---------------------------------------------------------------
 
 
+class ToolJudgeSpec(ProviderModel):
+    """A guardrail that also judges each tool call; it can only tighten (governor step 6, R3)."""
+
+    use: str
+
+
 class ToolsSpec(StrictModel):
     manifests: tuple[str, ...] = Field(default=(), description="Globs of `kind: Tool` files.")
     require_manifest: bool = True
     max_output_bytes: int = Field(default=20_000, gt=0)
-
-
-class PolicyRule(StrictModel):
-    id: str | None = None
-    when: str = Field(description="cel-lite predicate over principal, tenant, task, tool, args.")
-    effect: PolicyEffect
-    reason: str | None = None
+    trifecta: Literal["require_approval", "block"] = Field(
+        default="require_approval",
+        description="A call with egress after untrusted and private data entered the run (S3).",
+    )
+    approval_by_risk: dict[Risk, Literal["required", "none"]] = Field(
+        default_factory=dict[Risk, Literal["required", "none"]],
+        description="Risk levels whose calls always need approval, e.g. {high: required}.",
+    )
+    judge: ToolJudgeSpec | None = None
 
 
 class PolicySpec(ProviderModel):

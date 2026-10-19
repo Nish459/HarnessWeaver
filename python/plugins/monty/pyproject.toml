@@ -28,3 +28,6 @@ dependencies = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/harnessweaver_monty"]
+
+[project.entry-points."harnessweaver.plugins"]
+monty = "harnessweaver_monty:plugin"

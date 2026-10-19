@@ -18,7 +18,13 @@ from harnessweaver.core.hooks import HookPoint
 from harnessweaver.core.messages import StreamChunk
 from harnessweaver.core.middleware import Registration
 from harnessweaver.core.plugins import RunnerInfo
-from harnessweaver.core.ports import StateStore, ToolBackend
+from harnessweaver.core.ports import (
+    ApprovalChannel,
+    PolicyEngine,
+    StateStore,
+    ToolBackend,
+    ToolGovernor,
+)
 from harnessweaver.core.registry import Registry
 from harnessweaver.core.results import RunEvent
 from harnessweaver.core.state import Grant
@@ -48,6 +54,9 @@ class HarnessBase:
         tools: ToolBackend | None,
         clock: Clock,
         telemetry: Telemetry | None = None,
+        governor: ToolGovernor | None = None,
+        policy: PolicyEngine | None = None,
+        approvals: ApprovalChannel | None = None,
     ) -> None:
         self._effective = effective
         self._telemetry = telemetry or Telemetry()
@@ -59,6 +68,9 @@ class HarnessBase:
         self._prompts = prompts
         self._tools = tools
         self._clock = clock
+        self._governor = governor
+        self._policy = policy
+        self._approval_channel = approvals
         self._group: TaskGroup | None = None
         self._active: dict[str, ActiveRun] = {}
         self._channels: dict[str, Channel] = {}
@@ -138,6 +150,8 @@ class HarnessBase:
             harness=self,
             can_suspend=can_suspend,
             telemetry=self._telemetry,
+            governor=self._governor,
+            policy=self._policy,
         )
 
     # --- events -----------------------------------------------------------------------------

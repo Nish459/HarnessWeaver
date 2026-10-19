@@ -38,13 +38,10 @@ def org_profile(tmp_path: Path, **body: Any) -> str:
 @pytest.mark.parametrize(
     ("section", "value", "named"),
     [
-        ("policy", {"rules": [{"when": "true", "effect": "deny"}]}, "policy"),
         ("routing", {"r": {"options": ["a"]}}, "routing"),
         ("context", {"kb": {"use": "memory"}}, "context"),
-        ("tools", {"manifests": ["tools/*.yaml"]}, "tools.manifests"),
         ("evals", {"online": {"sample_rate": 0.1}}, "evals.online"),
         ("sidecar", {"url": "http://127.0.0.1:7070"}, "sidecar"),
-        ("approvals", {"use": "slack"}, "approvals.use"),
     ],
 )
 def test_sections_without_a_module_fail_to_load(
@@ -55,10 +52,15 @@ def test_sections_without_a_module_fail_to_load(
     assert named in caught.value.details["sections"]  # type: ignore[operator]
 
 
-def test_task_approval_tools_are_unsupported(build: Builder) -> None:
-    task = {"runner": "direct", "approvals": {"tools": ["refund"]}}
-    with pytest.raises(SpecError, match=r"tasks\.t\.approvals\.tools"):
+def test_task_approval_tools_must_exist(build: Builder) -> None:
+    task = {"runner": "direct", "approvals": {"tools": ["wire_money"]}}
+    with pytest.raises(SpecError, match=r"tasks\.t\.approvals\.tools: no tool named .wire_money."):
         build(spec(models=MODELS, tasks={"t": task}))
+
+
+def test_an_unknown_approval_channel_fails(build: Builder) -> None:
+    with pytest.raises(UnknownProvider, match="slack"):
+        build(spec(models=MODELS, approvals={"use": "slack"}))
 
 
 def test_an_exporter_needs_the_sdk_setup(build: Builder) -> None:
@@ -214,3 +216,9 @@ def test_plugin_profiles(tmp_path: Path, testkit: Any) -> None:
 def test_load_uses_the_default_catalog(tmp_path: Path, testkit: Any) -> None:
     harness = hw.load(write(tmp_path, spec(models=MODELS)))
     assert harness.name == "test-app"
+
+
+def test_run_start_rules_may_not_use_the_tool_or_its_arguments(build: Builder) -> None:
+    rule = {"id": "big", "when": "args.amount_usd > 100", "effect": "deny", "hook": "run.start"}
+    with pytest.raises(SpecError, match=r"policy.rules\[big\].*args"):
+        build(spec(models=MODELS, policy={"rules": [rule]}))

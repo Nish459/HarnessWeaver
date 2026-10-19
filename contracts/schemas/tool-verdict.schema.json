@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:tool-verdict",
+  "title": "ToolVerdict",
+  "additionalProperties": false,
+  "description": "What the governor decided about one call, and at which of its steps (DESIGNS No. 17).",
+  "properties": {
+    "decision": {
+      "enum": [
+        "allow",
+        "require_approval",
+        "block"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "step": {
+      "description": "The governor step that decided.",
+      "maximum": 7,
+      "minimum": 1,
+      "title": "Step",
+      "type": "integer"
+    },
+    "code": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Why, for blocks and approvals.",
+      "title": "Code"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    },
+    "approver_role": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approver Role"
+    }
+  },
+  "required": [
+    "decision",
+    "step",
+    "reason"
+  ],
+  "type": "object"
+}

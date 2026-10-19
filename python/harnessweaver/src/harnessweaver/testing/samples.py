@@ -29,9 +29,10 @@ from harnessweaver.core.hooks import (
     ToolResultEvent,
 )
 from harnessweaver.core.messages import Message, ModelRequest, ModelResponse, StreamChunk, ToolCall
+from harnessweaver.core.policy import PolicyRequest
 from harnessweaver.core.retrieval import ContextItem
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest, RunStatus
-from harnessweaver.core.tools import ToolInfo, ToolResult
+from harnessweaver.core.tools import Risk, ToolInfo, ToolResult
 
 __all__ = [
     "CANARY",
@@ -39,8 +40,10 @@ __all__ = [
     "AdapterSample",
     "echo",
     "echo_step",
+    "sample_approval_request",
     "sample_decision_request",
     "sample_event",
+    "sample_policy_requests",
     "sample_request",
 ]
 
@@ -69,11 +72,38 @@ def sample_request(text: str = "Say hello.") -> ModelRequest:
     return ModelRequest(messages=(Message.system("Be brief."), Message.user(text)))
 
 
+_NOW: Final = datetime(2026, 1, 5, 9, 0, tzinfo=UTC)
+
+
 def sample_decision_request() -> DecisionRequest:
     return DecisionRequest(router="intent", text="I want a refund", options=("billing", "other"))
 
 
-_NOW: Final = datetime(2026, 1, 5, 9, 0, tzinfo=UTC)
+def sample_policy_requests() -> list[PolicyRequest]:
+    """Questions for a ``PolicyEngine``: small and large refunds, a contractor, a run start."""
+    refund = ToolInfo(name="refund", risk=Risk.HIGH, egress=("payments.example.com",))
+    alice = Principal(id="alice", roles=("support",))
+    return [
+        PolicyRequest(principal=alice, tenant="acme", tool=refund, args={"amount_usd": 20}),
+        PolicyRequest(principal=alice, tenant="acme", tool=refund, args={"amount_usd": 500}),
+        PolicyRequest(
+            principal=Principal(id="carl", roles=("contractor",)),
+            tenant="acme",
+            tool=refund,
+            args={"amount_usd": 20},
+        ),
+        PolicyRequest(hook="run.start", principal=alice, tenant="acme", task="refunds"),
+    ]
+
+
+def sample_approval_request() -> ApprovalRequest:
+    return ApprovalRequest(
+        approval_id="apr_1",
+        run_id="run_1",
+        reason="refunds over 100 USD need finance",
+        approver_role="finance",
+        requested_at=_NOW,
+    )
 
 
 def sample_event(hook: HookPoint, text: str = CANARY) -> Any:

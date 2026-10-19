@@ -41,15 +41,6 @@ def unsupported_sections(spec: HarnessSpec) -> list[str]:
     Loading such a spec fails rather than silently skipping a control (R4).
     """
     found: list[str] = []
-    for name, task in spec.tasks.items():
-        if task.approvals is not None and task.approvals.tools:
-            found.append(f"tasks.{name}.approvals.tools")
-    if spec.policy.rules or spec.policy.use != "cel_lite":
-        found.append("policy")
-    if spec.approvals.use != "memory":
-        found.append("approvals.use")
-    if spec.tools.manifests:
-        found.append("tools.manifests")
     if spec.routing:
         found.append("routing")
     if spec.context:

@@ -1,0 +1,434 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:tool-manifest",
+  "title": "ToolManifest",
+  "$defs": {
+    "JsonValue": {},
+    "ManifestApproval": {
+      "additionalProperties": false,
+      "description": "When a call needs a human: ``when`` is a cel-lite predicate over the policy names.",
+      "properties": {
+        "when": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "When"
+        },
+        "approver_role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approver Role"
+        }
+      },
+      "title": "ManifestApproval",
+      "type": "object"
+    },
+    "OutputPolicy": {
+      "additionalProperties": false,
+      "description": "What the governor does to a result before anything else sees it (step 9).",
+      "properties": {
+        "max_bytes": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Defaults to tools.max_output_bytes.",
+          "title": "Max Bytes"
+        },
+        "sanitize": {
+          "default": [],
+          "items": {
+            "enum": [
+              "strip_instructions",
+              "pii_redact"
+            ],
+            "type": "string"
+          },
+          "title": "Sanitize",
+          "type": "array"
+        },
+        "label": {
+          "default": "untrusted",
+          "enum": [
+            "untrusted",
+            "trusted"
+          ],
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "title": "OutputPolicy",
+      "type": "object"
+    },
+    "RateLimit": {
+      "additionalProperties": false,
+      "description": "Calls allowed per principal and per tenant, such as ``10/m`` or ``200/h``.",
+      "properties": {
+        "per_principal": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Per Principal"
+        },
+        "per_tenant": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Per Tenant"
+        }
+      },
+      "title": "RateLimit",
+      "type": "object"
+    },
+    "Risk": {
+      "description": "How much harm a misused call could do.",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "Risk",
+      "type": "string"
+    },
+    "SandboxLimits": {
+      "additionalProperties": false,
+      "description": "Limits for one sandboxed run (S4).",
+      "properties": {
+        "timeout": {
+          "anyOf": [
+            {
+              "pattern": "^(\\d+(\\.\\d+)?(ms|d|h|m|s))+$",
+              "type": "string"
+            },
+            {
+              "minimum": 0,
+              "type": "number"
+            }
+          ],
+          "default": "PT5S",
+          "description": "A duration such as '250ms', '20s', '5m' or '1h30m', or a number of seconds.",
+          "title": "Timeout"
+        },
+        "max_memory_mb": {
+          "default": 64,
+          "exclusiveMinimum": 0,
+          "title": "Max Memory Mb",
+          "type": "integer"
+        },
+        "max_output_bytes": {
+          "default": 100000,
+          "description": "Printed output kept.",
+          "exclusiveMinimum": 0,
+          "title": "Max Output Bytes",
+          "type": "integer"
+        }
+      },
+      "title": "SandboxLimits",
+      "type": "object"
+    },
+    "SideEffect": {
+      "description": "What a tool changes when it runs.",
+      "enum": [
+        "none",
+        "read",
+        "write_internal",
+        "write_external",
+        "destructive"
+      ],
+      "title": "SideEffect",
+      "type": "string"
+    },
+    "ToolManifestSpec": {
+      "additionalProperties": false,
+      "description": "A tool's definition, transport and governance.",
+      "properties": {
+        "transport": {
+          "$ref": "#/$defs/Transport",
+          "default": "native"
+        },
+        "description": {
+          "default": "",
+          "description": "What the model is told the tool does.",
+          "title": "Description",
+          "type": "string"
+        },
+        "input_schema": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Input Schema",
+          "type": "object"
+        },
+        "definition_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Definition Digest"
+        },
+        "handler": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "native: 'module:function'. Required in a manifest file; a tool given in code is run by its own backend.",
+          "title": "Handler"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "http: where the arguments are POSTed.",
+          "title": "Url"
+        },
+        "headers_env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "http: header name -> environment variable holding its value (S1).",
+          "title": "Headers Env",
+          "type": "object"
+        },
+        "sandbox": {
+          "default": "none",
+          "description": "code: the Sandbox provider, e.g. monty.",
+          "title": "Sandbox",
+          "type": "string"
+        },
+        "code_arg": {
+          "default": "code",
+          "description": "code: the argument holding the code.",
+          "title": "Code Arg",
+          "type": "string"
+        },
+        "limits": {
+          "$ref": "#/$defs/SandboxLimits",
+          "default": {
+            "timeout": "5s",
+            "max_memory_mb": 64,
+            "max_output_bytes": 100000
+          }
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "pattern": "^(\\d+(\\.\\d+)?(ms|d|h|m|s))+$",
+              "type": "string"
+            },
+            {
+              "minimum": 0,
+              "type": "number"
+            }
+          ],
+          "default": "PT30S",
+          "description": "A duration such as '250ms', '20s', '5m' or '1h30m', or a number of seconds.",
+          "title": "Timeout"
+        },
+        "side_effect": {
+          "$ref": "#/$defs/SideEffect",
+          "default": "none"
+        },
+        "risk": {
+          "$ref": "#/$defs/Risk",
+          "default": "low"
+        },
+        "data_access": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Data Access",
+          "type": "array"
+        },
+        "egress": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Egress",
+          "type": "array"
+        },
+        "scopes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Scopes",
+          "type": "array"
+        },
+        "tenants": {
+          "default": [],
+          "description": "Tenants it is enabled for; empty is all.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Tenants",
+          "type": "array"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "rate_limit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RateLimit"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "approval": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ManifestApproval"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "output": {
+          "$ref": "#/$defs/OutputPolicy",
+          "default": {
+            "max_bytes": null,
+            "sanitize": [],
+            "label": "untrusted"
+          }
+        }
+      },
+      "title": "ToolManifestSpec",
+      "type": "object"
+    },
+    "ToolMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        },
+        "owner": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Owner"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ToolMetadata",
+      "type": "object"
+    },
+    "Transport": {
+      "description": "How a tool is reached.",
+      "enum": [
+        "native",
+        "http",
+        "code",
+        "mcp"
+      ],
+      "title": "Transport",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A ``kind: Tool`` document.",
+  "properties": {
+    "apiVersion": {
+      "const": "harnessweaver/v1",
+      "default": "harnessweaver/v1",
+      "title": "Apiversion",
+      "type": "string"
+    },
+    "kind": {
+      "const": "Tool",
+      "default": "Tool",
+      "title": "Kind",
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/ToolMetadata"
+    },
+    "spec": {
+      "$ref": "#/$defs/ToolManifestSpec"
+    }
+  },
+  "required": [
+    "metadata",
+    "spec"
+  ],
+  "type": "object"
+}

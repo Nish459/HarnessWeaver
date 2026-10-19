@@ -37,10 +37,12 @@ class ToolCalls(RunContextBase):
         return self.telemetry.tool_span(call, tool)
 
     async def call_tool(self, call: ToolCall) -> ToolResult:
-        """Make one governed tool call: ``tool.before``, the tool, ``tool.after``.
+        """Make one governed tool call: ``tool.before``, the governor, the tool, ``tool.after``.
 
         A call a human already approved carries the approval into ``tool.before``,
-        with any edited arguments applied (DESIGNS No. 18).
+        with any edited arguments applied (DESIGNS No. 18). The governor checks the
+        arguments the middleware leaves (steps 1 to 7) and sanitizes the result
+        before ``tool.after`` (step 9, ADR-0025).
 
         Raises:
             RunInterrupted: When a hook or a budget halts the run.
@@ -74,6 +76,24 @@ class ToolCalls(RunContextBase):
             )
         self.halt_on(before)
         call = before.event.call
+        if self.governor is not None:
+            approval = grant.decision if grant else None
+            verdict = await self.governor.authorize(self, call, description, approval)
+            if verdict.decision == "block":
+                raise RunBlocked(
+                    verdict.reason, hook=HookPoint.TOOL_BEFORE.value, code=verdict.code
+                )
+            if verdict.decision == "require_approval":
+                self.pending = PendingApproval(
+                    HookPoint.TOOL_BEFORE,
+                    verdict.reason,
+                    verdict.approver_role,
+                    digest,
+                    call=call,
+                    tool=description.info,
+                )
+                suspend = Suspend(reason=verdict.reason, approver_role=verdict.approver_role)
+                raise self.interrupt(HookPoint.TOOL_BEFORE, suspend)
         self.meter.start_tool_call()
         self._refresh_budget()
         with self._tool_span(call, description.info) as span:
@@ -90,6 +110,8 @@ class ToolCalls(RunContextBase):
                 result = ToolResult(
                     call_id=call.id, output={"error": type(exc).__name__}, is_error=True
                 )
+            if self.governor is not None:
+                result = await self.governor.sanitize(self, call, description, result)
             after = await self.emit(
                 HookPoint.TOOL_AFTER,
                 ToolResultEvent(call=call, tool=description.info, result=result),

@@ -20,6 +20,7 @@ from harnessweaver.testing.samples import (
     CANARY,
     SAMPLE_TEXTS,
     sample_decision_request,
+    sample_policy_requests,
     sample_request,
 )
 from harnessweaver.testing.traces import assert_no_content
@@ -129,9 +130,11 @@ async def check_latency(subject: Subject, runs: int = 20) -> None:
         "Decider",
         "ModelProvider",
         "StateStore",
+        "PolicyEngine",
     ):
         return
     limit = LATENCY_LIMITS[item.latency_class]
+    requests = sample_policy_requests()
     provider = build(subject.contribution)
     durations: list[float] = []
     with session_run() as harness:
@@ -142,6 +145,8 @@ async def check_latency(subject: Subject, runs: int = 20) -> None:
                     await provider.check(SAMPLE_TEXTS[index % len(SAMPLE_TEXTS)], session.envelope)
                 elif item.port == "Decider":
                     await provider(sample_decision_request())
+                elif item.port == "PolicyEngine":
+                    await provider.decide(requests[index % len(requests)])
                 elif item.port == "ModelProvider":
                     try:
                         await provider.generate(sample_request(), session.envelope)

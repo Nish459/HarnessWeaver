@@ -382,7 +382,7 @@ The **Envelope** is immutable (`frozen=True`). The mutable state of a run lives 
 
 **Labels drive the lethal-trifecta check (S3).**
 - `untrusted_seen` becomes true once retrieved context or tool output labelled `untrusted` enters the run.
-- `private_seen` becomes true once a tool with `data_access: [pii:*]` runs or PII was found in the input.
+- `private_seen` becomes true once a tool with `data_access: [pii:*]` runs, or a guard reports a finding marked `private` (as `pii.regex` does for the PII it finds), wherever the guard runs.
 - A tool with external egress, called while both flags are set, needs approval or is blocked.
 
 **Budgets** (`max_usd`, `max_tokens`, `max_model_calls`, `max_tool_calls`, `deadline`) are enforced at fixed points:
@@ -743,7 +743,7 @@ The core declares extras for convenience (`harnessweaver[openai]`, `harnessweave
 | `models` | `ModelProvider` | `scripted`; plugins: `openai.chat` (LiteLLM, OpenAI, vLLM, Ollama), `anthropic.messages` | Bedrock, Vertex via LiteLLM | `model.*`, `stream.chunk` |
 | `routing` | `Decider`, `Embedder` | cascade of `rules`, `lexical`, `semantic`, `llm`, custom `@hw.decider` | semantic-router, AnyJev, RouteLLM, GoRules ZEN | `route.decide` |
 | `policy` | `PolicyEngine` | `cel_lite`; plugin: `cel.policy` (full CEL) | Cedar, OPA, OpenFGA | `tool.before`, `run.start` |
-| `tools` | `ToolRegistry`, `ToolGovernor`, `Sandbox` | manifest registry, 9-step governor, native + http transports; plugin: `monty.sandbox` | MCP transport plugin, agentgateway / ContextForge | `tool.*` |
+| `tools` | `ToolRegistry`, `ToolGovernor`, `Sandbox` | manifest registry, 9-step governor, native, http and code (sandboxed) transports; plugin: `monty.sandbox` | MCP transport plugin, agentgateway / ContextForge | `tool.*` |
 | `approvals` | `ApprovalChannel` | `memory`, `callback`, `console`, `webhook` | Slack, email, harnessd approval page | `tool.before`, `output.before`, `approval.resolved` |
 | `guardrails` | `Guardrail` | `regex.deny`, `pii.regex`, `secrets.scan`, `injection.heuristic`, `size.limit`, `topic.deny`, `grounded.citations`, `llm.judge` | Presidio, Prompt Guard 2, Llama Guard, LLM Guard, Bedrock, Azure Prompt Shields, Lakera | `input.before`, `context.after`, `tool.after`, `output.before`, `stream.chunk` |
 | `validation` | `Validator` | `pydantic` (+ bounded repair), `rules` (cel-lite), `json_schema` | groundedness scorers | `output.before` |
@@ -807,52 +807,70 @@ flowchart LR
 
 ## 17. Tool governance
 
-No tool runs without a manifest (S2). The manifest is the contract between the tool's owner, the security team and the governor.
+No tool runs without a manifest (S2). The manifest is the contract between the tool's owner, the security team and the governor. `tools.manifests` names the files (globs relative to `harness.yaml`); every manifest is checked when the harness loads (R4).
 
 ```yaml
 apiVersion: harnessweaver/v1
 kind: Tool
 metadata: { name: refund_payment, version: 2.1.0, owner: payments-team }
 spec:
-  transport: native                     # native | http | mcp
-  handler: "app.tools:refund_payment"
-  definition_digest: "sha256:9f3c..."     # pinned {name, description, input_schema}
-  input_schema: { $ref: schemas/refund_args.json }
+  transport: native                     # native | http | code | mcp (planned)
+  handler: "app.tools:refund_payment"   # native: sync or async, called with the arguments
+  description: Refund part or all of a payment.
+  input_schema: { $ref: schemas/refund_args.json }   # or inline; the subset in ADR-0026
+  definition_digest: "sha256:9f3c..."   # pins {name, description, input_schema}
   side_effect: write_external           # none | read | write_internal | write_external | destructive
-  risk: high
+  risk: high                            # low | medium | high | critical
   data_access: ["pii:customer"]
   egress: [payments.internal]
   scopes: ["payments:refund"]
+  tenants: []                           # enabled for these tenants; empty is all
   rate_limit: { per_principal: 10/m, per_tenant: 200/h }
-  approval: { when: "args.amount_usd > 100" }
-  sandbox: none                         # none | monty
-  output: { max_bytes: 20000, sanitize: [strip_instructions, pii_redact], label: untrusted }
+  approval: { when: "args.amount_usd > 100", approver_role: finance }
+  output: { max_bytes: 20000, sanitize: [pii_redact, strip_instructions], label: untrusted }
+  timeout: 30s
 ```
 
-The governor runs nine deterministic steps on every `tool.before` / `tool.after`:
+- **Transports.** `native` imports `handler` at load. `http` POSTs the arguments as JSON to `url`, with headers whose values come from the environment variables `headers_env` names (S1); in test mode it refuses to call out (R14). `code` runs the code in one argument (`code_arg`, default `code`) in the `Sandbox` that `sandbox` names, never in the host process (S4, ADR-0027); `sandbox: monty` is short for the plugin's `monty.sandbox`. `mcp` is planned and fails to load.
+- **Idempotency.** Every call gets a key that stays the same when a resumed run repeats it, `<run_id>:<call digest>`. A native handler that takes an `idempotency_key` argument receives it, and an http tool gets an `Idempotency-Key` header, so the tool's owner can drop the repeat.
+- **Digests.** `definition_digest` is `sha256:` and the hex SHA-256 of the canonical JSON of `{name, description, input_schema}`: keys sorted, no spaces, non-ASCII escaped, integral numbers written as integers (fixtures suite `governor`). A manifest whose pin doesn't match its definition still loads, and every call to it is blocked (rug-pull defense); `harnessweaver doctor` fails it, and warns about manifests with no pin, printing the digest to pin.
+- **Tools given in code** carry a manifest too: `ToolDescription.from_manifest(...)`, which `FakeTool` uses. With `tools.require_manifest: true` (the default), a tool without one is blocked (ADR-0028).
+
+The governor runs nine deterministic steps. Steps 1 to 7 run inside the governed tool call, **after** the `tool.before` middleware and on the arguments it leaves, so no middleware can rewrite arguments past the checks (ADR-0025). Step 9 runs before the `tool.after` middleware. Every decision is a `harness.governor` trace note with its step, code and reason, never the argument values (R9, R13).
 
 ```mermaid
 flowchart TD
-    A([tool.before]) --> S1{1. Registry<br/>exists, enabled for tenant,<br/>digest matches?}
+    A([tool.before middleware]) --> S1{1. Registry<br/>manifest, enabled for tenant,<br/>digest matches?}
     S1 -- no --> BLK[Block]
     S1 -- yes --> S2{2. Schema<br/>args valid?}
     S2 -- no --> BLK
-    S2 -- yes --> S3{3. Policy<br/>deterministic engine}
+    S2 -- yes --> S3{3. Policy<br/>engine, manifest approval rule,<br/>approval_by_risk, task approvals}
     S3 -- deny --> BLK
     S3 -- "allow or approve" --> S4{4. Lethal trifecta<br/>untrusted and private and egress?}
-    S4 -- yes --> AP
-    S4 -- no --> S5{5. Limits<br/>rate, tool-call budget,<br/>idempotency}
+    S4 -- "yes, trifecta: block" --> BLK
+    S4 -- "yes" --> NEED
+    S4 -- no --> S5{5. Limits<br/>rate per principal and tenant}
     S5 -- exceeded --> BLK
     S5 -- ok --> S6[6. Optional judge<br/>may only tighten, R3]
     S6 --> NEED{approval needed?}
-    NEED -- yes --> AP[7. Suspend for approval]
-    AP -- "approved, edited args<br/>re-checked from step 2" --> S8
+    NEED -- "yes, not yet approved" --> AP[7. Suspend for approval]
+    AP -- "approved, edited args<br/>re-checked from step 1" --> A
     AP -- "rejected or timed out" --> BLK
-    NEED -- no --> S8[8. Execute<br/>native, http, monty sandbox]
-    S8 --> S9([9. tool.after<br/>truncate, redact, label untrusted])
+    NEED -- no --> S8[8. Execute<br/>native, http, code in a sandbox]
+    S8 --> S9[9. Sanitize, truncate, label untrusted]
+    S9 --> Z([tool.after middleware])
 ```
 
-The same manifests generate allow-lists for the MCP gateway and LiteLLM's tool-permission guardrail (`harnessweaver gateway`), so apps that call tools over the network get identical rules.
+- **Step 3, policy.** The engine `policy.use` names (`cel_lite`, or the plugin's `cel.policy`) decides allow, deny or require approval. Rules combine the same way in every engine (ADR-0025): of the rules whose `when` is true, `deny` beats `require_approval` beats `allow`; among equals the first decides; a `when` that can't be evaluated never loosens a decision; when nothing matches, `policy.default_effect` decides. Approval is also needed when the manifest's `approval.when` is true (or can't be evaluated), when `tools.approval_by_risk` marks the tool's risk `required`, and for the tools a task lists in `approvals.tools`.
+- **Step 4, trifecta (S3).** A tool with egress, called after untrusted content and private data both entered the run, needs approval (`tools.trifecta: require_approval`, the default) or is blocked (`block`). Tool output labelled untrusted, retrieved context, a tool with `data_access: [pii:*]`, and a guard finding marked `private` (as `pii.regex`'s are) set the labels.
+- **Step 5, limits.** A call reserves its place under each `rate_limit` before the later steps run, so concurrent calls can't all pass the same check, and gives it back if it doesn't go ahead. Windows slide on the injected clock (C4). The run's `max_tool_calls` is checked before `tool.before`.
+- **Step 6, judge.** `tools.judge` names a guardrail that sees `{tool, args}`: `block` blocks, `require_approval` or `escalate` asks a human, and a judge that fails asks a human rather than letting the call through or stopping the run alone.
+- **Step 7, approval.** A call that needs approval suspends (No. 18), unless the call carries an approval already given. An approval never overrides a deny: edited arguments go through every step again.
+- **Step 9, output.** The manifest's sanitizers run (`pii_redact`, then `strip_instructions`), the result is cut to `max_bytes` of UTF-8 (`tools.max_output_bytes` by default; a JSON result becomes its compact JSON text), and it is labelled untrusted unless `label: trusted`.
+
+**Policy at `run.start`.** A rule with `hook: run.start` decides whether a run or session may start, using `principal`, `tenant`, `task` and `labels` only (checked at load). `deny` blocks the run (`policy_denied`) and `require_approval` escalates it, because a run can't wait before it starts. Only these rules restrict a run: `default_effect` applies to tool calls.
+
+`harnessweaver policy test` (planned, 2.3) runs table-driven cases against the same decision. The same manifests generate allow-lists for the MCP gateway and LiteLLM's tool-permission guardrail (`harnessweaver gateway`, planned), so apps that call tools over the network get identical rules.
 
 ## 18. Approvals, state and durability
 
@@ -884,7 +902,8 @@ stateDiagram-v2
   2. Fires `approval.resolved`.
   3. Re-runs schema and policy on any edited args.
   4. Resumes.
-- **Approval requests.** The approver role and expiry come from the task's `approvals`, then the spec's `approvals`.
+- **Approval requests.** The approver role comes from the step that asked (a middleware's `Suspend`, or the manifest's `approval.approver_role`), then the task's `approvals`, then the spec's `approvals`; the expiry from the task's `approvals`, then the spec's.
+- **Channels.** Once the request and checkpoint are saved, the `ApprovalChannel` that `approvals.use` names is notified: `memory` (the default; keeps the requests), `callback` (`handler: "module:function"`, sync or async), `console` (one line on stderr or stdout) or `webhook` (`url`; POSTs the `approval-request` contract, with headers from `headers_env`; refuses the network in test mode). A channel that fails is traced (`approval_notify_failed`) and the run keeps waiting, since the request is already saved. A handler must not answer in-line.
 - **Grants.** An approval becomes a grant that matches the call by tool name and arguments, or the output by its content. A matching call carries the approval into `tool.before` as `event.approval`, so middleware doesn't ask again but still checks edited arguments.
 - **How runs resume** (ADR-0021). `direct` continues from the exact step. `session` and `workflow` run the interrupted handler or step again; finished workflow steps don't run again. Work before a suspension point should be safe to repeat.
 - **Expiry.** An answer after `expires_at` ends the run as `on_timeout` says (`escalate` or `reject`).
@@ -1098,6 +1117,10 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | **0022** | `Message` and `ModelResponse` carry `extensions`: provider data keyed by namespace that the harness treats as opaque and replays unchanged with the message | Some APIs require a model's own per-turn data back on the next request (Claude's thinking blocks must be replayed unchanged for reasoning to carry over). A neutral, JSON-only field keeps SDK types out of contracts (R7) and survives checkpoints | Accepted |
 | **0023** | A `validation.rules[].when` expression describes a violation (true means the output breaks the rule), like `policy.rules[].when`; an expression that can't be evaluated counts as broken | One reading of `when` across the spec; failing closed on a rule that can't be checked | Accepted |
 | **0024** | Logging goes through **loguru** in the core and the first-party plugins, and it becomes the core's fifth dependency (amends ADR-0003, R6 and C6). Each package that logs calls `logger.disable(__name__)` when it is imported, so it is silent until the app calls `logger.enable(...)`; library code never adds sinks. Messages carry ids and error types, never content (R9) | One logging API that is simpler to use and to configure than `logging.getLogger` per area. Disabling by default follows loguru's own advice for libraries, so an app's log output is its own decision. loguru is pure Python with no dependencies outside Windows, so the core stays small | Accepted |
+| **0025** | The governor's steps 1 to 7 run inside the governed tool call after the `tool.before` middleware, on the final arguments, and step 9 before the `tool.after` middleware; every decision is a `harness.governor` trace note. Every `PolicyEngine` combines `policy.rules` the same way: among rules whose `when` is true `deny` beats `require_approval` beats `allow`, the first of equals decides, a `when` that can't be evaluated never loosens (deny and approval rules count as matching, allow rules don't), and `default_effect` applies when none match. Rules carry a `hook` (`tool.before`, default, or `run.start`); `run.start` rules only restrict | Middleware may rewrite arguments, so checks that run first could be bypassed; one combination rule keeps `cel_lite`, `cel.policy` and future engines interchangeable and testable from one fixture suite; failing closed without letting an unevaluable allow grant anything (R3) | Accepted |
+| **0026** | Tool arguments are checked by a small JSON Schema 2020-12 validator in the core: types, enum and const, object, array, string and number keywords, `allOf`/`anyOf`/`oneOf`/`not`, and `$ref` to `#/$defs`. Annotations are ignored; any other keyword fails the manifest at load. Problems name locations and rules, never values | The core can't depend on `jsonschema` (R6), tool schemas need only this subset, TypeScript implements the same subset from the fixtures, and refusing unknown keywords means a schema never checks less than it says (R4, R9) | Accepted |
+| **0027** | Code-executing tools use `transport: code`: the code in one argument runs in the `Sandbox` the manifest names (`sandbox: monty` is short for `monty.sandbox`), with `limits` (time, memory, printed output); other transports can't name a sandbox | The guide marks code tools only with `sandbox: monty`; a transport of its own makes it explicit that the host never runs the code (S4) and lets the load check refuse a code tool without a sandbox | Accepted |
+| **0028** | Tools given in code carry a manifest (`ToolDescription.from_manifest`), so `tools.require_manifest` covers them. A pinned digest that doesn't match blocks the tool's calls rather than failing the load; `doctor` fails it and warns about unpinned manifests with the digest to pin | One rule for every tool (S2); a stale pin is a security finding about one tool, not a reason to take the whole app down, and `doctor` makes it visible | Accepted |
 
 ## 29. Deviations from the design guide
 
@@ -1115,6 +1138,9 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | A versioned price table in core | No built-in prices | Accuracy (0012) |
 | `model_access` (org) plus `models` (app) | One `models` section with `provider`, `aliases`, `allowed_aliases` | One place to read model access (0019) |
 | YAML parsed by whatever library a language has | YAML 1.2 core schema everywhere; duplicate keys fail | Same meaning in every language (0017) |
+| Code tools are `sandbox: monty` on a native tool | `transport: code` with a named `sandbox` | The host never runs the code, and a code tool without a sandbox fails to load (0027) |
+| `approvals: { channel: ... }` | `approvals: { use: ... }`, like every other provider-selecting section | One spelling for choosing a provider |
+| Governor runs on `tool.before` | Inside the governed call, after the `tool.before` middleware, on the final arguments | Middleware can't rewrite arguments past the checks (0025) |
 
 ## 30. Open decisions
 

@@ -44,13 +44,24 @@ def applies(check: str, subject: Subject) -> bool:
         if check == "results":
             return True
         if check == "deterministic":
-            return item.deterministic and item.port in ("Guardrail", "Decider", "ModelProvider")
+            return item.deterministic and item.port in (
+                "Guardrail",
+                "Decider",
+                "ModelProvider",
+                "PolicyEngine",
+            )
         if check == "timeout":
             return item.port == "Guardrail"
         if check == "no_raw_content":
             return item.port in ("Guardrail", "ModelProvider")
         if check == "latency":
-            return item.port in ("Guardrail", "Decider", "ModelProvider", "StateStore")
+            return item.port in (
+                "Guardrail",
+                "Decider",
+                "ModelProvider",
+                "StateStore",
+                "PolicyEngine",
+            )
         return False
     return (
         (check == "middleware" and isinstance(item, MiddlewareDef))

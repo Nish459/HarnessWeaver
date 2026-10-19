@@ -755,6 +755,7 @@
     },
     "PolicyRule": {
       "additionalProperties": false,
+      "description": "One ``policy.rules`` entry. ``when`` is true when the rule applies.",
       "properties": {
         "id": {
           "anyOf": [
@@ -769,7 +770,7 @@
           "title": "Id"
         },
         "when": {
-          "description": "cel-lite predicate over principal, tenant, task, tool, args.",
+          "description": "Predicate over principal, tenant, task, tool, args, labels.",
           "title": "When",
           "type": "string"
         },
@@ -787,6 +788,16 @@
           ],
           "default": null,
           "title": "Reason"
+        },
+        "hook": {
+          "default": "tool.before",
+          "description": "Where the rule applies.",
+          "enum": [
+            "tool.before",
+            "run.start"
+          ],
+          "title": "Hook",
+          "type": "string"
         }
       },
       "required": [
@@ -872,6 +883,17 @@
       },
       "title": "RequireLevel",
       "type": "object"
+    },
+    "Risk": {
+      "description": "How much harm a misused call could do.",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "Risk",
+      "type": "string"
     },
     "RouterSpec": {
       "additionalProperties": false,
@@ -1290,6 +1312,21 @@
       "title": "TaskSpec",
       "type": "object"
     },
+    "ToolJudgeSpec": {
+      "additionalProperties": true,
+      "description": "A guardrail that also judges each tool call; it can only tighten (governor step 6, R3).",
+      "properties": {
+        "use": {
+          "title": "Use",
+          "type": "string"
+        }
+      },
+      "required": [
+        "use"
+      ],
+      "title": "ToolJudgeSpec",
+      "type": "object"
+    },
     "ToolsSpec": {
       "additionalProperties": false,
       "properties": {
@@ -1312,6 +1349,42 @@
           "exclusiveMinimum": 0,
           "title": "Max Output Bytes",
           "type": "integer"
+        },
+        "trifecta": {
+          "default": "require_approval",
+          "description": "A call with egress after untrusted and private data entered the run (S3).",
+          "enum": [
+            "require_approval",
+            "block"
+          ],
+          "title": "Trifecta",
+          "type": "string"
+        },
+        "approval_by_risk": {
+          "additionalProperties": {
+            "enum": [
+              "required",
+              "none"
+            ],
+            "type": "string"
+          },
+          "description": "Risk levels whose calls always need approval, e.g. {high: required}.",
+          "propertyNames": {
+            "$ref": "#/$defs/Risk"
+          },
+          "title": "Approval By Risk",
+          "type": "object"
+        },
+        "judge": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolJudgeSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "title": "ToolsSpec",
@@ -1437,7 +1510,10 @@
       "default": {
         "manifests": [],
         "require_manifest": true,
-        "max_output_bytes": 20000
+        "max_output_bytes": 20000,
+        "trifecta": "require_approval",
+        "approval_by_risk": {},
+        "judge": null
       }
     },
     "policy": {

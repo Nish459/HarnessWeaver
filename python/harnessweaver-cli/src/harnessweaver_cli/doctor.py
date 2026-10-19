@@ -1,8 +1,9 @@
 """``harnessweaver doctor``: what a spec reaches and what to look at next.
 
 Reports the adoption level, unreachable hook points (as load errors), duplicate
-owners of retries (R5), unpinned profiles, guards still in shadow mode (R8),
-content capture (R9) and plugin installation problems.
+owners of retries (R5), unpinned profiles, tool manifests that aren't pinned or
+changed since they were (S2), guards still in shadow mode (R8), content capture
+(R9) and plugin installation problems.
 """
 
 import json
@@ -16,6 +17,7 @@ from harnessweaver import Harness
 from harnessweaver.core.errors import HarnessError
 from harnessweaver.core.guards import GuardAction
 from harnessweaver.core.registry import PluginCatalog
+from harnessweaver.modules.tools import load_manifests
 from harnessweaver.spec import REQUIREMENTS, Level
 from harnessweaver.spec.models import GuardrailsSpec, GuardSpec, HarnessSpec
 from harnessweaver.spec.sources import parse_ref
@@ -121,6 +123,28 @@ def _shadow(spec: HarnessSpec) -> list[Finding]:
     ]
 
 
+def _tools(harness: Harness) -> list[Finding]:
+    """Every manifest should pin its definition; a stale pin blocks the tool's calls (S2)."""
+    spec = harness.spec.spec
+    if not spec.tools.manifests:
+        return []
+    base = harness.spec.path.parent if harness.spec.path is not None else Path.cwd()
+    findings: list[Finding] = []
+    manifests = load_manifests(spec.tools.manifests, base)
+    for manifest in manifests:
+        pinned, computed = manifest.spec.definition_digest, manifest.computed_digest()
+        if pinned is None:
+            message = f"tool {manifest.name} isn't pinned; add definition_digest: {computed} (S2)"
+            findings.append(Finding("warn", "tools", message))
+        elif pinned != computed:
+            message = (
+                f"tool {manifest.name} changed since it was pinned, so its calls are blocked; "
+                f"review it, then set definition_digest: {computed} (S2)"
+            )
+            findings.append(Finding("fail", "tools", message))
+    return findings or [Finding("ok", "tools", f"{len(manifests)} tool manifest(s), all pinned")]
+
+
 def _content(spec: HarnessSpec) -> list[Finding]:
     if spec.observability.capture_content:
         return [
@@ -150,7 +174,7 @@ def diagnose(path: Path, env: str | None, profile_dirs: list[Path]) -> list[Find
         findings.append(
             Finding("ok", "hooks", f"task {task}: runner {runner.name} reaches every hook it needs")
         )
-    findings += _owners(harness) + _pins(spec) + _shadow(spec) + _content(spec)
+    findings += _owners(harness) + _pins(spec) + _tools(harness) + _shadow(spec) + _content(spec)
     return findings
 
 

@@ -13,27 +13,36 @@ from typing import TYPE_CHECKING, Any, Final, Protocol, runtime_checkable
 from pydantic import JsonValue
 
 from harnessweaver.core.decisions import Decision, DecisionRequest
-from harnessweaver.core.envelope import Envelope
+from harnessweaver.core.envelope import Clock, Envelope
 from harnessweaver.core.guards import GuardResult
+from harnessweaver.core.manifests import ToolManifest
 from harnessweaver.core.messages import ModelRequest, ModelResponse, StreamChunk, ToolCall, ToolSpec
+from harnessweaver.core.policy import PolicyDecision, PolicyRequest
 from harnessweaver.core.results import RunEvent
+from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest
 from harnessweaver.core.state import Checkpoint, RunRecord
-from harnessweaver.core.tools import ToolInfo, ToolResult
+from harnessweaver.core.tools import SandboxLimits, SandboxResult, ToolInfo, ToolResult, ToolVerdict
+from harnessweaver.core.trace import RunTrace
 
 if TYPE_CHECKING:
     from harnessweaver.core.context import RunContext
 
 __all__ = [
     "TEST_MODE_ENV",
+    "ApprovalChannel",
     "Decider",
+    "GovernedRun",
     "Guardrail",
     "ModelProvider",
+    "PolicyEngine",
     "Runner",
+    "Sandbox",
     "StateStore",
     "StreamingModelProvider",
     "TelemetrySetup",
     "ToolBackend",
     "ToolDescription",
+    "ToolGovernor",
     "network_allowed",
 ]
 
@@ -73,10 +82,29 @@ class StreamingModelProvider(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class ToolDescription:
-    """A tool as the governor sees it (``info``) and as a model sees it (``spec``)."""
+    """A tool as the governor sees it (``info``) and as a model sees it (``spec``).
+
+    ``manifest`` is the tool's ``kind: Tool`` document; tools given in code (such as
+    ``FakeTool``) have none and get the governor's defaults. ``digest_ok`` is false
+    when the manifest's ``definition_digest`` doesn't match its definition, and
+    then every call is blocked (S2).
+    """
 
     info: ToolInfo
     spec: ToolSpec
+    manifest: ToolManifest | None = None
+    digest_ok: bool = True
+
+    @classmethod
+    def from_manifest(cls, manifest: ToolManifest) -> "ToolDescription":
+        """Describe a tool by its manifest, checking its pinned digest (S2)."""
+        pinned = manifest.spec.definition_digest
+        return cls(
+            manifest.info(),
+            manifest.tool_spec(),
+            manifest=manifest,
+            digest_ok=pinned is None or pinned == manifest.computed_digest(),
+        )
 
 
 class ToolBackend(Protocol):
@@ -143,3 +171,69 @@ class Runner(Protocol):
     async def execute(
         self, ctx: "RunContext", input: Any, resume: Mapping[str, JsonValue] | None
     ) -> Any: ...
+
+
+class PolicyEngine(Protocol):
+    """Port ``PolicyEngine``: deterministic allow, deny or require-approval (R3).
+
+    Providers must be declared ``deterministic=True`` and are built from
+    :class:`~harnessweaver.core.policy.PolicyConfig` plus their own settings.
+    They combine rules with :func:`~harnessweaver.core.policy.decide_by_rules`.
+    """
+
+    async def decide(self, request: PolicyRequest) -> PolicyDecision: ...
+
+
+class Sandbox(Protocol):
+    """Port ``Sandbox``: runs untrusted code away from the host process (S4).
+
+    The code must not reach the host's files, network or environment. Errors in
+    the code are returned in :class:`SandboxResult`, not raised.
+    """
+
+    async def run(
+        self, code: str, inputs: Mapping[str, JsonValue], limits: SandboxLimits
+    ) -> SandboxResult: ...
+
+
+class ApprovalChannel(Protocol):
+    """Port ``ApprovalChannel``: tells approvers a run is waiting for them (DESIGNS No. 18).
+
+    The request is already saved when ``notify`` is called; answers come back
+    through ``harness.approve``. A handler must not answer in-line.
+    """
+
+    async def notify(self, request: ApprovalRequest, env: Envelope) -> None: ...
+
+
+class GovernedRun(Protocol):
+    """What the governor reads from a run: its envelope, clock and trace."""
+
+    trace: RunTrace
+
+    @property
+    def envelope(self) -> Envelope: ...
+
+    @property
+    def clock(self) -> Clock: ...
+
+
+class ToolGovernor(Protocol):
+    """What a governed tool call asks of the governor (DESIGNS No. 17, ADR-0025).
+
+    ``authorize`` runs steps 1 to 7 on the call's final arguments, after the
+    ``tool.before`` middleware; ``approval`` is the human answer the call
+    carries, if any. ``sanitize`` is step 9.
+    """
+
+    async def authorize(
+        self,
+        ctx: GovernedRun,
+        call: ToolCall,
+        tool: ToolDescription,
+        approval: ApprovalDecision | None,
+    ) -> ToolVerdict: ...
+
+    async def sanitize(
+        self, ctx: GovernedRun, call: ToolCall, tool: ToolDescription, result: ToolResult
+    ) -> ToolResult: ...

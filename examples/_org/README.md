@@ -16,7 +16,7 @@ pointing at this directory.
 | `require_level` | Internal tools reach L1, customer-facing apps L2, apps that take actions L3 |
 | `observability.capture_content: false` (locked) | No prompt or output content in telemetry (R9) |
 | `guardrails.input[base-pii]`, `guardrails.output[base-secrets]` (locked) | PII is redacted and secrets are blocked in every app (R1) |
-| `tools.require_manifest: true` (locked) | No tool runs without a manifest (S2) |
+| `tools.require_manifest: true`, `tools.approval_by_risk` (locked) | No tool runs without a manifest (S2), and high- and critical-risk calls wait for a human |
 | `bounds` on budgets | No app or caller goes over the org's caps; a value out of bounds fails loading (R10) |
 
 ```mermaid

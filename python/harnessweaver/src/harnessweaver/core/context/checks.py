@@ -7,7 +7,8 @@ from pydantic import JsonValue
 from harnessweaver.core.bus import HookResult
 from harnessweaver.core.context.access import PendingApproval
 from harnessweaver.core.context.base import RunContextBase
-from harnessweaver.core.decisions import Decision, DecisionRequest
+from harnessweaver.core.decisions import Decision, DecisionRequest, PolicyEffect
+from harnessweaver.core.errors import RunBlocked, RunEscalated
 from harnessweaver.core.hooks import (
     ApprovalResolvedEvent,
     ContextEvent,
@@ -17,8 +18,10 @@ from harnessweaver.core.hooks import (
     RouteEvent,
 )
 from harnessweaver.core.outcomes import (
+    OutcomeKind,
     Suspend,
 )
+from harnessweaver.core.policy import PolicyRequest
 from harnessweaver.core.retrieval import ContextItem
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest
 from harnessweaver.core.state import output_digest
@@ -27,6 +30,43 @@ from harnessweaver.core.state import output_digest
 class StepChecks(RunContextBase):
     """``input.before``, ``route.decide``, ``context.after``, ``output.before`` and
     ``approval.resolved`` (DESIGNS No. 7)."""
+
+    async def authorize_run(self) -> None:
+        """Ask the policy engine whether this run may start (``run.start`` rules, ADR-0025).
+
+        A decision a rule made is traced (R13); a run no rule restricts goes ahead.
+
+        Raises:
+            RunBlocked: When a rule denies the run.
+            RunEscalated: When a rule asks for approval: a run can't wait before it starts.
+        """
+        if self.policy is None:
+            return
+        envelope = self._envelope
+        request = PolicyRequest(
+            hook="run.start",
+            principal=envelope.principal,
+            tenant=envelope.tenant,
+            task=envelope.task,
+            task_version=envelope.task_version,
+            labels=envelope.labels,
+        )
+        decision = await self.policy.decide(request)
+        if decision.rule is None and decision.effect is PolicyEffect.ALLOW:
+            return
+        reason = decision.reason or f"the policy says {decision.effect.value}"
+        kind = {
+            PolicyEffect.ALLOW: OutcomeKind.CONTINUE,
+            PolicyEffect.REQUIRE_APPROVAL: OutcomeKind.ESCALATE,
+            PolicyEffect.DENY: OutcomeKind.BLOCK,
+        }[decision.effect]
+        details: dict[str, JsonValue] = {"effect": decision.effect.value, "rule": decision.rule}
+        hook = HookPoint.RUN_START
+        self.trace.note("harness.policy", reason, hook=hook, outcome=kind, details=details)
+        if decision.effect is PolicyEffect.DENY:
+            raise RunBlocked(reason, hook=hook.value, code="policy_denied")
+        if decision.effect is PolicyEffect.REQUIRE_APPROVAL:
+            raise RunEscalated(reason, hook=hook.value, code="policy_requires_approval")
 
     async def check_input(self, value: JsonValue) -> JsonValue:
         """Fire ``input.before``; return the (possibly redacted) input."""

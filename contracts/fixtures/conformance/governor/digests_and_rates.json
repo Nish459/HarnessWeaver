@@ -1,0 +1,40 @@
+{
+  "suite": "governor",
+  "description": "Canonical JSON, definition digests (S2) and rate-limit syntax.",
+  "cases": [
+    {
+      "name": "a definition's canonical text sorts keys and has no spaces",
+      "definition": {
+        "name": "refund_payment",
+        "description": "Refund a payment.",
+        "input_schema": {"type": "object", "properties": {"amount_usd": {"type": "number"}}, "required": ["amount_usd"]}
+      },
+      "expect": {
+        "canonical": "{\"description\":\"Refund a payment.\",\"input_schema\":{\"properties\":{\"amount_usd\":{\"type\":\"number\"}},\"required\":[\"amount_usd\"],\"type\":\"object\"},\"name\":\"refund_payment\"}",
+        "digest": "sha256:751d5bde20bbd167f80b35768dd2baf7b9be2593e85f7884eb20542d41b73523"
+      }
+    },
+    {
+      "name": "integral numbers are integers and non-ASCII text is escaped",
+      "definition": {"name": "t", "description": "Caf\u00e9", "input_schema": {"type": "object", "maxProperties": 3.0}},
+      "expect": {
+        "canonical": "{\"description\":\"Caf\\u00e9\",\"input_schema\":{\"maxProperties\":3,\"type\":\"object\"},\"name\":\"t\"}",
+        "digest": "sha256:4ccb1e8f447e36a6ea8a73516475d033cd886a4b030b9da876db6b4d7492fdfb"
+      }
+    },
+    {
+      "name": "an empty description is part of the definition",
+      "definition": {"name": "lookup", "description": "", "input_schema": {"type": "object"}},
+      "expect": {"digest": "sha256:35de8683b550823f2be39bd8f885ded4acc2ac1c2e55f1102ee042bf7c26ba6e"}
+    },
+    {"name": "per minute", "rate": "10/m", "expect": {"count": 10, "seconds": 60}},
+    {"name": "per hour", "rate": "200/h", "expect": {"count": 200, "seconds": 3600}},
+    {"name": "per second", "rate": "1/s", "expect": {"count": 1, "seconds": 1}},
+    {"name": "per day", "rate": "5/d", "expect": {"count": 5, "seconds": 86400}},
+    {"name": "spaces are allowed", "rate": " 3 / m ", "expect": {"count": 3, "seconds": 60}},
+    {"name": "zero calls is not a rate", "rate": "0/m", "expect": {"error": true}},
+    {"name": "units are single letters", "rate": "10/minute", "expect": {"error": true}},
+    {"name": "a window is required", "rate": "10", "expect": {"error": true}},
+    {"name": "negative counts fail", "rate": "-1/s", "expect": {"error": true}}
+  ]
+}

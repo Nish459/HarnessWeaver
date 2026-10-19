@@ -60,3 +60,11 @@ def test_unreviewed_plugins_stay_out(tmp_path: Path) -> None:
 def test_budgets_are_bounded_not_clamped(tmp_path: Path, budget: str) -> None:
     with pytest.raises(BoundViolation):
         _load(tmp_path, f"metadata: {{ name: notes }}\n{budget}\n")
+
+
+def test_high_risk_tools_keep_needing_approval(tmp_path: Path) -> None:
+    with pytest.raises(LockViolation):
+        _load(
+            tmp_path,
+            "metadata: { name: notes }\ntools: { approval_by_risk: { high: none } }\n",
+        )

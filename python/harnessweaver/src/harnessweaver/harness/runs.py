@@ -263,6 +263,7 @@ class RunMixin(EndingMixin, ABC):
                 HookPoint.RUN_START, RunStartEvent(task=task.name, input=run.input)
             )
             ctx.halt_on(start)
+            await ctx.authorize_run()
             await self._set_status(run, RunStatus.RUNNING)
             run.input = await ctx.check_input(run.input)
             ctx.input = run.input

@@ -32,6 +32,10 @@ class Finding(BaseModel):
     start: int | None = Field(default=None, ge=0)
     end: int | None = Field(default=None, ge=0)
     score: float | None = None
+    private: bool = Field(
+        default=False,
+        description="It's private data such as PII; finding it marks the run private (S3).",
+    )
 
 
 class GuardResult(BaseModel):

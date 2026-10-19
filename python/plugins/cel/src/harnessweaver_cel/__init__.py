@@ -1,11 +1,21 @@
 """HarnessWeaver plugin for CEL policies.
 
-Contributes a cel.policy policy engine that evaluates full CEL through cel-
-python.
+Contributes ``cel.policy``, a policy engine that evaluates ``policy.rules`` in
+full CEL through cel-python. Importing it imports nothing from cel-python (S8).
 """
 
 from importlib.metadata import version as _version
 
+import harnessweaver as hw
+from harnessweaver_cel.policy import CelPolicy
+
 __version__: str = _version("harnessweaver-cel")
 
-__all__ = ["__version__"]
+plugin = hw.Plugin(
+    namespace="cel",
+    version=__version__,
+    providers=[CelPolicy],
+    description="Policy rules in full CEL (cel.policy).",
+)
+
+__all__ = ["CelPolicy", "__version__", "plugin"]

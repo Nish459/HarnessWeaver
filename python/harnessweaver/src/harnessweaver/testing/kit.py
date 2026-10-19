@@ -11,13 +11,14 @@ from pydantic import JsonValue
 from harnessweaver.core.decisions import Decision, DecisionKind, DecisionRequest
 from harnessweaver.core.envelope import Clock, Envelope, FakeClock
 from harnessweaver.core.hooks import Band, HookPoint, RouteEvent
-from harnessweaver.core.messages import ToolCall, ToolSpec
+from harnessweaver.core.manifests import ToolManifest
+from harnessweaver.core.messages import ToolCall
 from harnessweaver.core.middleware import Registration
 from harnessweaver.core.outcomes import Continue, Outcome
 from harnessweaver.core.ports import ModelProvider, ToolBackend, ToolDescription
 from harnessweaver.core.registry import PluginCatalog
 from harnessweaver.core.telemetry import Telemetry
-from harnessweaver.core.tools import Risk, SideEffect, ToolInfo, ToolResult
+from harnessweaver.core.tools import Risk, SideEffect, ToolResult
 from harnessweaver.harness import Harness
 from harnessweaver.modules.models import ScriptedModel, ScriptedReply
 from harnessweaver.spec.loader import EffectiveSpec, load_spec, spec_from_documents
@@ -104,21 +105,27 @@ class FakeTool:
     scopes: tuple[str, ...] = ()
     untrusted: bool = True
     raises: Exception | None = None
+    governance: dict[str, JsonValue] = field(default_factory=dict[str, JsonValue])
+    """More manifest ``spec`` keys, such as ``approval`` or ``rate_limit`` (DESIGNS No. 17)."""
     calls: list[ToolCall] = field(default_factory=list[ToolCall])
 
+    def manifest(self) -> ToolManifest:
+        """The tool's manifest, as an app would write it (S2)."""
+        spec: dict[str, JsonValue] = {
+            "description": self.description,
+            "input_schema": self.input_schema,
+            "side_effect": self.side_effect.value,
+            "risk": self.risk.value,
+            "data_access": list(self.data_access),
+            "egress": list(self.egress),
+            "scopes": list(self.scopes),
+            "output": {"label": "untrusted" if self.untrusted else "trusted"},
+            **self.governance,
+        }
+        return ToolManifest.model_validate({"metadata": {"name": self.name}, "spec": spec})
+
     def describe(self) -> ToolDescription:
-        info = ToolInfo(
-            name=self.name,
-            side_effect=self.side_effect,
-            risk=self.risk,
-            data_access=self.data_access,
-            egress=self.egress,
-            scopes=self.scopes,
-        )
-        return ToolDescription(
-            info,
-            ToolSpec(name=self.name, description=self.description, input_schema=self.input_schema),
-        )
+        return ToolDescription.from_manifest(self.manifest())
 
     async def run(self, call: ToolCall) -> ToolResult:
         self.calls.append(call)

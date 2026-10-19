@@ -30,6 +30,7 @@ guardrails:
 
 tools:
   require_manifest: true            # S2
+  approval_by_risk: { high: required, critical: required }
 
 budgets:
   per_run: { max_usd: 2.00, deadline: 5m }
@@ -40,6 +41,7 @@ locks:
   - guardrails.input[base-pii]
   - guardrails.output[base-secrets]
   - tools.require_manifest
+  - tools.approval_by_risk
 
 # R10: a value outside these fails loading; nothing is clamped.
 bounds:

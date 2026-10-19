@@ -38,7 +38,9 @@ from harnessweaver.core.outcomes import (
     Suspend,
 )
 from harnessweaver.core.ports import (
+    PolicyEngine,
     ToolBackend,
+    ToolGovernor,
 )
 from harnessweaver.core.state import Grant
 from harnessweaver.core.telemetry import Telemetry
@@ -66,6 +68,8 @@ class RunContextBase:
         harness: object = None,
         can_suspend: bool = True,
         telemetry: Telemetry | None = None,
+        governor: ToolGovernor | None = None,
+        policy: PolicyEngine | None = None,
     ) -> None:
         self._envelope = envelope
         self.bus = bus
@@ -80,6 +84,8 @@ class RunContextBase:
         self.harness = harness
         self.can_suspend = can_suspend
         self.telemetry = telemetry
+        self.governor = governor
+        self.policy = policy
         self.input: JsonValue = None
         """The run's input after ``input.before``, for validation rules."""
         self.pending: PendingApproval | None = None

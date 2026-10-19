@@ -29,8 +29,12 @@ def compile_pattern(pattern: str, ignore_case: bool = False) -> re.Pattern[str]:
     return re.compile(pattern, flags)
 
 
-def apply_hits(content: str, hits: Sequence[Hit]) -> tuple[str, tuple[Finding, ...]]:
-    """Replace non-overlapping hits: earliest start wins, then the longest, then list order."""
+def apply_hits(
+    content: str, hits: Sequence[Hit], *, private: bool = False
+) -> tuple[str, tuple[Finding, ...]]:
+    """Replace non-overlapping hits: earliest start wins, then the longest, then list order.
+
+    ``private`` marks the findings as private data (S3)."""
     chosen: list[Hit] = []
     for hit in sorted(hits, key=lambda h: (h.start, -(h.end - h.start), h.order)):
         if chosen and hit.start < chosen[-1].end:
@@ -39,7 +43,9 @@ def apply_hits(content: str, hits: Sequence[Hit]) -> tuple[str, tuple[Finding, .
     redacted = content
     for hit in reversed(chosen):
         redacted = redacted[: hit.start] + hit.replacement + redacted[hit.end :]
-    findings = tuple(Finding(type=h.type, start=h.start, end=h.end) for h in chosen)
+    findings = tuple(
+        Finding(type=h.type, start=h.start, end=h.end, private=private) for h in chosen
+    )
     return redacted, findings
 
 

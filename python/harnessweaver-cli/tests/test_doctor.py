@@ -68,3 +68,29 @@ def test_a_spec_that_wont_load_fails(project: Path) -> None:
     findings = json.loads(result.output)
     assert findings[-1]["severity"] == "fail"
     assert findings[-1]["check"] == "load"
+
+
+def test_tool_manifests_should_be_pinned(project: Path) -> None:
+    (project / "tools").mkdir()
+    tool = {
+        "apiVersion": "harnessweaver/v1",
+        "kind": "Tool",
+        "metadata": {"name": "lookup"},
+        "spec": {"handler": "builtins:len", "description": "Look something up."},
+    }
+    (project / "tools" / "lookup.tool.yaml").write_text(json.dumps(tool), encoding="utf-8")
+    edit(project, "validation:", 'tools: { manifests: ["tools/*.tool.yaml"] }\n\nvalidation:')
+    findings = diagnose(project / "harness.yaml", None, [])
+    (unpinned,) = [f for f in findings if f.check == "tools"]
+    assert unpinned.severity == "warn"
+    digest = unpinned.message.split("definition_digest: ")[1].split(" ")[0]
+    tool["spec"]["definition_digest"] = digest  # type: ignore[index]
+    (project / "tools" / "lookup.tool.yaml").write_text(json.dumps(tool), encoding="utf-8")
+    assert ("ok", "tools") in {
+        (f.severity, f.check) for f in diagnose(project / "harness.yaml", None, [])
+    }
+    tool["spec"]["description"] = "Look something up, and more."  # type: ignore[index]
+    (project / "tools" / "lookup.tool.yaml").write_text(json.dumps(tool), encoding="utf-8")
+    result = runner.invoke(app, ["doctor"])
+    assert result.exit_code == 1
+    assert "lookup changed since it was pinned" in result.output

@@ -50,6 +50,12 @@
           ],
           "default": null,
           "title": "Score"
+        },
+        "private": {
+          "default": false,
+          "description": "It's private data such as PII; finding it marks the run private (S3).",
+          "title": "Private",
+          "type": "boolean"
         }
       },
       "required": [

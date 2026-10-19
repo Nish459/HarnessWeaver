@@ -19,12 +19,14 @@ from harnessweaver.core.envelope import Envelope
 from harnessweaver.core.errors import ErrorInfo
 from harnessweaver.core.guards import GuardResult
 from harnessweaver.core.hooks import HookEvent
+from harnessweaver.core.manifests import ToolManifest
 from harnessweaver.core.messages import ModelRequest, ModelResponse, ToolCall
 from harnessweaver.core.outcomes import Outcome
+from harnessweaver.core.policy import PolicyDecision, PolicyRequest
 from harnessweaver.core.results import RunEvent, RunResult
 from harnessweaver.core.retrieval import ContextItem
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest
-from harnessweaver.core.tools import ToolInfo, ToolResult
+from harnessweaver.core.tools import SandboxResult, ToolInfo, ToolResult, ToolVerdict
 from harnessweaver.core.trace import TraceEvent
 from harnessweaver.spec.models import HarnessSpec, ProfileSpec
 
@@ -57,6 +59,11 @@ CONTRACTS: Final[dict[str, Any]] = {
     "tool-call": ToolCall,
     "tool-info": ToolInfo,
     "tool-result": ToolResult,
+    "tool-manifest": ToolManifest,
+    "tool-verdict": ToolVerdict,
+    "policy-request": PolicyRequest,
+    "policy-decision": PolicyDecision,
+    "sandbox-result": SandboxResult,
     "context-item": ContextItem,
     "approval-request": ApprovalRequest,
     "approval-decision": ApprovalDecision,

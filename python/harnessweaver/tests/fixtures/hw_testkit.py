@@ -6,34 +6,19 @@ saw from :data:`RECORDER`, which the ``testkit`` fixture resets.
 """
 
 from collections.abc import AsyncIterator
-from dataclasses import dataclass, field
 from typing import Any, Literal
 
 import anyio
+from hw_recorder import RECORDER
+from hw_recorder import Recorder as Recorder
+from hw_testkit_tools import Careful, EchoSandbox, Explodes
+from hw_testkit_tools import lookup_order as lookup_order  # manifests name hw_testkit:<handler>
+from hw_testkit_tools import refund_payment as refund_payment
+from hw_testkit_tools import send_email as send_email
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 import harnessweaver as hw
 from harnessweaver.ports import ToolDescription
-
-
-@dataclass
-class Recorder:
-    hooks: list[str] = field(default_factory=list)
-    requests: list[hw.ModelRequest] = field(default_factory=list)
-    tool_calls: list[hw.ToolCall] = field(default_factory=list)
-    envelopes: list[hw.Envelope] = field(default_factory=list)
-    notes: list[Any] = field(default_factory=list)
-
-    def reset(self) -> None:
-        self.hooks.clear()
-        self.requests.clear()
-        self.tool_calls.clear()
-        self.envelopes.clear()
-        self.notes.clear()
-
-
-RECORDER = Recorder()
-
 
 # --- a scripted model provider -----------------------------------------------------------------
 
@@ -220,26 +205,23 @@ class Script:
 # --- tools ---------------------------------------------------------------------------------------
 
 
+def _tool(name: str, description: str, **spec: Any) -> ToolDescription:
+    document = {"metadata": {"name": name}, "spec": {"description": description, **spec}}
+    return ToolDescription.from_manifest(hw.ToolManifest.model_validate(document))
+
+
 class FakeTools:
     """A tool backend with three tools: lookup (read), refund (writes) and crash."""
 
     def __init__(self) -> None:
         self.tools = {
-            "lookup": ToolDescription(
-                hw.ToolInfo(
-                    name="lookup", side_effect=hw.SideEffect.READ, data_access=("pii:customer",)
-                ),
-                hw.ToolSpec(name="lookup", description="Look up a customer"),
+            "lookup": _tool(
+                "lookup", "Look up a customer", side_effect="read", data_access=["pii:customer"]
             ),
-            "refund": ToolDescription(
-                hw.ToolInfo(
-                    name="refund", side_effect=hw.SideEffect.WRITE_EXTERNAL, risk=hw.Risk.HIGH
-                ),
-                hw.ToolSpec(name="refund", description="Refund a payment"),
+            "refund": _tool(
+                "refund", "Refund a payment", side_effect="write_external", risk="high"
             ),
-            "crash": ToolDescription(
-                hw.ToolInfo(name="crash"), hw.ToolSpec(name="crash", description="Always fails")
-            ),
+            "crash": _tool("crash", "Always fails"),
         }
 
     def describe(self, name: str) -> ToolDescription | None:
@@ -344,7 +326,7 @@ class PartialRunner:
 plugin = hw.Plugin(
     namespace="testkit",
     version="0.1.0",
-    providers=[ScriptedProvider],
+    providers=[ScriptedProvider, EchoSandbox, Careful, Explodes],
     middleware=[audit, flaky, Script],
     runners=[PartialRunner],
     profiles={"strict": "testkit_profiles/strict.yaml"},

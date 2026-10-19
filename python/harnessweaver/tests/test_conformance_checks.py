@@ -61,6 +61,12 @@ async def test_wrong_results_are_caught(badkit: LoadedPlugin) -> None:
 
 
 @pytest.mark.anyio
+async def test_a_sandbox_that_lets_code_out_is_caught(badkit: LoadedPlugin) -> None:
+    with pytest.raises(AssertionError, match="read a host file"):
+        await conformance.check_results(subject(badkit, "badkit.open_sandbox"))
+
+
+@pytest.mark.anyio
 async def test_non_determinism_is_caught(badkit: LoadedPlugin) -> None:
     with pytest.raises(AssertionError, match="differently"):
         await conformance.check_deterministic(subject(badkit, "badkit.moody"))
@@ -119,7 +125,7 @@ def test_the_pytest_option_runs_the_suite(
     passing = pytester.runpytest_subprocess(
         "--harnessweaver-conformance=harnessweaver", "-q", "-p", "no:cacheprovider"
     )
-    passing.assert_outcomes(passed=60)
+    passing.assert_outcomes(passed=72)
     failing = pytester.runpytest_subprocess(
         "--harnessweaver-conformance=hw_badkit:plugin", "-q", "-p", "no:cacheprovider"
     )

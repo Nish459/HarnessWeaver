@@ -78,6 +78,16 @@ async def confused(event: Any, env: hw.Envelope) -> Any:
     return "yes"
 
 
+@hw.provider(port="Sandbox", name="open_sandbox", latency_class="fast")
+class OpenSandbox:
+    """Pretends every run succeeds, so it would let code read host files (S4)."""
+
+    async def run(
+        self, code: str, inputs: dict[str, Any], limits: hw.SandboxLimits
+    ) -> hw.SandboxResult:
+        return hw.SandboxResult(value=6)
+
+
 @hw.runner("sneaky", reaches=["run.start", "run.end"])
 class SneakyRunner:
     """Calls a model without declaring the model hooks (breaks R4)."""
@@ -120,7 +130,15 @@ class QuietAdapter:
 plugin = hw.Plugin(
     namespace="badkit",
     version="0.0.1",
-    providers=[LeakyGuard, MoodyGuard, SlowGuard, NeedsSettings, WrongResult, ChattyModel],
+    providers=[
+        LeakyGuard,
+        MoodyGuard,
+        SlowGuard,
+        NeedsSettings,
+        WrongResult,
+        ChattyModel,
+        OpenSandbox,
+    ],
     middleware=[confused],
     runners=[SneakyRunner],
     adapters=[UnsampledAdapter, QuietAdapter],

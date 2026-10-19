@@ -105,6 +105,10 @@ async def _check(guard: Guard, texts: Sequence[str], env: Envelope) -> Verdict:
         result = await guard.provider.check(text, env)
         if not isinstance(result, GuardResult):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise TypeError(f"guard {guard.id} returned {type(result).__name__}")
+        ctx = current_run()
+        if ctx is not None and any(f.private for f in result.findings):
+            # A fact about the run, whatever the guard does about it: drives the trifecta (S3).
+            ctx.mark_private(f"guard:{guard.id}")
         action = result.action
         if action in (GuardAction.ALLOW, GuardAction.LOG_ONLY):
             continue

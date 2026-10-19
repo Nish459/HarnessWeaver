@@ -6,13 +6,12 @@ point, the budget meter, labels, the pending approval and the approvals granted
 so far.
 """
 
-import hashlib
-import json
 from datetime import timedelta
 from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, JsonValue
 
+from harnessweaver.core.digests import canonical_digest
 from harnessweaver.core.envelope import Envelope, Labels
 from harnessweaver.core.messages import ToolCall, Usage
 from harnessweaver.core.results import RunResult
@@ -28,19 +27,14 @@ __all__ = [
 ]
 
 
-def _digest(value: JsonValue) -> str:
-    canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    return "sha256:" + hashlib.sha256(canonical.encode("ascii")).hexdigest()
-
-
 def call_digest(call: ToolCall) -> str:
     """Identify a tool call by name and arguments, ignoring its id (ids change on re-runs)."""
-    return _digest({"name": call.name, "arguments": call.arguments})
+    return canonical_digest({"name": call.name, "arguments": call.arguments})
 
 
 def output_digest(output: JsonValue) -> str:
     """Identify a candidate output."""
-    return _digest({"output": output})
+    return canonical_digest({"output": output})
 
 
 class _Record(BaseModel):

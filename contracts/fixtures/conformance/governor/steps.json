@@ -1,0 +1,582 @@
+{
+  "suite": "governor",
+  "description": "Governor steps 1 to 7 for one call (DESIGNS No. 17). Defaults: principal alice (support), tenant acme, no task, empty labels, no policy rules with default allow, tools.require_manifest true, trifecta require_approval, no previous calls, not approved. task_approvals maps a task to the tools it always asks about. A tool is a manifest's name and spec fields; manifest: false means a tool without one.",
+  "cases": [
+    {
+      "name": "a plain call is allowed",
+      "tool": {
+        "name": "lookup",
+        "side_effect": "read"
+      },
+      "args": {},
+      "expect": {
+        "decision": "allow",
+        "step": 7,
+        "code": null
+      }
+    },
+    {
+      "name": "a tool without a manifest is blocked when manifests are required",
+      "tool": {
+        "name": "lookup",
+        "manifest": false
+      },
+      "args": {},
+      "expect": {
+        "decision": "block",
+        "step": 1,
+        "code": "manifest_required"
+      }
+    },
+    {
+      "name": "a tool without a manifest is allowed when they aren't",
+      "tool": {
+        "name": "lookup",
+        "manifest": false
+      },
+      "args": {},
+      "tools": {
+        "require_manifest": false
+      },
+      "expect": {
+        "decision": "allow",
+        "step": 7,
+        "code": null
+      }
+    },
+    {
+      "name": "a disabled tool is blocked",
+      "tool": {
+        "name": "lookup",
+        "enabled": false
+      },
+      "args": {},
+      "expect": {
+        "decision": "block",
+        "step": 1,
+        "code": "tool_disabled"
+      }
+    },
+    {
+      "name": "a tool enabled for other tenants is blocked",
+      "tool": {
+        "name": "lookup",
+        "tenants": [
+          "globex"
+        ]
+      },
+      "args": {},
+      "tenant": "acme",
+      "expect": {
+        "decision": "block",
+        "step": 1,
+        "code": "tool_not_enabled"
+      }
+    },
+    {
+      "name": "a definition that doesn't match its pinned digest is blocked",
+      "tool": {
+        "name": "lookup",
+        "definition_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "args": {},
+      "expect": {
+        "decision": "block",
+        "step": 1,
+        "code": "digest_mismatch"
+      }
+    },
+    {
+      "name": "a definition that matches its pinned digest is allowed",
+      "tool": {
+        "name": "lookup",
+        "description": "",
+        "input_schema": {
+          "type": "object"
+        },
+        "definition_digest": "sha256:35de8683b550823f2be39bd8f885ded4acc2ac1c2e55f1102ee042bf7c26ba6e"
+      },
+      "args": {},
+      "expect": {
+        "decision": "allow",
+        "step": 7,
+        "code": null
+      }
+    },
+    {
+      "name": "arguments that break the schema are blocked",
+      "tool": {
+        "name": "refund",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "amount_usd": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "amount_usd"
+          ]
+        }
+      },
+      "args": {
+        "amount_usd": "lots"
+      },
+      "expect": {
+        "decision": "block",
+        "step": 2,
+        "code": "schema_invalid"
+      }
+    },
+    {
+      "name": "the schema is checked before the policy",
+      "tool": {
+        "name": "refund",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "amount_usd": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "amount_usd"
+          ]
+        }
+      },
+      "args": {},
+      "policy": {
+        "rules": [
+          {
+            "id": "all",
+            "when": "true",
+            "effect": "deny"
+          }
+        ]
+      },
+      "expect": {
+        "decision": "block",
+        "step": 2,
+        "code": "schema_invalid"
+      }
+    },
+    {
+      "name": "a policy deny blocks",
+      "tool": {
+        "name": "refund",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "amount_usd": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "amount_usd"
+          ]
+        }
+      },
+      "args": {
+        "amount_usd": 5000
+      },
+      "policy": {
+        "rules": [
+          {
+            "id": "huge",
+            "when": "args.amount_usd > 1000",
+            "effect": "deny"
+          }
+        ]
+      },
+      "expect": {
+        "decision": "block",
+        "step": 3,
+        "code": "policy_denied"
+      }
+    },
+    {
+      "name": "a policy approval asks a human",
+      "tool": {
+        "name": "refund",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "amount_usd": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "amount_usd"
+          ]
+        }
+      },
+      "args": {
+        "amount_usd": 500
+      },
+      "policy": {
+        "rules": [
+          {
+            "id": "big",
+            "when": "args.amount_usd > 100",
+            "effect": "require_approval"
+          }
+        ]
+      },
+      "expect": {
+        "decision": "require_approval",
+        "step": 7,
+        "code": "approval_required"
+      }
+    },
+    {
+      "name": "the manifest's approval rule asks a human",
+      "tool": {
+        "name": "refund",
+        "approval": {
+          "when": "args.amount_usd > 100"
+        }
+      },
+      "args": {
+        "amount_usd": 500
+      },
+      "expect": {
+        "decision": "require_approval",
+        "step": 7,
+        "code": "approval_required"
+      }
+    },
+    {
+      "name": "the manifest's approval rule can let a call through",
+      "tool": {
+        "name": "refund",
+        "approval": {
+          "when": "args.amount_usd > 100"
+        }
+      },
+      "args": {
+        "amount_usd": 20
+      },
+      "expect": {
+        "decision": "allow",
+        "step": 7,
+        "code": null
+      }
+    },
+    {
+      "name": "an approval rule that can't be evaluated asks a human",
+      "tool": {
+        "name": "refund",
+        "approval": {
+          "when": "args.order.total > 100"
+        }
+      },
+      "args": {},
+      "expect": {
+        "decision": "require_approval",
+        "step": 7,
+        "code": "approval_required"
+      }
+    },
+    {
+      "name": "risk levels can always need approval",
+      "tool": {
+        "name": "refund",
+        "risk": "high"
+      },
+      "args": {},
+      "tools": {
+        "approval_by_risk": {
+          "high": "required"
+        }
+      },
+      "expect": {
+        "decision": "require_approval",
+        "step": 7,
+        "code": "approval_required"
+      }
+    },
+    {
+      "name": "a risk level marked none doesn't",
+      "tool": {
+        "name": "refund",
+        "risk": "high"
+      },
+      "args": {},
+      "tools": {
+        "approval_by_risk": {
+          "high": "none"
+        }
+      },
+      "expect": {
+        "decision": "allow",
+        "step": 7,
+        "code": null
+      }
+    },
+    {
+      "name": "a task can always ask before a tool",
+      "tool": {
+        "name": "refund"
+      },
+      "args": {},
+      "task": "refunds",
+      "task_approvals": {
+        "refunds": [
+          "refund"
+        ]
+      },
+      "expect": {
+        "decision": "require_approval",
+        "step": 7,
+        "code": "approval_required"
+      }
+    },
+    {
+      "name": "another task doesn't",
+      "tool": {
+        "name": "refund"
+      },
+      "args": {},
+      "task": "billing",
+      "task_approvals": {
+        "refunds": [
+          "refund"
+        ]
+      },
+      "expect": {
+        "decision": "allow",
+        "step": 7,
+        "code": null
+      }
+    },
+    {
+      "name": "the lethal trifecta asks a human",
+      "tool": {
+        "name": "email",
+        "egress": [
+          "mail.example.com"
+        ]
+      },
+      "args": {},
+      "labels": {
+        "untrusted_seen": true,
+        "private_seen": true
+      },
+      "expect": {
+        "decision": "require_approval",
+        "step": 7,
+        "code": "approval_required"
+      }
+    },
+    {
+      "name": "the lethal trifecta can block instead",
+      "tool": {
+        "name": "email",
+        "egress": [
+          "mail.example.com"
+        ]
+      },
+      "args": {},
+      "labels": {
+        "untrusted_seen": true,
+        "private_seen": true
+      },
+      "tools": {
+        "trifecta": "block"
+      },
+      "expect": {
+        "decision": "block",
+        "step": 4,
+        "code": "trifecta"
+      }
+    },
+    {
+      "name": "untrusted data alone isn't the trifecta",
+      "tool": {
+        "name": "email",
+        "egress": [
+          "mail.example.com"
+        ]
+      },
+      "args": {},
+      "labels": {
+        "untrusted_seen": true
+      },
+      "expect": {
+        "decision": "allow",
+        "step": 7,
+        "code": null
+      }
+    },
+    {
+      "name": "a tool without egress isn't the trifecta",
+      "tool": {
+        "name": "lookup"
+      },
+      "args": {},
+      "labels": {
+        "untrusted_seen": true,
+        "private_seen": true
+      },
+      "expect": {
+        "decision": "allow",
+        "step": 7,
+        "code": null
+      }
+    },
+    {
+      "name": "a policy deny comes before the trifecta",
+      "tool": {
+        "name": "email",
+        "egress": [
+          "mail.example.com"
+        ]
+      },
+      "args": {},
+      "labels": {
+        "untrusted_seen": true,
+        "private_seen": true
+      },
+      "tools": {
+        "trifecta": "block"
+      },
+      "policy": {
+        "rules": [
+          {
+            "id": "no-mail",
+            "when": "tool.name == 'email'",
+            "effect": "deny"
+          }
+        ]
+      },
+      "expect": {
+        "decision": "block",
+        "step": 3,
+        "code": "policy_denied"
+      }
+    },
+    {
+      "name": "a principal over its rate limit is blocked",
+      "tool": {
+        "name": "lookup",
+        "rate_limit": {
+          "per_principal": "2/m"
+        }
+      },
+      "args": {},
+      "previous_calls": 2,
+      "expect": {
+        "decision": "block",
+        "step": 5,
+        "code": "rate_limited"
+      }
+    },
+    {
+      "name": "a principal under its rate limit is allowed",
+      "tool": {
+        "name": "lookup",
+        "rate_limit": {
+          "per_principal": "2/m"
+        }
+      },
+      "args": {},
+      "previous_calls": 1,
+      "expect": {
+        "decision": "allow",
+        "step": 7,
+        "code": null
+      }
+    },
+    {
+      "name": "a tenant over its rate limit is blocked",
+      "tool": {
+        "name": "lookup",
+        "rate_limit": {
+          "per_tenant": "3/h"
+        }
+      },
+      "args": {},
+      "previous_calls": 3,
+      "expect": {
+        "decision": "block",
+        "step": 5,
+        "code": "rate_limited"
+      }
+    },
+    {
+      "name": "an approved call goes ahead",
+      "tool": {
+        "name": "refund",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "amount_usd": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "amount_usd"
+          ]
+        }
+      },
+      "args": {
+        "amount_usd": 500
+      },
+      "approved": true,
+      "policy": {
+        "rules": [
+          {
+            "id": "big",
+            "when": "args.amount_usd > 100",
+            "effect": "require_approval"
+          }
+        ]
+      },
+      "expect": {
+        "decision": "allow",
+        "step": 7,
+        "code": "approved"
+      }
+    },
+    {
+      "name": "an approval doesn't override a deny (edited arguments are re-checked)",
+      "tool": {
+        "name": "refund",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "amount_usd": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "amount_usd"
+          ]
+        }
+      },
+      "args": {
+        "amount_usd": 5000
+      },
+      "approved": true,
+      "policy": {
+        "rules": [
+          {
+            "id": "big",
+            "when": "args.amount_usd > 100",
+            "effect": "require_approval"
+          },
+          {
+            "id": "huge",
+            "when": "args.amount_usd > 1000",
+            "effect": "deny"
+          }
+        ]
+      },
+      "expect": {
+        "decision": "block",
+        "step": 3,
+        "code": "policy_denied"
+      }
+    }
+  ]
+}

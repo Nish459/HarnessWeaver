@@ -93,7 +93,7 @@ class PiiRegex:
             for m in pattern.finditer(content)
             if _pii_valid(entity, m.group())
         ]
-        redacted, findings = apply_hits(content, hits)
+        redacted, findings = apply_hits(content, hits, private=True)
         return verdict_of(
             GuardAction.REDACT, redacted, findings, f"found {finding_types(findings)}"
         )

@@ -8,6 +8,7 @@ SUITES_WITH_RUNNERS = {
     "bus",
     "durations",
     "expr",
+    "governor",
     "guards",
     "hook_order",
     "levels",

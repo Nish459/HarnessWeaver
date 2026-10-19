@@ -51,6 +51,7 @@ from harnessweaver.core.hooks import (
     ToolCallEvent,
     ToolResultEvent,
 )
+from harnessweaver.core.manifests import ToolManifest, definition_digest
 from harnessweaver.core.messages import (
     Message,
     ModelRequest,
@@ -72,10 +73,25 @@ from harnessweaver.core.plugins import (
     provider,
     runner,
 )
+from harnessweaver.core.policy import (
+    PolicyConfig,
+    PolicyDecision,
+    PolicyRequest,
+    PolicyRule,
+    decide_by_rules,
+)
 from harnessweaver.core.results import RunEvent, RunResult
 from harnessweaver.core.retrieval import Acl, ContextItem
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest, RunStatus
-from harnessweaver.core.tools import Risk, SideEffect, ToolInfo, ToolResult
+from harnessweaver.core.tools import (
+    Risk,
+    SandboxLimits,
+    SandboxResult,
+    SideEffect,
+    ToolInfo,
+    ToolResult,
+    ToolVerdict,
+)
 from harnessweaver.core.trace import RunTrace, TraceEvent, TraceKind
 from harnessweaver.harness import Harness
 from harnessweaver.session import Session
@@ -133,7 +149,11 @@ __all__ = [
     "Outcome",
     "OutputEvent",
     "Plugin",
+    "PolicyConfig",
+    "PolicyDecision",
     "PolicyEffect",
+    "PolicyRequest",
+    "PolicyRule",
     "Principal",
     "ProfileSpec",
     "Retry",
@@ -148,6 +168,8 @@ __all__ = [
     "RunStartEvent",
     "RunStatus",
     "RunTrace",
+    "SandboxLimits",
+    "SandboxResult",
     "Session",
     "SideEffect",
     "StreamChunk",
@@ -157,16 +179,20 @@ __all__ = [
     "ToolCall",
     "ToolCallEvent",
     "ToolInfo",
+    "ToolManifest",
     "ToolResult",
     "ToolResultEvent",
     "ToolSpec",
+    "ToolVerdict",
     "TraceEvent",
     "TraceKind",
     "Usage",
     "__version__",
     "adapter",
     "current_run",
+    "decide_by_rules",
     "decider",
+    "definition_digest",
     "errors",
     "format_duration",
     "load",

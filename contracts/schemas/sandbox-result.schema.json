@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:sandbox-result",
+  "title": "SandboxResult",
+  "$defs": {
+    "JsonValue": {}
+  },
+  "additionalProperties": false,
+  "description": "What sandboxed code produced: its last expression's value, its printed output, or\nthe error it raised (``\"TypeName: message\"``).",
+  "properties": {
+    "value": {
+      "$ref": "#/$defs/JsonValue",
+      "default": null
+    },
+    "stdout": {
+      "default": "",
+      "title": "Stdout",
+      "type": "string"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    }
+  },
+  "type": "object"
+}

@@ -10,6 +10,7 @@ from harnessweaver.core.errors import (
 )
 from harnessweaver.core.expr import compile_expression
 from harnessweaver.core.plugins import RESERVED_NAMESPACES
+from harnessweaver.core.policy import RUN_POLICY_VARIABLES, TOOL_POLICY_VARIABLES
 from harnessweaver.spec._raw import as_list, as_map
 from harnessweaver.spec.merge import (
     Provenance,
@@ -24,8 +25,8 @@ __all__ = [
     "compile_rules",
 ]
 
-POLICY_VARIABLES: Final = frozenset({"principal", "tenant", "task", "tool", "args", "labels"})
-"""Names a ``policy.rules[].when`` expression may use."""
+POLICY_VARIABLES: Final = TOOL_POLICY_VARIABLES
+"""Names a ``tool.before`` ``policy.rules[].when`` may use (``run.start`` rules: fewer)."""
 
 VALIDATION_VARIABLES: Final = frozenset({"output", "input", "task"})
 """Names a ``validation.rules[].when`` expression may use."""
@@ -40,9 +41,12 @@ def _compile_rule(where: str, label: str, source: str, names: frozenset[str]) ->
 
 def compile_rules(spec: HarnessSpec) -> None:
     """Compile every cel-lite rule now, so a typo fails at load rather than mid-run (R4)."""
-    for index, policy_rule in enumerate(spec.policy.rules):
-        label = policy_rule.id or str(index)
-        _compile_rule("policy.rules", label, policy_rule.when, POLICY_VARIABLES)
+    # Other engines (cel.policy) compile their own rules when they're built.
+    if spec.policy.use == "cel_lite":
+        for index, policy_rule in enumerate(spec.policy.rules):
+            label = policy_rule.id or str(index)
+            names = POLICY_VARIABLES if policy_rule.hook == "tool.before" else RUN_POLICY_VARIABLES
+            _compile_rule("policy.rules", label, policy_rule.when, names)
     for index, validation_rule in enumerate(spec.validation.rules):
         label = validation_rule.id or str(index)
         _compile_rule("validation.rules", label, validation_rule.when, VALIDATION_VARIABLES)

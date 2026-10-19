@@ -1,10 +1,23 @@
-"""Tool contracts carried by ``tool.before`` and ``tool.after`` events."""
+"""Tool contracts: what ``tool.before`` / ``tool.after`` carry, the governor's verdict, and
+what a ``Sandbox`` runs (DESIGNS No. 17)."""
 
+from datetime import timedelta
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
-__all__ = ["Risk", "SideEffect", "ToolInfo", "ToolResult"]
+from harnessweaver.core.durations import Duration
+
+__all__ = [
+    "Risk",
+    "SandboxLimits",
+    "SandboxResult",
+    "SideEffect",
+    "ToolInfo",
+    "ToolResult",
+    "ToolVerdict",
+]
 
 
 class SideEffect(StrEnum):
@@ -54,3 +67,36 @@ class ToolResult(BaseModel):
     is_error: bool = False
     untrusted: bool = True
     truncated: bool = False
+
+
+class ToolVerdict(BaseModel):
+    """What the governor decided about one call, and at which of its steps (DESIGNS No. 17)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    decision: Literal["allow", "require_approval", "block"]
+    step: int = Field(ge=1, le=7, description="The governor step that decided.")
+    code: str | None = Field(default=None, description="Why, for blocks and approvals.")
+    reason: str
+    approver_role: str | None = None
+
+
+class SandboxLimits(BaseModel):
+    """Limits for one sandboxed run (S4)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    timeout: Duration = timedelta(seconds=5)
+    max_memory_mb: int = Field(default=64, gt=0)
+    max_output_bytes: int = Field(default=100_000, gt=0, description="Printed output kept.")
+
+
+class SandboxResult(BaseModel):
+    """What sandboxed code produced: its last expression's value, its printed output, or
+    the error it raised (``"TypeName: message"``)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    value: JsonValue = None
+    stdout: str = ""
+    error: str | None = None

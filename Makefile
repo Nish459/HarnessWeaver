@@ -28,7 +28,7 @@ test:
 	$(UV) run pytest -q
 
 # RULES T5: every first-party plugin passes the conformance suite.
-CONFORMANCE_PLUGINS := harnessweaver,openai,anthropic,otel
+CONFORMANCE_PLUGINS := harnessweaver,openai,anthropic,otel,cel,monty
 conformance:
 	$(UV) run pytest -q --harnessweaver-conformance=$(CONFORMANCE_PLUGINS) python/harnessweaver/src/harnessweaver/testing/conformance_suite.py
 
