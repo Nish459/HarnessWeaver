@@ -95,3 +95,6 @@ class Checkpoint(_Record):
     time_left: timedelta | None = Field(
         default=None, description="Deadline time left at suspension; waiting doesn't count."
     )
+    context_ids: tuple[str, ...] = Field(
+        default=(), description="Ids of the context items the run kept, for citation checks."
+    )

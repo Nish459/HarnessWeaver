@@ -39,7 +39,9 @@ from harnessweaver.harness.build import (
 )
 from harnessweaver.harness.governance import (
     build_channel,
+    build_context,
     build_governor,
+    build_memory,
     build_policy,
     build_tools,
 )
@@ -47,6 +49,7 @@ from harnessweaver.harness.records import PendingSession
 from harnessweaver.harness.wrap import WrapMixin
 from harnessweaver.modules.guardrails import install_guardrails
 from harnessweaver.modules.prompts import PromptStore
+from harnessweaver.modules.routing import install_routing
 from harnessweaver.modules.validation import install_validation
 from harnessweaver.session import Session
 from harnessweaver.spec.loader import EffectiveSpec, load_spec
@@ -134,11 +137,14 @@ class Harness(WrapMixin):
         install_guardrails(effective, registry, bus)
         install_validation(effective, bus)
         install_middleware(spec, registry, bus)
+        install_routing(effective, registry, bus, base)
         prompts = PromptStore(base / spec.prompts.dir)
         policy = build_policy(spec, registry)
         tools, manifests = build_tools(spec, registry, base, tools)
         governor = build_governor(spec, registry, policy, manifests)
         approvals = build_channel(spec, registry)
+        context = build_context(spec, registry, base)
+        memory = build_memory(spec, registry)
         tasks = {
             name: build_task(effective, name, task, registry, bus, models, prompts, tools)
             for name, task in spec.tasks.items()
@@ -157,6 +163,8 @@ class Harness(WrapMixin):
             governor=governor,
             policy=policy,
             approvals=approvals,
+            context=context,
+            memory=memory,
         )
 
     # --- lifecycle --------------------------------------------------------------------------

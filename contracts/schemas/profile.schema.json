@@ -208,7 +208,14 @@
             }
           ],
           "default": null,
+          "description": "One token per 4 characters.",
           "title": "Max Tokens"
+        },
+        "require_acl": {
+          "default": false,
+          "description": "Drop items that carry no ACL, not only those it excludes.",
+          "title": "Require Acl",
+          "type": "boolean"
         }
       },
       "required": [
@@ -427,6 +434,42 @@
       ],
       "title": "Level",
       "type": "string"
+    },
+    "MemorySpec": {
+      "additionalProperties": true,
+      "description": "The ``Memory`` provider behind ``s.memory``; entries are namespaced per tenant,\nprincipal and task.",
+      "properties": {
+        "use": {
+          "default": "memory",
+          "title": "Use",
+          "type": "string"
+        },
+        "default_ttl": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "pattern": "^(\\d+(\\.\\d+)?(ms|d|h|m|s))+$",
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              ],
+              "description": "A duration such as '250ms', '20s', '5m' or '1h30m', or a number of seconds."
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "When entries expire.",
+          "title": "Default Ttl"
+        }
+      },
+      "title": "MemorySpec",
+      "type": "object"
     },
     "Metadata": {
       "additionalProperties": false,
@@ -1486,6 +1529,13 @@
       },
       "title": "Context",
       "type": "object"
+    },
+    "memory": {
+      "$ref": "#/$defs/MemorySpec",
+      "default": {
+        "use": "memory",
+        "default_ttl": null
+      }
     },
     "guardrails": {
       "$ref": "#/$defs/GuardrailsSpec",

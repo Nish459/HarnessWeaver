@@ -10,6 +10,10 @@ they use only regex syntax both languages share, with ASCII word boundaries.
 Findings carry types and positions, never the matched text (R9).
 """
 
+from harnessweaver.modules.guardrails.providers.grounded_citations import (
+    CitationsConfig,
+    GroundedCitations,
+)
 from harnessweaver.modules.guardrails.providers.injection import (
     INJECTION_PATTERNS,
     InjectionHeuristic,
@@ -25,6 +29,8 @@ __all__ = [
     "INJECTION_PATTERNS",
     "PII_PATTERNS",
     "SECRET_PATTERNS",
+    "CitationsConfig",
+    "GroundedCitations",
     "InjectionHeuristic",
     "JudgeConfig",
     "LlmJudge",

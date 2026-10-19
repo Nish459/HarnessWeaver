@@ -38,8 +38,6 @@ def org_profile(tmp_path: Path, **body: Any) -> str:
 @pytest.mark.parametrize(
     ("section", "value", "named"),
     [
-        ("routing", {"r": {"options": ["a"]}}, "routing"),
-        ("context", {"kb": {"use": "memory"}}, "context"),
         ("evals", {"online": {"sample_rate": 0.1}}, "evals.online"),
         ("sidecar", {"url": "http://127.0.0.1:7070"}, "sidecar"),
     ],

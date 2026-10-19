@@ -492,7 +492,8 @@ plugins:     { local: [ "app.harness_plugin" ], allow: [ openai, acme ] }   # al
 models:      { provider: openai.chat, default: fast, aliases: { fast: ..., strong: ... }, prices: {...} }
 middleware:  [ { use: acme.no_weekend_refunds, band: app } ]
 routing:     { <router>: { options: [...], cascade: [...], default: ... } }
-context:     { <name>: { use: memory, label: untrusted, max_items: 5 } }
+context:     { <name>: { use: memory, file: data/kb.yaml, label: untrusted, max_items: 5, max_tokens: 2000 } }
+memory:      { use: memory, default_ttl: 30d }
 guardrails:  { input: [...], context: [...], tool_result: [...], output: [...], stream: [...] }
 validation:  { max_repairs: 1, on_failure: escalate, rules: [ { when: "output.total < 0", message: "the total can't be negative" } ] }
 tools:       { manifests: [ "tools/*.tool.yaml" ], require_manifest: true }
@@ -933,15 +934,38 @@ flowchart LR
     R3 -- no --> DF[default option] --> D
 ```
 
-Each stage's answer, confidence and reason is recorded on the trace (`harness.decision`), including stages that lost.
+Every stage's answer, confidence and reason is a `harness.routing` trace note, including the stages that lost; the final decision is a `harness.decision` note (R13). Reasons name rules, options and scores, never the request's text (R9).
+
+```yaml
+routing:
+  support:
+    options: [billing, smalltalk, other]
+    cascade:
+      - { use: rules, file: routes/support.rules.yaml }        # rules: [{ when, choice }]
+      - { use: acme.vip_rules }                                 # any @hw.decider
+      - { use: lexical, utterances: { billing: [refund my order], smalltalk: [hello there] }, threshold: 0.6 }
+      - { use: semantic, file: routes/support.utterances.yaml, threshold: 0.7 }
+      - { use: llm, model: fast, threshold: 0.8 }
+    default: other
+```
+
+- **The cascade (ADR-0029).** Stages run in order and the first confident answer wins. `exact` is confident; `probabilistic` is when its confidence reaches the stage's `threshold` (a stage without one accepts any confidence). An answer outside the router's options, or a stage that fails, counts as an abstention. With no confident stage the router's `default` answers; without a default, `decide` abstains. A stage is labelled by its `id`, or the generated `<use>#<n>`, like guards.
+- **One router per middleware.** The cascade answers only requests for its router name, and offers the router's options unless the caller passes its own (`s.decide("support", text=..., options=[...])`). It is installed on `route.decide`, banded by the layer that declared it.
+- **`rules`** (deterministic): the first rule whose cel-lite `when` is true over `text`, `state`, `options` and `router` decides exactly; a rule that can't be evaluated doesn't match. Rules come inline or from a `file`.
+- **`lexical`** (deterministic): each option scores its closest utterance by the cosine of token counts; the best option wins, with that score as its confidence; ties go to the option listed first; nothing shared abstains. Tokens are lowercased runs of letters and digits.
+- **`semantic`**: the same over embeddings. The built-in `Embedder` is `semantic.hashing`: hashed words and character trigrams (32-bit FNV-1a), dependency-free and deterministic; `encoder:` names another `Embedder` provider.
+- **`llm`**: asks the model (`model:` alias) to pick an option or none, with a confidence. The call is governed and budgeted, the confidence is uncalibrated (tune the threshold on a labelled routing set), and the model's explanation isn't kept.
+- **Custom stages** are `@hw.decider` functions or `Decider` providers from any plugin. `FakeDecider` stands in for routing in tests.
 
 ```python
-@hw.decider("vip_rules")                      # deterministic custom stage
+@hw.decider("vip_rules")                      # deterministic custom stage: use: acme.vip_rules
 async def vip_rules(req: hw.DecisionRequest) -> hw.Decision:
     if req.state.get("tier") == "vip":
         return hw.Decision.exact("billing_agent", reason="vip customer")
     return hw.Decision.abstain()
 ```
+
+The tokenizer, the lexical score, the hashing embedder and the cascade are part of the contract (fixtures suite `routing`).
 
 ## 20. Guardrails and validation
 
@@ -955,16 +979,24 @@ async def vip_rules(req: hw.DecisionRequest) -> hw.Decision:
 - **Pipeline semantics** (fixtures suite `guards`). Each guard is one middleware on its stage's hook (`input.before`, `context.after`, `tool.after`, `output.before`, `stream.chunk`), so items run in list order (baseline items first), redactions chain and the most severe action wins. Every string in a structured payload is checked. Consecutive `parallel: true` items in one band run concurrently as a group; their redactions are then applied in list order. At the context stage a `block` drops the item, not the run.
 - **Actions.** A provider proposes an action; the spec's `action` overrides it whenever the provider flags something. Asking to redact what a provider can't redact blocks. `repair` asks for a repair at the output stage and blocks anywhere else.
 - **Bands.** A guard's band comes from the layer that declared it: org profiles -> `baseline`, built-in profiles -> `platform`, the app -> `app`, a task's own guards -> `task`. Baseline guards must fail closed (R2).
-- **Built-in guards.** `regex.deny`, `pii.regex` (e-mail, phone, Luhn-checked card numbers, US SSN, IPv4), `secrets.scan` (private keys, cloud and API keys, tokens, JWTs, credential assignments), `injection.heuristic` (weighted phrases; cheap and easy to evade), `size.limit`, `topic.deny` and `llm.judge` (a governed, budgeted model call; its own explanation isn't kept, R9). Their patterns are part of the contract, written in regex syntax Python and TypeScript share.
+- **Built-in guards.** `regex.deny`, `pii.regex` (e-mail, phone, Luhn-checked card numbers, US SSN, IPv4), `secrets.scan` (private keys, cloud and API keys, tokens, JWTs, credential assignments), `injection.heuristic` (weighted phrases; cheap and easy to evade), `size.limit`, `topic.deny`, `grounded.citations` (output sentences cite the context ids the run kept, ADR-0032) and `llm.judge` (a governed, budgeted model call; its own explanation isn't kept, R9). A finding can be marked `private` (as `pii.regex`'s are), which marks the run private (S3). Their patterns are part of the contract, written in regex syntax Python and TypeScript share.
 - **Location transparency.** `where: local | sidecar` picks where a guard runs. App code doesn't change.
 - **Shadow mode (R8).** `mode: log_only` records "would have fired" without enforcing. The evals module reports would-fire rates and false positives; promotion to `enforce` is a reviewed one-line change.
 - **Validation.** Pydantic schema validation, then up to `max_repairs` (default 1) repair attempts. Each attempt sends the validation errors back to the model and is traced as a note with code `repair` (field locations and messages only, never the values, R9). Then `on_failure: escalate | block`. Business rules are cel-lite expressions over `output`, `input` and `task` installed as `output.before` middleware: a rule's `when` describes a violation, like a policy rule's `when` (ADR-0023). A true `when`, or one that can't be evaluated, asks for a repair with the rule's `message`.
 
 ## 21. Context and memory
 
-- A `ContextProvider` must filter by the envelope's principal and tenant itself. The module re-checks ACLs as defense in depth, drops violators, and records each drop on the trace.
-- Retrieved items are labelled with provenance and, by default, `untrusted` (S3). The module enforces `max_items` and `max_tokens`.
-- `Memory` writes are namespaced by tenant, principal and task, and carry TTLs.
+```yaml
+context:
+  kb: { use: memory, file: data/kb.yaml, label: untrusted, max_items: 5, max_tokens: 2000, require_acl: true }
+  web: { use: passthrough }          # the app retrieves; the harness governs
+memory: { use: memory, default_ttl: 30d }
+```
+
+- **Providers.** A `ContextProvider` must itself return only what the envelope's tenant and principal may see. `memory` holds documents (`id`, `content`, `acl`, `metadata`; inline or from a `file`) and searches them lexically, like the `lexical` routing stage; `passthrough` fetches nothing and governs what the app passes to `s.context(name).check(items)`. Vector stores come as plugins (planned).
+- **Governance (ADR-0030).** Every item, fetched (`s.context(name).fetch(query)`) or passed in, is governed before the `context.after` middleware sees it: its ACL is re-checked and it is dropped if it excludes the run's tenant or principal, even when its provider returned it (with `require_acl`, items with no ACL are dropped too); its `source` becomes the source's name and it is untrusted unless the source is `label: trusted` (S3); then `max_items` and `max_tokens` (one token per four characters) are enforced in order. Each drop is a `harness.context` note with the item's id, never its content (R9, R13). Then the `context` guard stage and other middleware run, and untrusted items label the run.
+- **Kept ids.** The ids of the items a run keeps are remembered, in its checkpoint too, so `grounded.citations` can tell a real source from a made-up one.
+- **Memory (ADR-0031).** `s.memory` keeps key-value entries for the run's `(tenant, principal, task)`: `put(key, value, ttl=...)`, `get`, `delete`, `entries`. Entries expire after `ttl` or `memory.default_ttl`, on the run's clock. The harness picks the namespace, so nobody reads another tenant's or principal's entries. It is a store, not a memory model (R12): what an agent remembers, and when, is the app's or its framework's business.
 
 ## 22. Observability
 
@@ -1121,6 +1153,10 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | **0026** | Tool arguments are checked by a small JSON Schema 2020-12 validator in the core: types, enum and const, object, array, string and number keywords, `allOf`/`anyOf`/`oneOf`/`not`, and `$ref` to `#/$defs`. Annotations are ignored; any other keyword fails the manifest at load. Problems name locations and rules, never values | The core can't depend on `jsonschema` (R6), tool schemas need only this subset, TypeScript implements the same subset from the fixtures, and refusing unknown keywords means a schema never checks less than it says (R4, R9) | Accepted |
 | **0027** | Code-executing tools use `transport: code`: the code in one argument runs in the `Sandbox` the manifest names (`sandbox: monty` is short for `monty.sandbox`), with `limits` (time, memory, printed output); other transports can't name a sandbox | The guide marks code tools only with `sandbox: monty`; a transport of its own makes it explicit that the host never runs the code (S4) and lets the load check refuse a code tool without a sandbox | Accepted |
 | **0028** | Tools given in code carry a manifest (`ToolDescription.from_manifest`), so `tools.require_manifest` covers them. A pinned digest that doesn't match blocks the tool's calls rather than failing the load; `doctor` fails it and warns about unpinned manifests with the digest to pin | One rule for every tool (S2); a stale pin is a security finding about one tool, not a reason to take the whole app down, and `doctor` makes it visible | Accepted |
+| **0029** | A router is a cascade: stages run in order, the first confident answer wins (exact always; probabilistic at or above the stage's threshold, any confidence without one), answers outside the options and failing stages abstain, and the router's `default` answers when no stage is confident. Every stage's answer is traced. The built-in `lexical` and `semantic` stages and the `memory` context provider share one text scoring: letter-and-digit tokens, cosine of token counts, and a hashing embedder (FNV-1a over words and trigrams) | The guide's cascade, made exact so Python, TypeScript and the sidecar route identically (fixtures suite `routing`); a dependency-free embedder keeps semantic routing in the core (R6) while `encoder:` lets a plugin bring real embeddings | Accepted |
+| **0030** | Context governance (ACL re-check, labels, caps) runs inside the governed context call, before the `context.after` middleware, for fetched and app-supplied items alike; every drop is traced by item id | Defense in depth against a misbehaving provider can't depend on middleware order, and the same rules must cover items the app retrieved itself | Accepted |
+| **0031** | `Memory` is a key-value port with expiry, namespaced by the harness as `(tenant, principal, task)` and exposed as `s.memory`; the built-in provider is in-process | A namespaced store is infrastructure every app needs; what to remember stays with the app or its agent framework, so the core gains no memory model (R12) | Accepted |
+| **0032** | `grounded.citations` checks that output sentences (ending at `.`, `!` or `?` and a space, or a line break) of at least `min_words` words cite a context id in square brackets; it proposes `repair` when fewer than `min_supported` do, or when a citation names an id the run didn't keep | A cheap, deterministic grounding check that catches made-up sources; scoring how well a source supports a claim is left to later groundedness scorers and judges | Accepted |
 
 ## 29. Deviations from the design guide
 
@@ -1141,6 +1177,7 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | Code tools are `sandbox: monty` on a native tool | `transport: code` with a named `sandbox` | The host never runs the code, and a code tool without a sandbox fails to load (0027) |
 | `approvals: { channel: ... }` | `approvals: { use: ... }`, like every other provider-selecting section | One spelling for choosing a provider |
 | Governor runs on `tool.before` | Inside the governed call, after the `tool.before` middleware, on the final arguments | Middleware can't rewrite arguments past the checks (0025) |
+| `semantic` stage with a local model encoder (`local/bge-small`) | `semantic` uses the built-in hashing embedder unless `encoder:` names an `Embedder` provider | No model dependency in the core; real encoders come as plugins (0029) |
 
 ## 30. Open decisions
 

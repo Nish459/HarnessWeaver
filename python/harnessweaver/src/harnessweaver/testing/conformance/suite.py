@@ -49,6 +49,7 @@ def applies(check: str, subject: Subject) -> bool:
                 "Decider",
                 "ModelProvider",
                 "PolicyEngine",
+                "Embedder",
             )
         if check == "timeout":
             return item.port == "Guardrail"

@@ -3,7 +3,7 @@
 import contextlib
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import anyio
@@ -23,6 +23,7 @@ from harnessweaver.core.plugins import (
 from harnessweaver.core.policy import PolicyDecision
 from harnessweaver.core.ports import StreamingModelProvider
 from harnessweaver.core.results import RunEvent
+from harnessweaver.core.retrieval import ContextItem
 from harnessweaver.core.runs import RunStatus
 from harnessweaver.core.state import Checkpoint, RunRecord
 from harnessweaver.core.tools import SandboxLimits, SandboxResult
@@ -45,8 +46,9 @@ __all__ = ["check_deterministic", "check_results", "check_timeout_blocks", "sess
 
 @contextmanager
 def session_run() -> Iterator[Any]:
-    """A harness whose scripted model also answers ``llm.judge``-style questions."""
-    yield harness_for_test({}, model=scripted(output({"pass": True, "reason": "fine"})))
+    """A harness whose scripted model also answers ``llm.judge`` and ``llm`` routing questions."""
+    answer = {"pass": True, "reason": "fine", "choice": "billing", "confidence": 0.9}
+    yield harness_for_test({}, model=scripted(output(answer)))
 
 
 async def guard_results(provider: Any) -> list[GuardResult]:
@@ -115,6 +117,32 @@ async def _policy_results(engine: Any) -> list[PolicyDecision]:
     return decisions
 
 
+async def _context_contract(name: str, provider: Any) -> None:
+    """Items are valid, and the provider itself returns only what the tenant may see."""
+    env = conformance_env()
+    for item in await provider.fetch("refund", env, limit=5):
+        expect(isinstance(item, ContextItem), f"{name} returned {type(item).__name__}")
+        allowed = item.acl is None or item.acl.allows(env.tenant, env.principal)
+        expect(allowed, f"{name} returned an item the tenant may not see (DESIGNS No. 21)")
+
+
+async def _memory_contract(name: str, memory: Any) -> None:
+    """Entries round-trip within their namespace and expire on time."""
+    now = datetime(2026, 1, 5, 9, 0, tzinfo=UTC)
+    space, other = ("acme", "alice", ""), ("acme", "bob", "")
+    await memory.put(space, "tone", "formal", expires_at=None)
+    await memory.put(space, "otp", "1234", expires_at=now + timedelta(minutes=5))
+    expect(await memory.get(space, "tone", now=now) == "formal", f"{name} lost an entry")
+    expect(await memory.get(other, "tone", now=now) is None, f"{name} leaked across namespaces")
+    later = now + timedelta(minutes=10)
+    expect(await memory.get(space, "otp", now=later) is None, f"{name} kept an expired entry")
+    expect(
+        await memory.entries(space, now=later) == {"tone": "formal"}, f"{name} entries are wrong"
+    )
+    await memory.delete(space, "tone")
+    expect(await memory.entries(space, now=later) == {}, f"{name} didn't delete")
+
+
 async def _sandbox_contract(name: str, sandbox: Any) -> None:
     """Code runs and returns its value; it can't read the host's files (S4)."""
     limits = SandboxLimits(timeout=timedelta(seconds=10))
@@ -157,6 +185,14 @@ async def check_results(subject: Subject) -> None:
             PolicyDecision.model_validate(decision.model_dump())
     elif item.port == "Sandbox":
         await _sandbox_contract(item.name, provider)
+    elif item.port == "ContextProvider":
+        await _context_contract(item.name, provider)
+    elif item.port == "Embedder":
+        vectors = await provider.embed(["refund my order", "hello there"])
+        expect(len(vectors) == 2, f"{item.name} must return one vector per text")
+        expect(len({len(v) for v in vectors}) == 1, f"{item.name} vectors differ in length")
+    elif item.port == "Memory":
+        await _memory_contract(item.name, provider)
     elif item.port == "ApprovalChannel":
         # A live channel refuses the network in test mode (R14).
         with contextlib.suppress(ProviderError):
@@ -183,6 +219,11 @@ async def check_deterministic(subject: Subject) -> None:
             await build(subject.contribution)(sample_decision_request())
             == await build(subject.contribution)(sample_decision_request())
         )
+    elif item.port == "Embedder":
+        texts = ["refund my order", "hello there"]
+        first_vectors = await build(subject.contribution).embed(texts)
+        second_vectors = await build(subject.contribution).embed(texts)
+        expect(first_vectors == second_vectors, f"{item.name} embedded differently the second time")
     elif item.port == "PolicyEngine":
         first_policy = await _policy_results(build(subject.contribution))
         second_policy = await _policy_results(build(subject.contribution))

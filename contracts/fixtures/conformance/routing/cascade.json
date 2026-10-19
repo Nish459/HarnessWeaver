@@ -1,0 +1,253 @@
+{
+  "suite": "routing",
+  "description": "The cascade (ADR-0029): stages answer in order; the first confident answer wins. Each stage is {answer} or {error: true}, with an optional threshold. won lists, per stage that ran, whether it won.",
+  "cases": [
+    {
+      "name": "the first exact answer wins",
+      "options": [
+        "a",
+        "b"
+      ],
+      "default": "b",
+      "stages": [
+        {
+          "answer": {
+            "kind": "exact",
+            "choice": "a",
+            "confidence": 1.0
+          }
+        },
+        {
+          "answer": {
+            "kind": "exact",
+            "choice": "b",
+            "confidence": 1.0
+          }
+        }
+      ],
+      "expect": {
+        "decision": {
+          "kind": "exact",
+          "choice": "a",
+          "stage": "s1"
+        },
+        "won": [
+          true
+        ]
+      }
+    },
+    {
+      "name": "a probabilistic answer below its threshold falls through",
+      "options": [
+        "a",
+        "b"
+      ],
+      "default": null,
+      "stages": [
+        {
+          "answer": {
+            "kind": "probabilistic",
+            "choice": "a",
+            "confidence": 0.6
+          },
+          "threshold": 0.8
+        },
+        {
+          "answer": {
+            "kind": "probabilistic",
+            "choice": "b",
+            "confidence": 0.9
+          },
+          "threshold": 0.8
+        }
+      ],
+      "expect": {
+        "decision": {
+          "kind": "probabilistic",
+          "choice": "b",
+          "stage": "s2"
+        },
+        "won": [
+          false,
+          true
+        ]
+      }
+    },
+    {
+      "name": "a confidence equal to the threshold wins",
+      "options": [
+        "a"
+      ],
+      "default": null,
+      "stages": [
+        {
+          "answer": {
+            "kind": "probabilistic",
+            "choice": "a",
+            "confidence": 0.8
+          },
+          "threshold": 0.8
+        }
+      ],
+      "expect": {
+        "decision": {
+          "kind": "probabilistic",
+          "choice": "a",
+          "stage": "s1"
+        },
+        "won": [
+          true
+        ]
+      }
+    },
+    {
+      "name": "a stage without a threshold accepts any confidence",
+      "options": [
+        "a"
+      ],
+      "default": null,
+      "stages": [
+        {
+          "answer": {
+            "kind": "probabilistic",
+            "choice": "a",
+            "confidence": 0.1
+          }
+        }
+      ],
+      "expect": {
+        "decision": {
+          "kind": "probabilistic",
+          "choice": "a",
+          "stage": "s1"
+        },
+        "won": [
+          true
+        ]
+      }
+    },
+    {
+      "name": "an answer outside the options is an abstention",
+      "options": [
+        "a",
+        "b"
+      ],
+      "default": null,
+      "stages": [
+        {
+          "answer": {
+            "kind": "exact",
+            "choice": "z",
+            "confidence": 1.0
+          }
+        },
+        {
+          "answer": {
+            "kind": "exact",
+            "choice": "b",
+            "confidence": 1.0
+          }
+        }
+      ],
+      "expect": {
+        "decision": {
+          "kind": "exact",
+          "choice": "b",
+          "stage": "s2"
+        },
+        "won": [
+          false,
+          true
+        ]
+      }
+    },
+    {
+      "name": "a failing stage is an abstention",
+      "options": [
+        "a"
+      ],
+      "default": null,
+      "stages": [
+        {
+          "error": true
+        },
+        {
+          "answer": {
+            "kind": "exact",
+            "choice": "a",
+            "confidence": 1.0
+          }
+        }
+      ],
+      "expect": {
+        "decision": {
+          "kind": "exact",
+          "choice": "a",
+          "stage": "s2"
+        },
+        "won": [
+          false,
+          true
+        ]
+      }
+    },
+    {
+      "name": "the default when no stage is confident",
+      "options": [
+        "a",
+        "b"
+      ],
+      "default": "b",
+      "stages": [
+        {
+          "answer": {
+            "kind": "abstain",
+            "choice": null,
+            "confidence": null
+          }
+        },
+        {
+          "answer": {
+            "kind": "probabilistic",
+            "choice": "a",
+            "confidence": 0.2
+          },
+          "threshold": 0.5
+        }
+      ],
+      "expect": {
+        "decision": {
+          "kind": "default",
+          "choice": "b",
+          "stage": null
+        },
+        "won": [
+          false,
+          false
+        ]
+      }
+    },
+    {
+      "name": "no decision without a default",
+      "options": [
+        "a"
+      ],
+      "default": null,
+      "stages": [
+        {
+          "answer": {
+            "kind": "abstain",
+            "choice": null,
+            "confidence": null
+          }
+        }
+      ],
+      "expect": {
+        "decision": null,
+        "won": [
+          false
+        ]
+      }
+    }
+  ]
+}

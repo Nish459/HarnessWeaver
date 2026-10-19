@@ -1,0 +1,125 @@
+{
+  "suite": "routing",
+  "description": "Tokens, lexical similarity and the semantic.hashing embedder (ADR-0029). Similarities are compared to 6 decimal places.",
+  "cases": [
+    {
+      "name": "tokens are lowercased runs of letters and digits",
+      "tokens": "Refund my ORDER #42, please!",
+      "expect": {
+        "tokens": [
+          "refund",
+          "my",
+          "order",
+          "42",
+          "please"
+        ]
+      }
+    },
+    {
+      "name": "underscores separate tokens",
+      "tokens": "order_id=7",
+      "expect": {
+        "tokens": [
+          "order",
+          "id",
+          "7"
+        ]
+      }
+    },
+    {
+      "name": "letters beyond ASCII are letters",
+      "tokens": "Caf\u00e9 au lait",
+      "expect": {
+        "tokens": [
+          "caf\u00e9",
+          "au",
+          "lait"
+        ]
+      }
+    },
+    {
+      "name": "similarity of shared words",
+      "a": "refund my order",
+      "b": "please refund my order",
+      "expect": {
+        "similarity": 0.866025
+      }
+    },
+    {
+      "name": "similarity counts repeats",
+      "a": "refund refund order",
+      "b": "refund order",
+      "expect": {
+        "similarity": 0.948683
+      }
+    },
+    {
+      "name": "no shared words",
+      "a": "hello there",
+      "b": "refund my order",
+      "expect": {
+        "similarity": 0.0
+      }
+    },
+    {
+      "name": "an empty text is similar to nothing",
+      "a": "",
+      "b": "refund",
+      "expect": {
+        "similarity": 0.0
+      }
+    },
+    {
+      "name": "a hashing embedding",
+      "embed": "refund",
+      "dims": 16,
+      "expect": {
+        "vector": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0.5,
+          0,
+          0,
+          0,
+          -0.5,
+          0,
+          0,
+          0,
+          0.5,
+          0,
+          0.5
+        ]
+      }
+    },
+    {
+      "name": "hashing embeddings of related words",
+      "a": "refunds",
+      "b": "refund",
+      "dims": 256,
+      "expect": {
+        "cosine": 0.369274
+      }
+    },
+    {
+      "name": "hashing embeddings of similar phrases",
+      "a": "refund my order",
+      "b": "refund the order",
+      "dims": 256,
+      "expect": {
+        "cosine": 0.697863
+      }
+    },
+    {
+      "name": "hashing embeddings of unrelated words",
+      "a": "hello",
+      "b": "refund",
+      "dims": 256,
+      "expect": {
+        "cosine": 0.0
+      }
+    }
+  ]
+}

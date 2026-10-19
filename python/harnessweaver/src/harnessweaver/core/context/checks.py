@@ -8,7 +8,7 @@ from harnessweaver.core.bus import HookResult
 from harnessweaver.core.context.access import PendingApproval
 from harnessweaver.core.context.base import RunContextBase
 from harnessweaver.core.decisions import Decision, DecisionRequest, PolicyEffect
-from harnessweaver.core.errors import RunBlocked, RunEscalated
+from harnessweaver.core.errors import RunBlocked, RunEscalated, SpecError
 from harnessweaver.core.hooks import (
     ApprovalResolvedEvent,
     ContextEvent,
@@ -102,16 +102,37 @@ class StepChecks(RunContextBase):
             self.telemetry.decision(request, decision)
         return decision
 
+    async def fetch_context(
+        self, source: str, query: str, *, limit: int | None = None
+    ) -> tuple[ContextItem, ...]:
+        """Retrieve from a ``context`` source, governed (see :meth:`context_after`).
+
+        Raises:
+            SpecError: For a source the spec doesn't name.
+        """
+        if self.context is None:
+            raise SpecError("this run has no context sources")
+        items = await self.context.fetch(self, source, query, limit=limit)
+        return await self.context_after(source, items, query=query)
+
     async def context_after(
         self, source: str, items: Iterable[ContextItem], *, query: str | None = None
     ) -> tuple[ContextItem, ...]:
-        """Fire ``context.after`` on retrieved items; label the run if any are untrusted."""
-        event = ContextEvent(source=source, query=query, items=tuple(items))
+        """Govern retrieved items (ACLs, labels, caps; ADR-0030), then fire ``context.after``.
+
+        Untrusted items label the run (S3); the ids kept are remembered for
+        ``grounded.citations``.
+        """
+        governed = tuple(items)
+        if self.context is not None:
+            governed = self.context.govern(self, source, governed)
+        event = ContextEvent(source=source, query=query, items=governed)
         result = await self.emit(HookPoint.CONTEXT_AFTER, event)
         self.halt_on(result)
         kept = result.event.items
         if any(item.untrusted for item in kept):
             self.mark_untrusted(f"context:{source}")
+        self.context_ids.update(item.id for item in kept)
         return kept
 
     async def check_output(

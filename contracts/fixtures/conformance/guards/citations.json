@@ -1,0 +1,125 @@
+{
+  "suite": "guards",
+  "description": "grounded.citations (ADR-0032): sentences cite context ids in square brackets. context_ids are the items the run kept; without them the case runs outside a run.",
+  "cases": [
+    {
+      "name": "every claim cites a retrieved item",
+      "guard": "grounded.citations",
+      "config": {},
+      "content": "Refunds take five business days [kb-1]. Shipping is free over fifty dollars [kb-2].",
+      "context_ids": [
+        "kb-1",
+        "kb-2"
+      ],
+      "expect": {
+        "action": "allow",
+        "content": null,
+        "findings": []
+      }
+    },
+    {
+      "name": "an uncited claim needs a repair",
+      "guard": "grounded.citations",
+      "config": {},
+      "content": "Refunds take five business days [kb-1]. Shipping is always free for everyone.",
+      "context_ids": [
+        "kb-1"
+      ],
+      "expect": {
+        "action": "repair",
+        "content": null,
+        "findings": [
+          "uncited_sentence"
+        ],
+        "score": 0.5
+      }
+    },
+    {
+      "name": "min_supported can allow some uncited claims",
+      "guard": "grounded.citations",
+      "config": {
+        "min_supported": 0.5
+      },
+      "content": "Refunds take five business days [kb-1]. Shipping is always free for everyone.",
+      "context_ids": [
+        "kb-1"
+      ],
+      "expect": {
+        "action": "allow",
+        "content": null,
+        "findings": []
+      }
+    },
+    {
+      "name": "a citation of something the run didn't retrieve",
+      "guard": "grounded.citations",
+      "config": {},
+      "content": "Refunds take five business days [kb-9].",
+      "context_ids": [
+        "kb-1"
+      ],
+      "expect": {
+        "action": "repair",
+        "content": null,
+        "findings": [
+          "uncited_sentence",
+          "unknown_citation"
+        ],
+        "score": 0.0
+      }
+    },
+    {
+      "name": "short sentences need no citation",
+      "guard": "grounded.citations",
+      "config": {},
+      "content": "Thanks! Refunds take five business days [kb-1].\nKind regards",
+      "context_ids": [
+        "kb-1"
+      ],
+      "expect": {
+        "action": "allow",
+        "content": null,
+        "findings": []
+      }
+    },
+    {
+      "name": "without a run any id counts",
+      "guard": "grounded.citations",
+      "config": {},
+      "content": "Refunds take five business days [kb-1].",
+      "expect": {
+        "action": "allow",
+        "content": null,
+        "findings": []
+      }
+    },
+    {
+      "name": "require_known false accepts any id",
+      "guard": "grounded.citations",
+      "config": {
+        "require_known": false
+      },
+      "content": "Refunds take five business days [kb-9].",
+      "context_ids": [
+        "kb-1"
+      ],
+      "expect": {
+        "action": "allow",
+        "content": null,
+        "findings": []
+      }
+    },
+    {
+      "name": "nothing to check",
+      "guard": "grounded.citations",
+      "config": {},
+      "content": "OK.",
+      "context_ids": [],
+      "expect": {
+        "action": "allow",
+        "content": null,
+        "findings": []
+      }
+    }
+  ]
+}

@@ -41,10 +41,6 @@ def unsupported_sections(spec: HarnessSpec) -> list[str]:
     Loading such a spec fails rather than silently skipping a control (R4).
     """
     found: list[str] = []
-    if spec.routing:
-        found.append("routing")
-    if spec.context:
-        found.append("context")
     if spec.evals.online is not None and spec.evals.online.sample_rate > 0:
         found.append("evals.online")
     if spec.sidecar.url is not None:

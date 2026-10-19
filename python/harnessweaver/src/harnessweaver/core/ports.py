@@ -6,8 +6,9 @@ and are versioned with the contract (V1, V2). They use only HarnessWeaver types
 """
 
 import os
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import AsyncIterator, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, Final, Protocol, runtime_checkable
 
 from pydantic import JsonValue
@@ -19,6 +20,7 @@ from harnessweaver.core.manifests import ToolManifest
 from harnessweaver.core.messages import ModelRequest, ModelResponse, StreamChunk, ToolCall, ToolSpec
 from harnessweaver.core.policy import PolicyDecision, PolicyRequest
 from harnessweaver.core.results import RunEvent
+from harnessweaver.core.retrieval import ContextItem
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest
 from harnessweaver.core.state import Checkpoint, RunRecord
 from harnessweaver.core.tools import SandboxLimits, SandboxResult, ToolInfo, ToolResult, ToolVerdict
@@ -30,9 +32,13 @@ if TYPE_CHECKING:
 __all__ = [
     "TEST_MODE_ENV",
     "ApprovalChannel",
+    "ContextGovernor",
+    "ContextProvider",
     "Decider",
+    "Embedder",
     "GovernedRun",
     "Guardrail",
+    "Memory",
     "ModelProvider",
     "PolicyEngine",
     "Runner",
@@ -237,3 +243,65 @@ class ToolGovernor(Protocol):
     async def sanitize(
         self, ctx: GovernedRun, call: ToolCall, tool: ToolDescription, result: ToolResult
     ) -> ToolResult: ...
+
+
+class Embedder(Protocol):
+    """Port ``Embedder``: texts to vectors, for the ``semantic`` routing stage (DESIGNS No. 19)."""
+
+    async def embed(self, texts: Sequence[str]) -> list[list[float]]: ...
+
+
+class ContextProvider(Protocol):
+    """Port ``ContextProvider``: retrieves items for a query (DESIGNS No. 21).
+
+    A provider must itself return only what the envelope's tenant and principal
+    may see; the context module re-checks every item's ACL anyway and drops the
+    rest (defense in depth).
+    """
+
+    async def fetch(
+        self, query: str, env: Envelope, *, limit: int | None = None
+    ) -> list[ContextItem]: ...
+
+
+class Memory(Protocol):
+    """Port ``Memory``: key-value entries in a namespace, with expiry (DESIGNS No. 21).
+
+    The harness picks the namespace, ``(tenant, principal, task)``, so one tenant
+    or principal never reads another's entries. Times come from the run's clock.
+    """
+
+    async def put(
+        self,
+        namespace: tuple[str, ...],
+        key: str,
+        value: JsonValue,
+        *,
+        expires_at: datetime | None,
+    ) -> None: ...
+
+    async def get(
+        self, namespace: tuple[str, ...], key: str, *, now: datetime
+    ) -> JsonValue | None: ...
+
+    async def delete(self, namespace: tuple[str, ...], key: str) -> None: ...
+
+    async def entries(
+        self, namespace: tuple[str, ...], *, now: datetime
+    ) -> dict[str, JsonValue]: ...
+
+
+class ContextGovernor(Protocol):
+    """What a governed context call asks of the context module (ADR-0030).
+
+    ``fetch`` asks a source's provider; ``govern`` re-checks ACLs, labels and caps
+    items before the ``context.after`` middleware, tracing each drop.
+    """
+
+    async def fetch(
+        self, ctx: GovernedRun, source: str, query: str, *, limit: int | None = None
+    ) -> list[ContextItem]: ...
+
+    def govern(
+        self, ctx: GovernedRun, source: str, items: Sequence[ContextItem]
+    ) -> tuple[ContextItem, ...]: ...

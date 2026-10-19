@@ -15,6 +15,7 @@ SUITES_WITH_RUNNERS = {
     "merge",
     "outcomes",
     "plugins",
+    "routing",
     "semver",
 }
 

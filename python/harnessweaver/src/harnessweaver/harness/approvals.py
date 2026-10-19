@@ -75,6 +75,7 @@ class ApprovalMixin(RunMixin):
             approval_hook=pending.hook.value,  # pyright: ignore[reportArgumentType]
             approval_digest=pending.digest,
             time_left=ctx.time_left(),
+            context_ids=tuple(sorted(ctx.context_ids)),
         )
         await self._state.put_checkpoint(checkpoint)
         self._telemetry.approval(ctx.run_id, approval.approval_id, "requested")
@@ -133,6 +134,7 @@ class ApprovalMixin(RunMixin):
             meter=BudgetMeter.restore(record.envelope.budget, checkpoint.meter),
             trace_events=previous,
             grants=checkpoint.grants,
+            context_ids=checkpoint.context_ids,
         )
         return LiveRun(record, ctx, task, checkpoint.input, channel)
 

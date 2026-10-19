@@ -12,6 +12,7 @@ from harnessweaver.spec.models.sections import (
     ContextSourceSpec,
     EvalsSpec,
     GuardrailsSpec,
+    MemorySpec,
     Metadata,
     MiddlewareSpec,
     ModelsSpec,
@@ -43,6 +44,7 @@ class Sections(StrictModel):
     models: ModelsSpec = ModelsSpec()
     routing: dict[str, RouterSpec] = Field(default_factory=dict[str, RouterSpec])
     context: dict[str, ContextSourceSpec] = Field(default_factory=dict[str, ContextSourceSpec])
+    memory: MemorySpec = MemorySpec()
     guardrails: GuardrailsSpec = GuardrailsSpec()
     validation: ValidationSpec = ValidationSpec()
     tools: ToolsSpec = ToolsSpec()

@@ -14,7 +14,9 @@ from harnessweaver.modules.approvals import (
     MemoryChannel,
     WebhookChannel,
 )
+from harnessweaver.modules.context import MemoryContext, MemoryStore, PassthroughContext
 from harnessweaver.modules.guardrails import (
+    GroundedCitations,
     InjectionHeuristic,
     LlmJudge,
     PiiRegex,
@@ -25,6 +27,13 @@ from harnessweaver.modules.guardrails import (
 )
 from harnessweaver.modules.models import ScriptedModel
 from harnessweaver.modules.policy import CelLitePolicy
+from harnessweaver.modules.routing import (
+    HashingEmbedder,
+    LexicalDecider,
+    LlmDecider,
+    RulesDecider,
+    SemanticDecider,
+)
 from harnessweaver.modules.state import MemoryStateStore, SqliteStateStore
 from harnessweaver.runners import DirectRunner, SessionRunner, WorkflowRunner
 
@@ -44,11 +53,20 @@ plugin = Plugin(
         SizeLimit,
         TopicDeny,
         LlmJudge,
+        GroundedCitations,
         CelLitePolicy,
         MemoryChannel,
         CallbackChannel,
         ConsoleChannel,
         WebhookChannel,
+        RulesDecider,
+        LexicalDecider,
+        SemanticDecider,
+        LlmDecider,
+        HashingEmbedder,
+        PassthroughContext,
+        MemoryContext,
+        MemoryStore,
     ],
     runners=[DirectRunner, SessionRunner, WorkflowRunner],
     description="Runners and providers that ship with the harnessweaver core.",

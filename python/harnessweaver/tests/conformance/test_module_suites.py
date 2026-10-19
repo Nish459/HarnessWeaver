@@ -4,7 +4,9 @@ from typing import Any
 
 import pytest
 
+from harnessweaver.core.budgets import BudgetMeter
 from harnessweaver.core.bus import HookBus
+from harnessweaver.core.context import RunContext
 from harnessweaver.core.envelope import Envelope, FakeClock
 from harnessweaver.core.guards import GuardAction
 from harnessweaver.core.hooks import (
@@ -74,7 +76,19 @@ async def test_guards(case: dict[str, Any]) -> None:
     expect = case["expect"]
     if "guard" in case:
         provider = REGISTRY.provider("Guardrail", case["guard"]).build(case.get("config", {}))
-        result = await provider.check(case["content"], _env())
+        if "context_ids" in case:
+            env = _env()
+            run = RunContext(
+                envelope=env,
+                bus=HookBus(),
+                trace=RunTrace(env.clock),
+                meter=BudgetMeter(env.budget),
+                context_ids=case["context_ids"],
+            )
+            with run.activate():
+                result = await provider.check(case["content"], env)
+        else:
+            result = await provider.check(case["content"], _env())
         assert result.action.value == expect["action"]
         assert result.content == expect["content"]
         assert sorted({f.type for f in result.findings}) == expect["findings"]

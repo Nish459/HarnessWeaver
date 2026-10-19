@@ -1,0 +1,213 @@
+{
+  "suite": "routing",
+  "description": "The rules and lexical stages. A decision is {kind, choice, confidence}; confidence to 6 decimal places.",
+  "cases": [
+    {
+      "name": "the first matching rule decides",
+      "stage": "rules",
+      "config": {
+        "rules": [
+          {
+            "id": "vip",
+            "when": "state.tier == 'vip'",
+            "choice": "billing"
+          },
+          {
+            "id": "refunds",
+            "when": "text.contains('refund')",
+            "choice": "billing"
+          },
+          {
+            "id": "greet",
+            "when": "text.startsWith('hi')",
+            "choice": "smalltalk"
+          }
+        ]
+      },
+      "request": {
+        "router": "support",
+        "text": "hi, can I get a refund?",
+        "options": [
+          "billing",
+          "smalltalk"
+        ],
+        "state": {
+          "tier": "gold"
+        }
+      },
+      "expect": {
+        "kind": "exact",
+        "choice": "billing",
+        "confidence": 1.0
+      }
+    },
+    {
+      "name": "no matching rule abstains",
+      "stage": "rules",
+      "config": {
+        "rules": [
+          {
+            "when": "text.contains('refund')",
+            "choice": "billing"
+          }
+        ]
+      },
+      "request": {
+        "router": "support",
+        "text": "hello",
+        "options": [
+          "billing",
+          "smalltalk"
+        ]
+      },
+      "expect": {
+        "kind": "abstain",
+        "choice": null,
+        "confidence": null
+      }
+    },
+    {
+      "name": "a rule that can't be evaluated doesn't match",
+      "stage": "rules",
+      "config": {
+        "rules": [
+          {
+            "when": "state.tier == 'vip'",
+            "choice": "billing"
+          },
+          {
+            "when": "true",
+            "choice": "smalltalk"
+          }
+        ]
+      },
+      "request": {
+        "router": "support",
+        "text": "x",
+        "options": [
+          "billing",
+          "smalltalk"
+        ]
+      },
+      "expect": {
+        "kind": "exact",
+        "choice": "smalltalk",
+        "confidence": 1.0
+      }
+    },
+    {
+      "name": "lexical: the closest utterance's option, with its similarity",
+      "stage": "lexical",
+      "config": {
+        "utterances": {
+          "billing": [
+            "refund my order",
+            "charged twice"
+          ],
+          "smalltalk": [
+            "hello there",
+            "how are you"
+          ]
+        }
+      },
+      "request": {
+        "router": "support",
+        "text": "I want a refund for my order",
+        "options": [
+          "billing",
+          "smalltalk"
+        ]
+      },
+      "expect": {
+        "kind": "probabilistic",
+        "choice": "billing",
+        "confidence": 0.654654
+      }
+    },
+    {
+      "name": "lexical: another option",
+      "stage": "lexical",
+      "config": {
+        "utterances": {
+          "billing": [
+            "refund my order",
+            "charged twice"
+          ],
+          "smalltalk": [
+            "hello there",
+            "how are you"
+          ]
+        }
+      },
+      "request": {
+        "router": "support",
+        "text": "hello",
+        "options": [
+          "billing",
+          "smalltalk"
+        ]
+      },
+      "expect": {
+        "kind": "probabilistic",
+        "choice": "smalltalk",
+        "confidence": 0.707107
+      }
+    },
+    {
+      "name": "lexical: no shared word abstains",
+      "stage": "lexical",
+      "config": {
+        "utterances": {
+          "billing": [
+            "refund my order",
+            "charged twice"
+          ],
+          "smalltalk": [
+            "hello there",
+            "how are you"
+          ]
+        }
+      },
+      "request": {
+        "router": "support",
+        "text": "xyz",
+        "options": [
+          "billing",
+          "smalltalk"
+        ]
+      },
+      "expect": {
+        "kind": "abstain",
+        "choice": null,
+        "confidence": null
+      }
+    },
+    {
+      "name": "lexical: ties go to the option listed first",
+      "stage": "lexical",
+      "config": {
+        "utterances": {
+          "a": [
+            "red"
+          ],
+          "b": [
+            "red"
+          ]
+        }
+      },
+      "request": {
+        "router": "colors",
+        "text": "red",
+        "options": [
+          "b",
+          "a"
+        ]
+      },
+      "expect": {
+        "kind": "probabilistic",
+        "choice": "b",
+        "confidence": 1.0
+      }
+    }
+  ]
+}

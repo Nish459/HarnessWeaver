@@ -20,6 +20,7 @@ __all__ = [
     "EvalsSpec",
     "GuardSpec",
     "GuardrailsSpec",
+    "MemorySpec",
     "Metadata",
     "MiddlewareSpec",
     "ModelsSpec",
@@ -102,7 +103,18 @@ class ContextSourceSpec(ProviderModel):
     use: str
     label: Literal["untrusted", "trusted"] = "untrusted"
     max_items: int | None = Field(default=None, gt=0)
-    max_tokens: int | None = Field(default=None, gt=0)
+    max_tokens: int | None = Field(default=None, gt=0, description="One token per 4 characters.")
+    require_acl: bool = Field(
+        default=False, description="Drop items that carry no ACL, not only those it excludes."
+    )
+
+
+class MemorySpec(ProviderModel):
+    """The ``Memory`` provider behind ``s.memory``; entries are namespaced per tenant,
+    principal and task."""
+
+    use: str = "memory"
+    default_ttl: Duration | None = Field(default=None, description="When entries expire.")
 
 
 # --- guardrails and validation ------------------------------------------------------------

@@ -20,6 +20,8 @@ from harnessweaver.core.middleware import Registration
 from harnessweaver.core.plugins import RunnerInfo
 from harnessweaver.core.ports import (
     ApprovalChannel,
+    ContextGovernor,
+    Memory,
     PolicyEngine,
     StateStore,
     ToolBackend,
@@ -57,6 +59,8 @@ class HarnessBase:
         governor: ToolGovernor | None = None,
         policy: PolicyEngine | None = None,
         approvals: ApprovalChannel | None = None,
+        context: ContextGovernor | None = None,
+        memory: Memory | None = None,
     ) -> None:
         self._effective = effective
         self._telemetry = telemetry or Telemetry()
@@ -71,6 +75,8 @@ class HarnessBase:
         self._governor = governor
         self._policy = policy
         self._approval_channel = approvals
+        self._context_sources = context
+        self._memory = memory
         self._group: TaskGroup | None = None
         self._active: dict[str, ActiveRun] = {}
         self._channels: dict[str, Channel] = {}
@@ -126,6 +132,7 @@ class HarnessBase:
         trace_events: tuple[TraceEvent, ...] = (),
         grants: Sequence[Grant] = (),
         can_suspend: bool = True,
+        context_ids: Sequence[str] = (),
     ) -> RunContext:
         run_id = envelope.run_id
 
@@ -152,6 +159,10 @@ class HarnessBase:
             telemetry=self._telemetry,
             governor=self._governor,
             policy=self._policy,
+            context=self._context_sources,
+            memory=self._memory,
+            memory_ttl=self._effective.spec.memory.default_ttl,
+            context_ids=context_ids,
         )
 
     # --- events -----------------------------------------------------------------------------

@@ -9,13 +9,21 @@ from pathlib import Path
 
 from harnessweaver.core.errors import SpecError
 from harnessweaver.core.manifests import ToolManifest
-from harnessweaver.core.ports import ApprovalChannel, PolicyEngine, Sandbox, ToolBackend
+from harnessweaver.core.ports import ApprovalChannel, Memory, PolicyEngine, Sandbox, ToolBackend
 from harnessweaver.core.registry import Registry
+from harnessweaver.modules.context import ContextSources
 from harnessweaver.modules.tools import ChainedTools, Governor, ManifestTools, load_manifests
 from harnessweaver.modules.tools.manifests import approval_rules
 from harnessweaver.spec.models import HarnessSpec
 
-__all__ = ["build_channel", "build_governor", "build_policy", "build_tools"]
+__all__ = [
+    "build_channel",
+    "build_context",
+    "build_governor",
+    "build_memory",
+    "build_policy",
+    "build_tools",
+]
 
 
 def build_policy(spec: HarnessSpec, registry: Registry) -> PolicyEngine:
@@ -89,3 +97,25 @@ def build_channel(spec: HarnessSpec, registry: Registry) -> ApprovalChannel:
     return registry.provider("ApprovalChannel", spec.approvals.use).build(
         spec.approvals.provider_settings()
     )
+
+
+def build_context(spec: HarnessSpec, registry: Registry, base: Path) -> ContextSources:
+    """The ``context`` sources with their providers; a relative ``file`` setting is read
+    from the spec's directory (DESIGNS No. 21)."""
+    sources = {}
+    for name, source in spec.context.items():
+        settings = dict(source.provider_settings())
+        file = settings.get("file")
+        if isinstance(file, str) and not Path(file).is_absolute():
+            settings["file"] = str(base / file)
+        try:
+            provider = registry.provider("ContextProvider", source.use).build(settings)
+        except SpecError as exc:
+            raise SpecError(f"context.{name}: {exc.message}") from None
+        sources[name] = (source, provider)
+    return ContextSources(sources)
+
+
+def build_memory(spec: HarnessSpec, registry: Registry) -> Memory:
+    """The ``Memory`` provider behind ``s.memory``."""
+    return registry.provider("Memory", spec.memory.use).build(spec.memory.provider_settings())

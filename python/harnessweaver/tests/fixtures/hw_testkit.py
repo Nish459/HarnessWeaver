@@ -11,7 +11,8 @@ from typing import Any, Literal
 import anyio
 from hw_recorder import RECORDER
 from hw_recorder import Recorder as Recorder
-from hw_testkit_tools import Careful, EchoSandbox, Explodes
+from hw_testkit_tools import Careful, EchoSandbox, Explodes, LeakyContext, vip
+from hw_testkit_tools import cite_then_refund as cite_then_refund
 from hw_testkit_tools import lookup_order as lookup_order  # manifests name hw_testkit:<handler>
 from hw_testkit_tools import refund_payment as refund_payment
 from hw_testkit_tools import send_email as send_email
@@ -326,7 +327,7 @@ class PartialRunner:
 plugin = hw.Plugin(
     namespace="testkit",
     version="0.1.0",
-    providers=[ScriptedProvider, EchoSandbox, Careful, Explodes],
+    providers=[ScriptedProvider, EchoSandbox, Careful, Explodes, LeakyContext, vip],
     middleware=[audit, flaky, Script],
     runners=[PartialRunner],
     profiles={"strict": "testkit_profiles/strict.yaml"},

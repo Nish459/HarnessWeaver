@@ -38,6 +38,8 @@ from harnessweaver.core.outcomes import (
     Suspend,
 )
 from harnessweaver.core.ports import (
+    ContextGovernor,
+    Memory,
     PolicyEngine,
     ToolBackend,
     ToolGovernor,
@@ -70,6 +72,10 @@ class RunContextBase:
         telemetry: Telemetry | None = None,
         governor: ToolGovernor | None = None,
         policy: PolicyEngine | None = None,
+        context: ContextGovernor | None = None,
+        memory: Memory | None = None,
+        memory_ttl: timedelta | None = None,
+        context_ids: Iterable[str] = (),
     ) -> None:
         self._envelope = envelope
         self.bus = bus
@@ -86,6 +92,11 @@ class RunContextBase:
         self.telemetry = telemetry
         self.governor = governor
         self.policy = policy
+        self.context = context
+        self.memory = memory
+        self.memory_ttl = memory_ttl
+        self.context_ids: set[str] = set(context_ids)
+        """Ids of the context items this run kept, for ``grounded.citations``."""
         self.input: JsonValue = None
         """The run's input after ``input.before``, for validation rules."""
         self.pending: PendingApproval | None = None

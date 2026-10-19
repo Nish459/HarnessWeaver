@@ -55,13 +55,18 @@ All notable changes to the HarnessWeaver packages are recorded here. The format 
 - `harnessweaver-cel`: the `cel.policy` engine, full CEL through cel-python, checked against the shared policy fixtures; its tests pin every `expr` fixture where full CEL and cel-lite differ.
 - `harnessweaver-monty`: the `monty.sandbox` sandbox, running code tools in pydantic-monty workers with time and memory limits.
 - Guard findings can be marked `private` (`pii.regex`'s are); finding private data marks the run private for the trifecta check (S3).
+- Routing (DESIGNS No. 19, ADR-0029): `routing.<router>` cascades on `route.decide`, with the built-in `rules`, `lexical`, `semantic` (with the dependency-free `semantic.hashing` `Embedder`) and `llm` stages and any `@hw.decider`. The first confident stage wins, answers outside the options and failing stages abstain, the router's `default` answers otherwise, and every stage's answer is a `harness.routing` trace note. New `Embedder` port.
+- Context (DESIGNS No. 21, ADR-0030): `context.<source>` with the built-in `memory` (documents with ACLs, searched lexically) and `passthrough` providers, and `s.context(name).fetch(query)`. Every item, fetched or passed to `check()`, has its ACL re-checked (`require_acl` drops items without one), is labelled with its source and trust, and is capped by `max_items` and `max_tokens` before the `context.after` middleware; every drop is traced. New `ContextProvider` port.
+- Memory (ADR-0031): the `Memory` port, the in-process `memory` provider, the spec's `memory` section (`default_ttl`) and `s.memory` (`put`, `get`, `delete`, `entries`), namespaced per tenant, principal and task.
+- The `grounded.citations` guard (ADR-0032): output sentences must cite, in square brackets, context ids the run kept; a run's kept ids survive suspension.
+- Fixtures suite `routing`: tokens, similarity, the hashing embedder, the `rules` and `lexical` stages and the cascade. The conformance suite checks context providers (valid items, only what the tenant may see), embedders and memory stores.
 - `harnessweaver doctor` warns about tool manifests without a pinned digest (printing the digest to pin) and fails ones that changed since they were pinned.
 - The conformance suite checks policy engines (valid, repeatable decisions within their latency class), sandboxes (code runs; it can't read a host file) and approval channels; `make conformance` now covers `cel` and `monty` too.
 - Fixtures suite `governor`: canonical JSON and digests, rate syntax, the JSON Schema subset, policy combination, governor steps 1 to 7 and step 9. Schemas `tool-manifest`, `tool-verdict`, `policy-request`, `policy-decision` and `sandbox-result`.
 - Each repair attempt is traced as a note with code `repair`, giving field locations and messages but never the values (R13, R9).
 - `Message.extensions` and `ModelResponse.extensions` for provider data replayed unchanged with a turn (ADR-0022).
 - `HARNESSWEAVER_TEST_MODE=1` (`harnessweaver.ports.network_allowed`) makes live providers refuse to call out; every test runs with it (R14).
-- A spec that uses a section whose module this release doesn't have yet (routing, context, online evals, the sidecar) fails to load instead of running without that control (R4).
+- A spec that uses a section whose module this release doesn't have yet (online evals, the sidecar) fails to load instead of running without that control (R4).
 - Errors `NotFound` and `RunInterrupted` (`RunBlocked`, `RunEscalated`, `RunSuspended`) with codes `not_found`, `blocked`, `escalated` and `suspended` (ADR-0020).
 - JSON Schemas for every contract under `contracts/schemas`, with `make schemas` / `make schemas-check` and a drift test (ADR-0005).
 - Language-neutral conformance fixtures under `contracts/fixtures/conformance` (suites `durations`, `semver`, `outcomes`, `hook_order`, `expr`, `merge`, `levels`, `bus`, `budgets`, `plugins`, `guards`) and their Python runners.

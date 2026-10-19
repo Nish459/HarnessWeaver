@@ -14,6 +14,7 @@ Example:
 """
 
 from collections.abc import Iterable, Sequence
+from datetime import timedelta
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Literal, Self
 
@@ -26,6 +27,7 @@ from harnessweaver.core.errors import SpecError, ValidationFailed
 from harnessweaver.core.ids import new_id
 from harnessweaver.core.messages import Message, ModelRequest, ToolCall
 from harnessweaver.core.outcomes import Retry
+from harnessweaver.core.ports import Memory
 from harnessweaver.core.results import RunResult
 from harnessweaver.core.retrieval import ContextItem
 from harnessweaver.core.trace import RunTrace
@@ -43,7 +45,7 @@ from harnessweaver.runners._output import (
 if TYPE_CHECKING:
     from harnessweaver.harness import Harness, PendingSession
 
-__all__ = ["ContextSource", "Session"]
+__all__ = ["ContextSource", "Session", "SessionMemory"]
 
 
 class ContextSource:
@@ -53,6 +55,15 @@ class ContextSource:
         self._ctx = ctx
         self.source = source
 
+    async def fetch(self, query: str, *, limit: int | None = None) -> tuple[ContextItem, ...]:
+        """Retrieve from the source's provider: ACLs re-checked, labelled, capped, then
+        ``context.after`` (DESIGNS No. 21).
+
+        Raises:
+            SpecError: For a source the spec doesn't name.
+        """
+        return await self._ctx.fetch_context(self.source, query, limit=limit)
+
     async def check(
         self, items: Iterable[ContextItem], *, query: str | None = None
     ) -> tuple[ContextItem, ...]:
@@ -61,6 +72,45 @@ class ContextSource:
         Middleware may filter or relabel them; untrusted items label the run (S3).
         """
         return await self._ctx.context_after(self.source, items, query=query)
+
+
+class SessionMemory:
+    """Key-value entries kept for the run's tenant, principal and task (``s.memory``).
+
+    Entries expire after ``ttl``, or the spec's ``memory.default_ttl``; times come
+    from the run's clock. Another tenant, principal or task never sees them.
+    """
+
+    def __init__(self, ctx: RunContext) -> None:
+        self._ctx = ctx
+
+    @property
+    def _store(self) -> Memory:
+        if self._ctx.memory is None:
+            raise SpecError("this run has no memory provider")
+        return self._ctx.memory
+
+    @property
+    def namespace(self) -> tuple[str, ...]:
+        envelope = self._ctx.envelope
+        return (envelope.tenant, envelope.principal.id, envelope.task or "")
+
+    async def put(self, key: str, value: JsonValue, *, ttl: timedelta | None = None) -> None:
+        """Keep ``value`` under ``key``, replacing what was there."""
+        lifetime = ttl if ttl is not None else self._ctx.memory_ttl
+        expires = self._ctx.clock.now() + lifetime if lifetime is not None else None
+        await self._store.put(self.namespace, key, value, expires_at=expires)
+
+    async def get(self, key: str) -> JsonValue | None:
+        """The value under ``key``, or ``None`` if there is none or it expired."""
+        return await self._store.get(self.namespace, key, now=self._ctx.clock.now())
+
+    async def delete(self, key: str) -> None:
+        await self._store.delete(self.namespace, key)
+
+    async def entries(self) -> dict[str, JsonValue]:
+        """Every entry that hasn't expired."""
+        return await self._store.entries(self.namespace, now=self._ctx.clock.now())
 
 
 class Session:
@@ -225,6 +275,11 @@ class Session:
     def context(self, source: str) -> ContextSource:
         """Governed access to a context source."""
         return ContextSource(self._ctx, source)
+
+    @property
+    def memory(self) -> SessionMemory:
+        """Entries kept for this tenant, principal and task (DESIGNS No. 21)."""
+        return SessionMemory(self._ctx)
 
     async def guard(self, stage: Literal["input"], content: JsonValue) -> JsonValue:
         """Run the input guards on content the app received (``input.before``)."""

@@ -7,7 +7,7 @@ from contextlib import contextmanager
 
 from loguru import logger
 
-from harnessweaver.core.errors import ProviderError, RunInterrupted
+from harnessweaver.core.errors import ProviderError, RunInterrupted, ValidationFailed
 from harnessweaver.core.plugins import (
     ProviderInfo,
 )
@@ -96,16 +96,21 @@ async def check_no_raw_content(subject: Subject) -> None:
     with _captured_logs(subject.plugin.source.module) as logs:
         if item.port == "Guardrail":
             guard = {"id": "g", "use": subject.name, **sample_settings(item.sample)}
+            stage = "input" if not item.stages or "input" in item.stages else "output"
             harness = harness_for_test(
-                subject.spec(guardrails={"input": [guard]}),
+                subject.spec(guardrails={stage: [guard]}),
                 model=scripted(output({"pass": True})),
                 telemetry=telemetry,
             )
             session = harness.session()
+            content = f"Please mail {CANARY} the details about refunds today."
             try:
                 async with session as s:
-                    await s.guard("input", f"Please mail {CANARY} the details")
-            except RunInterrupted:
+                    if stage == "input":
+                        await s.guard("input", content)
+                    else:
+                        await s.validate("output", content)
+            except (RunInterrupted, ValidationFailed):
                 pass
             result = session.result
         else:
