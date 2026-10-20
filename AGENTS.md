@@ -102,7 +102,10 @@ flowchart LR
 - Keep modules small: when a module grows past about 350 lines, turn it into a package of focused modules whose `__init__` exports only what other code imports.
 - Public API lives in `harnessweaver/__init__.py`. Anything prefixed `_` is private.
 - Names: hook points `tool.before`; providers `area.capability` (`pii.regex`); spec keys `snake_case`; env vars `HARNESSWEAVER_*`.
-- Match the surrounding code's style, naming and comment density. Comments explain *why*.
+- Match the surrounding code's style and naming.
+- Give every module, package, class, method and function a docstring, wherever possible (Google style, RULES C9).
+- Comment any complex or long piece of logic enough that a reader can follow how it works and why without reverse-engineering it: the approach, the steps, the non-obvious cases and the reasons. Don't narrate obvious single lines (RULES C9).
+- Implement with the `ponytail` skill: the simplest solution that works, with the standard library and existing code before anything new. An agent without the skill follows the same approach.
 - Only keyboard characters (D5): `No. 13` for sections, `-` for dashes, `->` for arrows, `...` for ellipses. `make check` runs `scripts/check_ascii.py`.
 
 ## Checklists
