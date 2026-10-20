@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:tool-allow-list",
+  "title": "ToolAllowList",
+  "$defs": {
+    "AllowedTool": {
+      "additionalProperties": false,
+      "description": "A tool a gateway may let through.",
+      "properties": {
+        "tool": {
+          "title": "Tool",
+          "type": "string"
+        },
+        "transport": {
+          "$ref": "#/$defs/Transport"
+        },
+        "server": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The MCP server, for mcp tools.",
+          "title": "Server"
+        },
+        "digest": {
+          "description": "The definition digest to pin (S2, rug-pull defense).",
+          "title": "Digest",
+          "type": "string"
+        },
+        "scopes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Scopes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tool",
+        "transport",
+        "digest"
+      ],
+      "title": "AllowedTool",
+      "type": "object"
+    },
+    "GatewayMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "The spec the list was generated from.",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "GatewayMetadata",
+      "type": "object"
+    },
+    "Transport": {
+      "description": "How a tool is reached.",
+      "enum": [
+        "native",
+        "http",
+        "code",
+        "mcp"
+      ],
+      "title": "Transport",
+      "type": "string"
+    },
+    "WithheldTool": {
+      "additionalProperties": false,
+      "description": "A tool only the harness may run, and why.",
+      "properties": {
+        "tool": {
+          "title": "Tool",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool",
+        "reason"
+      ],
+      "title": "WithheldTool",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A ``kind: ToolAllowList`` document: deny by default, allow ``tools``.",
+  "properties": {
+    "apiVersion": {
+      "const": "harnessweaver/v1",
+      "default": "harnessweaver/v1",
+      "title": "Apiversion",
+      "type": "string"
+    },
+    "kind": {
+      "const": "ToolAllowList",
+      "default": "ToolAllowList",
+      "title": "Kind",
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/GatewayMetadata"
+    },
+    "default": {
+      "const": "deny",
+      "type": "string",
+      "default": "deny",
+      "title": "Default"
+    },
+    "tools": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/AllowedTool"
+      },
+      "title": "Tools",
+      "type": "array"
+    },
+    "withheld": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/WithheldTool"
+      },
+      "title": "Withheld",
+      "type": "array"
+    }
+  },
+  "required": [
+    "metadata"
+  ],
+  "type": "object"
+}

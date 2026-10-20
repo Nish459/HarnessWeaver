@@ -230,6 +230,19 @@
           "description": "http: where the arguments are POSTed.",
           "title": "Url"
         },
+        "server": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "mcp: the MCP server that serves the tool, e.g. mcp://payments.",
+          "title": "Server"
+        },
         "headers_env": {
           "additionalProperties": {
             "type": "string"

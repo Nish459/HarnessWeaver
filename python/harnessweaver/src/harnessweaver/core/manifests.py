@@ -138,6 +138,9 @@ class ToolManifestSpec(_Strict):
         "code is run by its own backend.",
     )
     url: str | None = Field(default=None, description="http: where the arguments are POSTed.")
+    server: str | None = Field(
+        default=None, description="mcp: the MCP server that serves the tool, e.g. mcp://payments."
+    )
     headers_env: dict[str, str] = Field(
         default_factory=dict[str, str],
         description="http: header name -> environment variable holding its value (S1).",
@@ -163,6 +166,8 @@ class ToolManifestSpec(_Strict):
     def _transport_fields(self) -> Self:
         if self.transport is Transport.HTTP and not self.url:
             raise ValueError("an http tool needs a url")
+        if (self.transport is Transport.MCP) != (self.server is not None):
+            raise ValueError("an mcp tool names its server, and only an mcp tool does")
         if self.transport is Transport.CODE and self.sandbox == "none":
             raise ValueError("a code tool must name a sandbox, such as monty (S4)")
         if self.transport is not Transport.CODE and self.sandbox != "none":

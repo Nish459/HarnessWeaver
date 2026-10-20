@@ -40,6 +40,7 @@ make schemas-check    # report drift
 | `eval-dataset`, `eval-sample`, `grade`, `suite-result`, `baseline`, `online-sample` | Eval datasets, what a grader sees and says, a suite's results, its stored baseline, and a graded production sample |
 | `policy-tests` | A `harnessweaver policy test` table: tool calls and the governor's expected verdicts |
 | `recorded-call`, `replay-report` | What a recorded run got from outside (`state.record`), and what replaying it found |
+| `tool-allow-list` | The tools a gateway may let through, with digests and scopes, and the ones only the harness may run (`harnessweaver gateway mcp`) |
 
 Every schema has `$id` `urn:harnessweaver:v1:<name>`. Within `harnessweaver/v1`, changes are additive only (V2).
 

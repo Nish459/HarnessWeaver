@@ -31,7 +31,9 @@ pytestmark = pytest.mark.anyio
         ),
         ({"description": "no handler"}, "needs a handler"),
         ({"handler": "hw_testkit:nope"}, "can't import"),
-        ({"transport": "mcp"}, "isn't supported yet"),
+        ({"transport": "mcp", "server": "mcp://payments.example"}, "isn't supported yet"),
+        ({"transport": "mcp"}, "names its server"),
+        ({"handler": "hw_testkit:refund_payment", "server": "mcp://x"}, "only an mcp tool"),
         ({"transport": "code"}, "must name a sandbox"),
         ({"handler": "hw_testkit:refund_payment", "sandbox": "monty"}, "only code tools"),
         (

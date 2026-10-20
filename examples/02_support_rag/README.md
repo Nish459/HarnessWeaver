@@ -59,6 +59,7 @@ sequenceDiagram
 | [prompts/answer@1.md](prompts/answer@1.md) | The versioned prompt (ADR-0013) |
 | [evals/golden.yaml](evals/golden.yaml) | Golden questions graded on intent and citations |
 | [run.py](run.py) | The Session style in a script |
+| [gateway/](gateway) | `harnessweaver gateway litellm` output: the LiteLLM config for apps that call the gateway directly (a golden file) |
 | [tests/](tests/test_support_rag.py) | Tenant isolation, the poisoned article, injection, repair, PII, the policy, the baseline's locks, `doctor` |
 
 ## What the baseline guarantees

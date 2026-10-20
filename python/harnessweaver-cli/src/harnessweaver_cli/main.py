@@ -7,8 +7,10 @@ import typer
 import harnessweaver
 from harnessweaver_cli import __version__
 from harnessweaver_cli.add import add_app
+from harnessweaver_cli.dev import dev
 from harnessweaver_cli.doctor import doctor
 from harnessweaver_cli.evals import eval_app
+from harnessweaver_cli.gateway import gateway_app
 from harnessweaver_cli.plugins import plugin_app
 from harnessweaver_cli.policy import policy_app
 from harnessweaver_cli.replay import replay
@@ -38,6 +40,8 @@ app.add_typer(add_app, name="add")
 app.add_typer(tools_app, name="tools")
 app.add_typer(plugin_app, name="plugin")
 app.command()(sidecar)
+app.add_typer(gateway_app, name="gateway")
+app.command()(dev)
 
 
 def _print_version(value: bool) -> None:

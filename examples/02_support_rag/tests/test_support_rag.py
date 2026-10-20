@@ -15,6 +15,7 @@ from harnessweaver.errors import LockViolation
 from harnessweaver.spec import Level, load_spec
 from harnessweaver.testing import ScriptedModel, harness_for_test, scripted
 from harnessweaver_cli.doctor import diagnose
+from harnessweaver_cli.gateway import render_litellm
 
 pytestmark = pytest.mark.anyio
 
@@ -147,3 +148,12 @@ def test_doctor_reports_l4_for_a_customer_facing_app() -> None:
     findings = diagnose(SPEC, "offline", [ORG])
     assert findings[0].message.startswith("adoption level L4")
     assert not [f for f in findings if f.severity == "fail"]
+
+
+def test_the_gateway_configs_match_the_checked_in_ones() -> None:
+    """``harnessweaver gateway`` output for this spec (golden files; regenerate with
+    ``harnessweaver gateway litellm|mcp ... -o gateway/<file>``)."""
+    effective = load_spec(SPEC, profile_dirs=[ORG])
+    assert (HERE / "gateway" / "litellm.yaml").read_text(encoding="utf-8") == render_litellm(
+        effective
+    )

@@ -1,0 +1,183 @@
+# A local stack for this app, written by `harnessweaver dev` (ADR-0039): LiteLLM Proxy
+# (config from `harnessweaver gateway litellm`), an OpenTelemetry collector that sends
+# traces to Langfuse, and harnessd serving the spec. Secrets and the provider models
+# are in .env, next to this file; nothing here is meant to be committed.
+#
+#   docker compose up -d        (or: harnessweaver dev --up)
+#
+# harnessd and the collector share LiteLLM's network, so the URLs a spec uses on the
+# developer's machine (http://localhost:4000 for the gateway, :4318 for OTLP) work
+# unchanged inside the containers too. Every port is published on 127.0.0.1 only (S6),
+# and every image is pinned by digest (S5).
+
+name: harnessweaver-dev
+
+x-langfuse-env: &langfuse-env
+  NEXTAUTH_URL: http://localhost:3000
+  DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres
+  SALT: ${SALT}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+  TELEMETRY_ENABLED: "false"
+  CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+  CLICKHOUSE_URL: http://clickhouse:8123
+  CLICKHOUSE_USER: clickhouse
+  CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+  CLICKHOUSE_CLUSTER_ENABLED: "false"
+  LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+  LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+  LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+  LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+  LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+  LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+  LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minio
+  LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+  LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://localhost:9090
+  LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_AUTH: ${REDIS_AUTH}
+
+x-langfuse-depends: &langfuse-depends
+  postgres: { condition: service_healthy }
+  clickhouse: { condition: service_healthy }
+  minio: { condition: service_healthy }
+  redis: { condition: service_healthy }
+
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:v1.104.0@sha256:625981c83410a3ea68eb0697590a57ec1d764d634514d54fa5db0591077ee839
+    command: ["--config", "/etc/litellm/config.yaml", "--port", "4000"]
+    env_file: .env
+    volumes:
+      - ./litellm.yaml:/etc/litellm/config.yaml:ro
+    ports:
+      - 127.0.0.1:4000:4000     # LiteLLM Proxy
+      - 127.0.0.1:4317:4317     # OTLP gRPC (the collector)
+      - 127.0.0.1:4318:4318     # OTLP HTTP (the collector)
+      - 127.0.0.1:7070:7070     # harnessd
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.162.0@sha256:39923a8e431bd1f57be82411999d389fcfe40857492e4365456d97a4c1f74be6
+    command: ["--config", "/etc/otelcol/config.yaml"]
+    network_mode: service:litellm
+    environment:
+      LANGFUSE_OTLP_AUTH: ${LANGFUSE_OTLP_AUTH}
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    depends_on: [litellm, langfuse-web]
+    restart: unless-stopped
+
+  harnessd:
+    # Build it from the HarnessWeaver repository: docker build -f deploy/harnessd/Dockerfile -t harnessd:dev .
+    image: ${HARNESSD_IMAGE:-harnessd:dev}
+    network_mode: service:litellm
+    env_file: .env
+    environment:
+      HARNESSWEAVER_ENV: "__env__"
+      HARNESSWEAVER_PROFILE_PATH: "__profile_path__"   # the folders --profile-dir named
+    volumes:
+      - ../..:/app:ro           # the app: its spec, overlays, profiles and code
+__profile_volumes__    command: ["__spec__"]
+    depends_on: [litellm]
+    restart: unless-stopped
+
+  langfuse-web:
+    image: docker.io/langfuse/langfuse:4@sha256:ce6c636df92db6638f15beb7d826f0460a51d04fcfe2e55132fcc8aad9e1bef8
+    depends_on: *langfuse-depends
+    ports:
+      - 127.0.0.1:3000:3000
+    environment:
+      <<: *langfuse-env
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      LANGFUSE_S3_MEDIA_UPLOAD_INTERNAL_ENDPOINT: http://minio:9000
+      LANGFUSE_INIT_ORG_ID: harnessweaver
+      LANGFUSE_INIT_ORG_NAME: HarnessWeaver
+      LANGFUSE_INIT_PROJECT_ID: dev
+      LANGFUSE_INIT_PROJECT_NAME: dev
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
+      LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_USER_EMAIL}
+      LANGFUSE_INIT_USER_NAME: dev
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_USER_PASSWORD}
+    restart: unless-stopped
+
+  langfuse-worker:
+    image: docker.io/langfuse/langfuse-worker:4@sha256:68549f1167370de7e601114e592dbc86aac13216d90c5193063a2d9d83d9ec57
+    depends_on: *langfuse-depends
+    environment: *langfuse-env
+    restart: unless-stopped
+
+  postgres:
+    image: docker.io/postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  clickhouse:
+    image: docker.io/clickhouse/clickhouse-server:25.12@sha256:8a790dd3468db22b1d4e7b18a176f378ff5ff6053b9c48dd4ea1fa71a24c5ba6
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  minio:
+    image: cgr.dev/chainguard/minio:latest@sha256:cff197fef764642223ef9f4444c903d51aee9b544a7be8bc007fef6b7b00d136
+    entrypoint: sh
+    # Langfuse's bucket must exist before it starts.
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - 127.0.0.1:9090:9000     # media uploads from the browser
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: docker.io/redis:7@sha256:4fa24486b8bcca8eec45ee0eb166edc674795e53a2b53d1a9ef263eecebaac85
+    command: ["--requirepass", "${REDIS_AUTH}", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_AUTH}", "ping"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+  clickhouse_logs:
+  minio_data:
+  redis_data:

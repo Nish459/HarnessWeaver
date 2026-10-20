@@ -51,9 +51,10 @@ language. A plugin's templates are named `<namespace>.<template>`
 | `plugin new NAMESPACE [DIR]` | Scaffold a standalone plugin package with a sample guard and tests that run the conformance suite |
 | `plugin list [--format text\|json]` | Installed plugins: namespace, distribution, version, contract range, compatibility |
 | `sidecar [SPEC] [-e ENV] [--host H] [--port P] [--token-env VAR]` | Serve the spec to other languages: runs `harnessd` (needs `harnessweaver-sidecar` and a token, S6) |
+| `gateway litellm [SPEC] [-o FILE]` | A LiteLLM Proxy config from the spec: gateway models and aliases, retries, a timeout, no message logging, and a tool-permission guardrail from the manifests |
+| `gateway mcp [SPEC] [-o FILE]` | A neutral tool allow-list for an MCP gateway: each allowed tool's server, digest and scopes, and the withheld tools with the reason |
+| `dev [SPEC] [-e ENV] [--up]` | Write `.harness/dev/`: LiteLLM, an OTel collector, Langfuse and harnessd in a Compose file, wired to the spec, with local secrets in `.env`. `--up` starts it |
 
 Every command that takes `SPEC` defaults to `harness.yaml`, takes
 `--profile-dir` to find `org://` profiles, and makes the spec's directory
 importable, as it is when the app runs from there.
-
-*Planned:* `dev` (a compose file with LiteLLM, the OTel collector, Langfuse and harnessd) and `gateway`.

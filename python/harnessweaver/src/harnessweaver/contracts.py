@@ -25,6 +25,7 @@ from harnessweaver.core.evals import (
     OnlineSample,
     SuiteResult,
 )
+from harnessweaver.core.gateway import ToolAllowList
 from harnessweaver.core.guards import GuardResult
 from harnessweaver.core.hooks import HookEvent
 from harnessweaver.core.manifests import ToolManifest
@@ -90,6 +91,7 @@ CONTRACTS: Final[dict[str, Any]] = {
     "policy-tests": PolicyTests,
     "recorded-call": RecordedCall,
     "replay-report": ReplayReport,
+    "tool-allow-list": ToolAllowList,
 }
 """Every exported contract, by schema file name (without ``.schema.json``)."""
 

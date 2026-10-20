@@ -72,6 +72,7 @@ uv sync --all-packages          # install every workspace package + dev tools in
 | Grow a spec | `uv run harnessweaver add guard <use> <spec>` (shadow mode), `uv run harnessweaver add tool <module:function> <spec>`, `uv run harnessweaver tools pin <spec>` |
 | Plugins | `uv run harnessweaver plugin list`, `uv run harnessweaver plugin new <namespace> <dir>` (a standalone package) |
 | Sidecar | `HARNESSD_TOKEN=<token> uv run harnessd <spec>` (or `uv run harnessweaver sidecar <spec>`); `docker build -f deploy/harnessd/Dockerfile .` |
+| Gateways and the dev stack | `uv run harnessweaver gateway litellm <spec>`, `uv run harnessweaver gateway mcp <spec>`, `uv run harnessweaver dev <spec> [--up]` |
 | TypeScript | `pnpm -C typescript install && pnpm -C typescript test && pnpm -C typescript build` |
 | Docs site | `make docs` (`mkdocs build --strict`) |
 
