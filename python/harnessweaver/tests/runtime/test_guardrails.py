@@ -106,6 +106,69 @@ async def test_a_shadow_guard_is_traced_but_does_not_act(build: Builder) -> None
     assert shadow[0].source == "guardrails.output[keys]"
 
 
+BILLING = {"id": "billing", "use": "regex.deny", "patterns": ["billing"]}
+
+
+async def test_an_approved_output_passes_the_guard_that_asked(build: Builder) -> None:
+    harness = build(
+        spec(
+            models=scripted({"text": "billing for alice@example.com"}),
+            guardrails={
+                "output": [
+                    {"id": "pii", "use": "pii.regex"},
+                    {**BILLING, "action": "require_approval"},
+                ]
+            },
+            tasks={"t": {"runner": "direct"}},
+        )
+    )
+    first = await harness.run("t", "q")
+    assert first.status is hw.RunStatus.AWAITING_APPROVAL
+    assert first.approval is not None
+    result = await harness.approve(first.run_id, first.approval.approval_id, approver="bob")
+    assert result.status is hw.RunStatus.COMPLETED
+    assert result.output == "billing for [EMAIL]"  # the approval doesn't undo a redaction
+    approved = [e for e in result.trace if e.code == "guard_approved"]
+    assert len(approved) == 1
+    assert approved[0].details == {
+        "guard": "guardrails.output[billing]",
+        "action": "require_approval",
+        "approved_by": "bob",
+        "findings": ["regex:0"],
+    }
+    outcome = [
+        e
+        for e in result.trace
+        if e.kind is TraceKind.OUTCOME and e.source == "guardrails.output[billing]"
+    ]
+    assert outcome[-1].reason == "guardrails.output[billing]: approved by bob"
+
+
+async def test_an_approval_answers_only_the_approval(build: Builder) -> None:
+    harness = build(
+        spec(
+            models=scripted({"text": "billing refund"}),
+            guardrails={
+                "output": [
+                    {**BILLING, "action": "require_approval"},
+                    {
+                        "id": "refunds",
+                        "use": "regex.deny",
+                        "patterns": ["refund"],
+                        "action": "escalate",
+                    },
+                ]
+            },
+            tasks={"t": {"runner": "direct"}},
+        )
+    )
+    first = await harness.run("t", "q")
+    assert first.status is hw.RunStatus.AWAITING_APPROVAL  # Suspend outranks Escalate
+    assert first.approval is not None
+    result = await harness.approve(first.run_id, first.approval.approval_id, approver="bob")
+    assert result.status is hw.RunStatus.ESCALATED
+
+
 async def test_guard_configuration_errors(build: Builder) -> None:
     with pytest.raises(SpecError, match="stage"):
         build(

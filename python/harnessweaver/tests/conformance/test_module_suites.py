@@ -7,7 +7,7 @@ import pytest
 from harnessweaver.core.budgets import BudgetMeter
 from harnessweaver.core.bus import HookBus
 from harnessweaver.core.context import RunContext
-from harnessweaver.core.envelope import Envelope, FakeClock
+from harnessweaver.core.envelope import Envelope, FakeClock, Principal
 from harnessweaver.core.guards import GuardAction
 from harnessweaver.core.hooks import (
     Band,
@@ -21,6 +21,7 @@ from harnessweaver.core.messages import Message, ModelRequest, StreamChunk, Tool
 from harnessweaver.core.middleware import Registration
 from harnessweaver.core.registry import PluginCatalog, Registry
 from harnessweaver.core.retrieval import ContextItem
+from harnessweaver.core.runs import ApprovalDecision
 from harnessweaver.core.tools import ToolInfo, ToolResult
 from harnessweaver.core.trace import RunTrace
 from harnessweaver.modules.guardrails import STAGE_HOOKS, Guard, guard_handler
@@ -32,12 +33,17 @@ def _env() -> Envelope:
     return Envelope.new(tenant="t", principal="p", clock=FakeClock())
 
 
-def _event(stage: str, content: Any) -> Any:
+def _event(stage: str, content: Any, *, approved: bool = False) -> Any:
     match stage:
         case "input":
             return InputEvent(input=content)
         case "output":
-            return OutputEvent(output=content)
+            approval = (
+                ApprovalDecision(approval_id="a1", decision="approve", approver=Principal(id="bob"))
+                if approved
+                else None
+            )
+            return OutputEvent(output=content, approval=approval)
         case "tool_result":
             call = ToolCall(id="c1", name="lookup")
             result = ToolResult(call_id="c1", output=content)
@@ -117,7 +123,8 @@ async def test_guards(case: dict[str, Any]) -> None:
             )
         )
     trace = RunTrace(FakeClock())
-    result = await bus.emit(STAGE_HOOKS[stage], _event(stage, case["content"]), _env(), trace)
+    event = _event(stage, case["content"], approved=case.get("approved", False))
+    result = await bus.emit(STAGE_HOOKS[stage], event, _env(), trace)
     assert result.outcome.kind == expect["outcome"]
     assert _content(stage, result.event) == expect["content"]
     if "note" in expect:
