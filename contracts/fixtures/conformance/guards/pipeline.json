@@ -1,6 +1,6 @@
 {
   "suite": "guards",
-  "description": "How guards configured in a spec run at one stage (DESIGNS No. 20). Each guard becomes middleware in list order; consecutive `parallel` guards form one group. `content` is the stage's payload: input.before input, output.before output, tool.after tool output, a stream chunk's text, or [id, text] pairs of context items. `expect.outcome` is the combined outcome kind, `expect.content` the payload afterwards, and `expect.note` a substring of the trace note when there is one.",
+  "description": "How guards configured in a spec run at one stage (DESIGNS No. 20). Each guard becomes middleware in list order; consecutive `parallel` guards form one group. `content` is the stage's payload: input.before input, output.before output, tool.after tool output, a stream chunk's text, or [id, text] pairs of context items. `approved: true` gives the output.before event a human's approval (`approve`, by approver `bob`), which answers `require_approval` and nothing else. `expect.outcome` is the combined outcome kind, `expect.content` the payload afterwards, and `expect.note` a substring of the trace note when there is one.",
   "cases": [
     {
       "name": "redactions chain through the guards",
@@ -104,6 +104,68 @@
       "guards": [{ "id": "keys", "use": "secrets.scan", "action": "escalate" }],
       "content": "key AKIAIOSFODNN7EXAMPLE",
       "expect": { "outcome": "escalate", "content": "key AKIAIOSFODNN7EXAMPLE" }
+    },
+    {
+      "name": "an approved output passes a require_approval guard",
+      "stage": "output",
+      "approved": true,
+      "guards": [{ "id": "keys", "use": "secrets.scan", "action": "require_approval" }],
+      "content": "key AKIAIOSFODNN7EXAMPLE",
+      "expect": { "outcome": "continue", "content": "key AKIAIOSFODNN7EXAMPLE", "note": "keys: approved by bob" }
+    },
+    {
+      "name": "an approval doesn't override a block",
+      "stage": "output",
+      "approved": true,
+      "guards": [{ "id": "keys", "use": "secrets.scan" }],
+      "content": "key AKIAIOSFODNN7EXAMPLE",
+      "expect": { "outcome": "block", "content": "key AKIAIOSFODNN7EXAMPLE" }
+    },
+    {
+      "name": "an approval doesn't override an escalate",
+      "stage": "output",
+      "approved": true,
+      "guards": [{ "id": "keys", "use": "secrets.scan", "action": "escalate" }],
+      "content": "key AKIAIOSFODNN7EXAMPLE",
+      "expect": { "outcome": "escalate", "content": "key AKIAIOSFODNN7EXAMPLE" }
+    },
+    {
+      "name": "an approval doesn't stop a repair",
+      "stage": "output",
+      "approved": true,
+      "guards": [{ "id": "topics", "use": "topic.deny", "config": { "topics": { "medical": ["diagnosis"] } }, "action": "repair" }],
+      "content": "Your diagnosis is fine",
+      "expect": { "outcome": "retry", "content": "Your diagnosis is fine" }
+    },
+    {
+      "name": "redactions still apply to an approved output",
+      "stage": "output",
+      "approved": true,
+      "guards": [
+        { "id": "pii", "use": "pii.regex" },
+        { "id": "keys", "use": "secrets.scan", "action": "require_approval" }
+      ],
+      "content": "mail alice@example.com, key AKIAIOSFODNN7EXAMPLE",
+      "expect": { "outcome": "continue", "content": "mail [EMAIL], key AKIAIOSFODNN7EXAMPLE", "note": "keys: approved by bob" }
+    },
+    {
+      "name": "an approval answers a parallel group's require_approval and keeps its redactions",
+      "stage": "output",
+      "approved": true,
+      "guards": [
+        { "id": "pii", "use": "pii.regex", "parallel": true },
+        { "id": "keys", "use": "secrets.scan", "action": "require_approval", "parallel": true }
+      ],
+      "content": "mail alice@example.com, key AKIAIOSFODNN7EXAMPLE",
+      "expect": { "outcome": "continue", "content": "mail [EMAIL], key AKIAIOSFODNN7EXAMPLE", "note": "approved by bob" }
+    },
+    {
+      "name": "a shadow guard still records what it would do on an approved output",
+      "stage": "output",
+      "approved": true,
+      "guards": [{ "id": "keys", "use": "secrets.scan", "action": "require_approval", "mode": "log_only" }],
+      "content": "key AKIAIOSFODNN7EXAMPLE",
+      "expect": { "outcome": "continue", "content": "key AKIAIOSFODNN7EXAMPLE", "note": "would require_approval" }
     },
     {
       "name": "a blocked context item is dropped, not the run",

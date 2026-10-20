@@ -17,6 +17,7 @@ from harnessweaver.core.hooks import (
 from harnessweaver.core.middleware import FailMode
 from harnessweaver.core.outcomes import Block, Continue, Escalate, Outcome, Retry, Suspend
 from harnessweaver.core.ports import Guardrail
+from harnessweaver.core.runs import ApprovalDecision
 from harnessweaver.spec.merge import LayerKind
 
 __all__ = [
@@ -86,29 +87,59 @@ class Verdict:
     texts: tuple[str, ...]
     reason: str | None = None
     findings: tuple[str, ...] = ()
+    approved_by: str | None = None
+    """Who approved the output, when the guard asked for approval and an approval answered it."""
 
 
-async def check(guard: Guard, texts: Sequence[str], env: Envelope) -> Verdict:
-    """Run ``guard`` over every text and combine the answers; the most severe wins."""
+async def check(
+    guard: Guard,
+    texts: Sequence[str],
+    env: Envelope,
+    approval: ApprovalDecision | None = None,
+) -> Verdict:
+    """Run ``guard`` over every text and combine the answers; the most severe wins.
+
+    ``approval`` is a human's approval of the content (``OutputEvent.approval``).
+    It answers the guard's ``require_approval`` and nothing else: ``block``,
+    ``escalate``, ``repair`` and redactions still apply, and a shadow guard still
+    records what it would do (DESIGNS No. 20).
+    """
+    if guard.shadow or (approval is not None and approval.decision == "reject"):
+        approval = None
     ctx = current_run()
     telemetry = ctx.telemetry if ctx is not None else None
     if telemetry is None:
-        verdict = await _check(guard, texts, env)
+        verdict = await _check(guard, texts, env, approval)
         _note(guard, verdict)
         return verdict
     with telemetry.guard_span(guard.id, None, guard.mode) as span:
-        verdict = await _check(guard, texts, env)
+        verdict = await _check(guard, texts, env, approval)
         telemetry.guard_done(span, verdict.action.value, list(verdict.findings))
         _note(guard, verdict)
         return verdict
 
 
 def _note(guard: Guard, verdict: Verdict) -> None:
-    """Trace a guard that fired, or would have in shadow mode, by name (R8, R13)."""
+    """Trace a guard that fired, would have in shadow mode, or was answered by an
+    approval, by name (R8, R13)."""
     ctx = current_run()
-    if ctx is None or verdict.action in (GuardAction.ALLOW, GuardAction.LOG_ONLY):
+    if ctx is None:
         return
     name = guard.name or guard.id
+    if verdict.approved_by is not None:
+        ctx.trace.note(
+            "harness.guard",
+            f"{name} {GuardAction.REQUIRE_APPROVAL.value} approved by {verdict.approved_by}",
+            code="guard_approved",
+            details={
+                "guard": name,
+                "action": GuardAction.REQUIRE_APPROVAL.value,
+                "approved_by": verdict.approved_by,
+                "findings": list[JsonValue](verdict.findings),
+            },
+        )
+    if verdict.action in (GuardAction.ALLOW, GuardAction.LOG_ONLY):
+        return
     verb = "would " if guard.shadow else ""
     ctx.trace.note(
         "harness.guard",
@@ -122,11 +153,14 @@ def _note(guard: Guard, verdict: Verdict) -> None:
     )
 
 
-async def _check(guard: Guard, texts: Sequence[str], env: Envelope) -> Verdict:
+async def _check(
+    guard: Guard, texts: Sequence[str], env: Envelope, approval: ApprovalDecision | None
+) -> Verdict:
     worst = GuardAction.ALLOW
     out = list(texts)
     reason: str | None = None
     found: set[str] = set()
+    approved_by: str | None = None
     for index, text in enumerate(texts):
         result = await guard.provider.check(text, env)
         if not isinstance(result, GuardResult):  # pyright: ignore[reportUnnecessaryIsInstance]
@@ -140,26 +174,31 @@ async def _check(guard: Guard, texts: Sequence[str], env: Envelope) -> Verdict:
             continue
         if guard.action is not None and guard.action is not GuardAction.LOG_ONLY:
             action = guard.action
+        found.update(f.type for f in result.findings)
+        if action is GuardAction.REQUIRE_APPROVAL and approval is not None:
+            # The human answered this ask; the guard's other answers still stand (No. 18).
+            approved_by = approval.approver.id
+            continue
         if action is GuardAction.REDACT:
             if result.content is None:
                 action = GuardAction.BLOCK
                 reason = reason or f"{result.reason or 'flagged'} (it can't be redacted)"
             else:
                 out[index] = result.content
-        found.update(f.type for f in result.findings)
         reason = reason or result.reason
         if ACTION_RANK[action] > ACTION_RANK[worst]:
             worst = action
-    return Verdict(worst, tuple(out), reason, tuple(sorted(found)))
+    return Verdict(worst, tuple(out), reason, tuple(sorted(found)), approved_by)
 
 
 def outcome_of(label: str, verdict: Verdict, stage: Stage, rebuilt: Any) -> Outcome:
     reason = f"{label}: {verdict.reason or verdict.action.value}"
+    approved = f"approved by {verdict.approved_by}" if verdict.approved_by else None
     match verdict.action:
         case GuardAction.ALLOW | GuardAction.LOG_ONLY:
-            return Continue()
+            return Continue(note=f"{label}: {approved}" if approved else None)
         case GuardAction.REDACT:
-            return Continue(modified=rebuilt, note=reason)
+            return Continue(modified=rebuilt, note=f"{reason}; {approved}" if approved else reason)
         case GuardAction.REPAIR if stage == "output":
             return Retry(reason=reason)
         case GuardAction.ESCALATE:

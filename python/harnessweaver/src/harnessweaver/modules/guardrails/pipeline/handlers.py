@@ -10,9 +10,11 @@ from harnessweaver.core.envelope import Envelope
 from harnessweaver.core.guards import GuardAction
 from harnessweaver.core.hooks import (
     ContextEvent,
+    OutputEvent,
 )
 from harnessweaver.core.middleware import Handler
 from harnessweaver.core.outcomes import Continue, Outcome
+from harnessweaver.core.runs import ApprovalDecision
 from harnessweaver.modules.guardrails.pipeline.content import content_of
 from harnessweaver.modules.guardrails.pipeline.guards import (
     ACTION_RANK,
@@ -27,11 +29,13 @@ from harnessweaver.modules.guardrails.pipeline.guards import (
 __all__ = ["guard_handler"]
 
 
-async def _member(guard: Guard, texts: Sequence[str], env: Envelope) -> Verdict:
+async def _member(
+    guard: Guard, texts: Sequence[str], env: Envelope, approval: ApprovalDecision | None
+) -> Verdict:
     """A parallel group member, with its own timeout and fail mode."""
     try:
         with anyio.fail_after(guard.timeout.total_seconds() if guard.timeout else None):
-            return await check(guard, texts, env)
+            return await check(guard, texts, env, approval)
     except Exception as exc:
         reason = f"guard failed ({type(exc).__name__})"
         ctx = current_run()
@@ -43,12 +47,15 @@ async def _member(guard: Guard, texts: Sequence[str], env: Envelope) -> Verdict:
 
 
 async def _group(
-    guards: Sequence[Guard], texts: Sequence[str], env: Envelope
+    guards: Sequence[Guard],
+    texts: Sequence[str],
+    env: Envelope,
+    approval: ApprovalDecision | None,
 ) -> tuple[Verdict, list[str]]:
     verdicts: list[Verdict | None] = [None] * len(guards)
 
     async def run(index: int) -> None:
-        verdicts[index] = await _member(guards[index], texts, env)
+        verdicts[index] = await _member(guards[index], texts, env, approval)
 
     async with anyio.create_task_group() as group:
         for index in range(len(guards)):
@@ -59,6 +66,11 @@ async def _group(
         for g, v in zip(guards, done, strict=True)
         if g.shadow and v.action not in (GuardAction.ALLOW, GuardAction.LOG_ONLY)
     ]
+    notes += [
+        f"{g.id}: approved by {v.approved_by}"
+        for g, v in zip(guards, done, strict=True)
+        if v.approved_by
+    ]
     enforced = [(g, v) for g, v in zip(guards, done, strict=True) if not g.shadow]
     worst = Verdict(GuardAction.ALLOW, tuple(texts))
     for _, verdict in enforced:
@@ -68,7 +80,7 @@ async def _group(
         current = list(texts)
         for guard, verdict in enforced:
             if verdict.action is GuardAction.REDACT:
-                again = await _member(guard, current, env)
+                again = await _member(guard, current, env, approval)
                 if again.action is GuardAction.REDACT:
                     current = list(again.texts)
         worst = Verdict(GuardAction.REDACT, tuple(current), worst.reason, worst.findings)
@@ -86,12 +98,14 @@ def guard_handler(stage: Stage, guards: Sequence[Guard], label: str) -> Handler:
         texts, rebuild = content_of(stage, event)
         if not texts:
             return None
+        # Only an output carries a human's approval to the guards (DESIGNS No. 18).
+        approval = event.approval if isinstance(event, OutputEvent) else None
         if len(guards) == 1:
-            verdict = await check(guards[0], texts, env)
+            verdict = await check(guards[0], texts, env, approval)
             if guards[0].shadow:
                 return shadow_outcome(label, verdict)
             return outcome_of(label, verdict, stage, rebuild(verdict.texts))
-        verdict, notes = await _group(guards, texts, env)
+        verdict, notes = await _group(guards, texts, env, approval)
         outcome = outcome_of(label, verdict, stage, rebuild(verdict.texts))
         if notes and isinstance(outcome, Continue):
             return Continue(modified=outcome.modified, note="; ".join(notes))

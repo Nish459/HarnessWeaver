@@ -16,6 +16,9 @@ Semantics (fixtures suite ``guards``):
   provider flags something. Asking to redact what a provider can't redact blocks.
 * ``mode: log_only`` (or ``action: log_only``) records what the guard would have
   done and lets the content through (R8).
+* An output a human approved (``OutputEvent.approval``) passes the guards that ask
+  for approval, traced as ``guard_approved``. The approval answers nothing else:
+  ``block``, ``escalate``, ``repair`` and redactions still apply (No. 18).
 * Consecutive ``parallel: true`` guards in one band run concurrently as a group.
   Their redactions are then applied in list order, each guard re-checking the
   content the previous one redacted.
