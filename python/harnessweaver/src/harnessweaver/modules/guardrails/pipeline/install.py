@@ -12,9 +12,9 @@ from harnessweaver.core.registry import Registry
 from harnessweaver.modules.guardrails.pipeline.guards import LAYER_BANDS, STAGE_HOOKS, Guard, Stage
 from harnessweaver.modules.guardrails.pipeline.handlers import guard_handler
 from harnessweaver.spec.loader import EffectiveSpec
-from harnessweaver.spec.models import GuardrailsSpec, GuardSpec
+from harnessweaver.spec.models import GuardrailsSpec, GuardSpec, HarnessSpec
 
-__all__ = ["install_guardrails"]
+__all__ = ["configured_guards", "install_guardrails"]
 
 
 def _band(effective: EffectiveSpec, path: str) -> Band:
@@ -23,7 +23,7 @@ def _band(effective: EffectiveSpec, path: str) -> Band:
     return LAYER_BANDS[origin.kind] if origin is not None else Band.APP
 
 
-def _guard(item: GuardSpec, index: int, stage: Stage, registry: Registry) -> Guard:
+def _guard(item: GuardSpec, index: int, stage: Stage, registry: Registry, prefix: str) -> Guard:
     info = registry.provider("Guardrail", item.use)
     if info.stages and stage not in info.stages:
         raise SpecError(
@@ -31,8 +31,10 @@ def _guard(item: GuardSpec, index: int, stage: Stage, registry: Registry) -> Gua
         )
     if item.where != "local":
         raise SpecError(f"guard {item.id or item.use}: where: {item.where} needs the sidecar")
+    guard_id = item.id or f"{item.use}#{index + 1}"
     return Guard(
-        id=item.id or f"{item.use}#{index + 1}",
+        id=guard_id,
+        name=f"{prefix}.{stage}[{guard_id}]",
         provider=info.build(item.provider_settings()),
         action=item.action,
         mode=item.mode,
@@ -52,6 +54,27 @@ def _groups(items: Sequence[tuple[GuardSpec, Band]]) -> list[list[tuple[GuardSpe
     return groups
 
 
+def _sections(spec: HarnessSpec) -> list[tuple[str | None, str, GuardrailsSpec]]:
+    found: list[tuple[str | None, str, GuardrailsSpec]] = [(None, "guardrails", spec.guardrails)]
+    found += [
+        (name, f"tasks.{name}.guardrails", task.guardrails)
+        for name, task in spec.tasks.items()
+        if task.guardrails is not None
+    ]
+    return found
+
+
+def configured_guards(spec: HarnessSpec) -> list[tuple[str, GuardSpec]]:
+    """Every enabled guard with its full name (``guardrails.input[pii]``), as traces,
+    ``doctor`` and eval reports name it."""
+    return [
+        (f"{prefix}.{stage}[{item.id or f'{item.use}#{index + 1}'}]", item)
+        for _, prefix, section in _sections(spec)
+        for stage in STAGE_HOOKS
+        for index, item in enumerate(i for i in getattr(section, stage) if i.enabled)
+    ]
+
+
 def install_guardrails(effective: EffectiveSpec, registry: Registry, bus: HookBus) -> int:
     """Turn every enabled guard into middleware. Returns how many middleware were added.
 
@@ -59,15 +82,8 @@ def install_guardrails(effective: EffectiveSpec, registry: Registry, bus: HookBu
         SpecError: For an unknown provider, a stage it doesn't support, a guard
             that needs the sidecar, or a baseline guard that fails open (R2).
     """
-    spec = effective.spec
-    sections: list[tuple[str | None, str, GuardrailsSpec]] = [(None, "guardrails", spec.guardrails)]
-    sections += [
-        (name, f"tasks.{name}.guardrails", task.guardrails)
-        for name, task in spec.tasks.items()
-        if task.guardrails is not None
-    ]
     added = 0
-    for task, prefix, section in sections:
+    for task, prefix, section in _sections(effective.spec):
         for stage, hook in STAGE_HOOKS.items():
             items = [item for item in getattr(section, stage) if item.enabled]
             banded = [
@@ -75,7 +91,9 @@ def install_guardrails(effective: EffectiveSpec, registry: Registry, bus: HookBu
                 for item in items
             ]
             for group in _groups(banded):
-                guards = [_guard(item, items.index(item), stage, registry) for item, _ in group]
+                guards = [
+                    _guard(item, items.index(item), stage, registry, prefix) for item, _ in group
+                ]
                 ids = "+".join(g.id for g in guards)
                 label = f"{prefix}.{stage}[{ids}]"
                 closed = any(g.fail_mode == "closed" for g in guards)

@@ -1,0 +1,76 @@
+{
+  "suite": "evals",
+  "description": "Reading a dataset: each case's graders are the suite's followed by its own, labelled 'name' with no setting, 'name:value' for a text, number or boolean setting, and 'name#n' for a list or map of settings, where n counts that grader's uses in the case's list from 1. A dataset that breaks the format is 'invalid'.",
+  "cases": [
+    {
+      "name": "grader labels",
+      "dataset": {
+        "suite": "golden",
+        "task": "extract",
+        "graders": [
+          "schema_valid",
+          { "field_equals": "invoice_number" },
+          { "field_equals": "total" },
+          { "numeric_close": { "field": "total", "tolerance": 0.01 } },
+          { "contains": ["a", "b"] },
+          { "numeric_close": "total" }
+        ],
+        "cases": [
+          { "id": "one", "input": { "text": "x" }, "graders": [ { "contains": "x" } ] },
+          { "id": "two", "input": { "text": "y" } }
+        ]
+      },
+      "expect": {
+        "cases": {
+          "one": ["schema_valid", "field_equals:invoice_number", "field_equals:total", "numeric_close#1", "contains#1", "numeric_close:total", "contains:x"],
+          "two": ["schema_valid", "field_equals:invoice_number", "field_equals:total", "numeric_close#1", "contains#1", "numeric_close:total"]
+        }
+      }
+    },
+    {
+      "name": "a null setting is no setting",
+      "dataset": { "suite": "s", "task": "t", "cases": [ { "id": "a", "graders": [ { "exact": null }, { "status": ["blocked"] } ] } ] },
+      "expect": { "cases": { "a": ["exact", "status#1"] } }
+    },
+    {
+      "name": "every case needs a grader",
+      "dataset": { "suite": "s", "task": "t", "cases": [ { "id": "a", "graders": ["exact"] }, { "id": "b" } ] },
+      "expect": { "error": "invalid" }
+    },
+    {
+      "name": "case ids are unique",
+      "dataset": { "suite": "s", "task": "t", "graders": ["exact"], "cases": [ { "id": "a" }, { "id": "a" } ] },
+      "expect": { "error": "invalid" }
+    },
+    {
+      "name": "labels are unique within a case",
+      "dataset": { "suite": "s", "task": "t", "graders": [ { "contains": "x" } ], "cases": [ { "id": "a", "graders": [ { "contains": "x" } ] } ] },
+      "expect": { "error": "invalid" }
+    },
+    {
+      "name": "a grader has one name",
+      "dataset": { "suite": "s", "task": "t", "graders": [ { "exact": null, "contains": "x" } ], "cases": [ { "id": "a" } ] },
+      "expect": { "error": "invalid" }
+    },
+    {
+      "name": "the task is required",
+      "dataset": { "suite": "s", "graders": ["exact"], "cases": [ { "id": "a" } ] },
+      "expect": { "error": "invalid" }
+    },
+    {
+      "name": "a dataset needs cases",
+      "dataset": { "suite": "s", "task": "t", "graders": ["exact"], "cases": [] },
+      "expect": { "error": "invalid" }
+    },
+    {
+      "name": "the pass rate is a share",
+      "dataset": { "suite": "s", "task": "t", "graders": ["exact"], "thresholds": { "pass_rate": 1.5 }, "cases": [ { "id": "a" } ] },
+      "expect": { "error": "invalid" }
+    },
+    {
+      "name": "unknown keys are refused",
+      "dataset": { "suite": "s", "task": "t", "graders": ["exact"], "cases": [ { "id": "a", "expected": 1 } ] },
+      "expect": { "error": "invalid" }
+    }
+  ]
+}

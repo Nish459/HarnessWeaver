@@ -26,6 +26,11 @@ async def test_the_offline_overlay_extracts_a_summary() -> None:
     assert TicketSummary.model_validate(result.output).category == "billing"
 
 
+async def test_the_golden_set_passes_offline() -> None:
+    result = await hw.load(SPEC, env="offline").evaluate("evals/golden.yaml")
+    assert result.passed, [case.id for case in result.cases if not case.passed]
+
+
 async def test_an_invalid_answer_is_repaired_once() -> None:
     model = scripted(output({"category": "billing"}), output(VALID))
     result = await harness_for_test(SPEC, model=model).run(

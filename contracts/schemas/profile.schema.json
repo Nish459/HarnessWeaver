@@ -243,6 +243,19 @@
       "title": "EvalsSpec",
       "type": "object"
     },
+    "GraderItem": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        }
+      ]
+    },
     "GuardAction": {
       "description": "What a guardrail wants done with the content it checked.\n\nThe guardrails module maps actions onto hook outcomes (DESIGNS No. 9).",
       "enum": [
@@ -742,6 +755,7 @@
     },
     "OnlineEvalsSpec": {
       "additionalProperties": false,
+      "description": "Sample production runs at ``run.end`` and grade them (DESIGNS No. 23).",
       "properties": {
         "sample_rate": {
           "default": 0.0,
@@ -749,6 +763,15 @@
           "minimum": 0,
           "title": "Sample Rate",
           "type": "number"
+        },
+        "graders": {
+          "default": [],
+          "description": "Deterministic graders; online samples have no expect.",
+          "items": {
+            "$ref": "#/$defs/GraderItem"
+          },
+          "title": "Graders",
+          "type": "array"
         }
       },
       "title": "OnlineEvalsSpec",

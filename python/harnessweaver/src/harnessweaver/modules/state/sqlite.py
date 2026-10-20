@@ -13,9 +13,10 @@ from typing import Final
 import anyio.to_thread
 from pydantic import BaseModel, ConfigDict, Field
 
+from harnessweaver.core.evals import OnlineSample
 from harnessweaver.core.plugins import provider
 from harnessweaver.core.results import RunEvent
-from harnessweaver.core.state import Checkpoint, RunRecord
+from harnessweaver.core.state import Checkpoint, RecordedCall, RunRecord
 
 __all__ = ["SqliteStateConfig", "SqliteStateStore"]
 
@@ -29,6 +30,13 @@ CREATE TABLE IF NOT EXISTS idempotency (
 CREATE TABLE IF NOT EXISTS events (
     run_id TEXT NOT NULL, seq INTEGER NOT NULL, data TEXT NOT NULL,
     PRIMARY KEY (run_id, seq)
+);
+CREATE TABLE IF NOT EXISTS recordings (
+    run_id TEXT NOT NULL, seq INTEGER NOT NULL, data TEXT NOT NULL,
+    PRIMARY KEY (run_id, seq)
+);
+CREATE TABLE IF NOT EXISTS samples (
+    run_id TEXT PRIMARY KEY, task TEXT, at TEXT NOT NULL, data TEXT NOT NULL
 );
 """
 
@@ -53,7 +61,8 @@ class SqliteStateConfig(BaseModel):
     latency_class="fast",
 )
 class SqliteStateStore:
-    """Runs, checkpoints, idempotency records and events in SQLite.
+    """Runs, checkpoints, idempotency records, events, recordings and online samples
+    in SQLite.
 
     The connection opens on first use, so building the store does no I/O.
     """
@@ -146,6 +155,40 @@ class SqliteStateStore:
             ).fetchall()
         )
         return [RunEvent.model_validate_json(row[0]) for row in rows]
+
+    async def append_recording(self, call: RecordedCall) -> None:
+        data = call.model_dump_json()
+        await self._run(
+            lambda db: db.execute(
+                "INSERT OR REPLACE INTO recordings (run_id, seq, data) VALUES (?, ?, ?)",
+                (call.run_id, call.seq, data),
+            )
+        )
+
+    async def recording(self, run_id: str) -> list[RecordedCall]:
+        rows = await self._run(
+            lambda db: db.execute(
+                "SELECT data FROM recordings WHERE run_id = ? ORDER BY seq", (run_id,)
+            ).fetchall()
+        )
+        return [RecordedCall.model_validate_json(row[0]) for row in rows]
+
+    async def put_sample(self, sample: OnlineSample) -> None:
+        data = sample.model_dump_json()
+        await self._run(
+            lambda db: db.execute(
+                "INSERT OR REPLACE INTO samples (run_id, task, at, data) VALUES (?, ?, ?, ?)",
+                (sample.run_id, sample.task, sample.at.isoformat(), data),
+            )
+        )
+
+    async def samples(self, task: str | None = None) -> list[OnlineSample]:
+        if task is None:
+            query, args = "SELECT data FROM samples ORDER BY rowid", ()
+        else:
+            query, args = "SELECT data FROM samples WHERE task = ? ORDER BY rowid", (task,)
+        rows = await self._run(lambda db: db.execute(query, args).fetchall())
+        return [OnlineSample.model_validate_json(row[0]) for row in rows]
 
     async def aclose(self) -> None:
         def close(db: sqlite3.Connection) -> None:

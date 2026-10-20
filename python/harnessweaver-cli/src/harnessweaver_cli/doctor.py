@@ -17,9 +17,10 @@ from harnessweaver import Harness
 from harnessweaver.core.errors import HarnessError
 from harnessweaver.core.guards import GuardAction
 from harnessweaver.core.registry import PluginCatalog
+from harnessweaver.modules.guardrails import configured_guards
 from harnessweaver.modules.tools import load_manifests
 from harnessweaver.spec import REQUIREMENTS, Level
-from harnessweaver.spec.models import GuardrailsSpec, GuardSpec, HarnessSpec
+from harnessweaver.spec.models import HarnessSpec
 from harnessweaver.spec.sources import parse_ref
 from harnessweaver_cli._load import spec_path
 
@@ -33,26 +34,6 @@ class Finding:
     severity: Severity
     check: str
     message: str
-
-
-_STAGES = ("input", "context", "tool_result", "output", "stream")
-
-
-def _named(prefix: str, guardrails: GuardrailsSpec) -> list[tuple[str, GuardSpec]]:
-    # Labelled as the guardrails pipeline labels them, so doctor and traces agree.
-    return [
-        (f"{prefix}.{stage}[{guard.id or f'{guard.use}#{index + 1}'}]", guard)
-        for stage in _STAGES
-        for index, guard in enumerate(getattr(guardrails, stage))
-    ]
-
-
-def _guards(spec: HarnessSpec) -> list[tuple[str, GuardSpec]]:
-    found = _named("guardrails", spec.guardrails)
-    for name, task in spec.tasks.items():
-        if task.guardrails is not None:
-            found += _named(f"tasks.{name}.guardrails", task.guardrails)
-    return found
 
 
 def _level(harness: Harness) -> list[Finding]:
@@ -108,7 +89,7 @@ def _pins(spec: HarnessSpec) -> list[Finding]:
 def _shadow(spec: HarnessSpec) -> list[Finding]:
     shadow = [
         name
-        for name, g in _guards(spec)
+        for name, g in configured_guards(spec)
         if g.mode == "log_only" or g.action is GuardAction.LOG_ONLY
     ]
     if not shadow:

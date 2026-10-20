@@ -35,19 +35,10 @@ def org_profile(tmp_path: Path, **body: Any) -> str:
     return "org://acme-baseline"
 
 
-@pytest.mark.parametrize(
-    ("section", "value", "named"),
-    [
-        ("evals", {"online": {"sample_rate": 0.1}}, "evals.online"),
-        ("sidecar", {"url": "http://127.0.0.1:7070"}, "sidecar"),
-    ],
-)
-def test_sections_without_a_module_fail_to_load(
-    build: Builder, section: str, value: Any, named: str
-) -> None:
+def test_sections_without_a_module_fail_to_load(build: Builder) -> None:
     with pytest.raises(SpecError, match="doesn't support yet") as caught:
-        build(spec(models=MODELS, **{section: value}))
-    assert named in caught.value.details["sections"]  # type: ignore[operator]
+        build(spec(models=MODELS, sidecar={"url": "http://127.0.0.1:7070"}))
+    assert "sidecar" in caught.value.details["sections"]  # type: ignore[operator]
 
 
 def test_task_approval_tools_must_exist(build: Builder) -> None:

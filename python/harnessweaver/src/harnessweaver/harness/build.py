@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import JsonValue
+from pydantic import JsonValue, TypeAdapter
 
 from harnessweaver._imports import import_object
 from harnessweaver.core.bus import HookBus
@@ -26,8 +26,10 @@ from harnessweaver.spec.models import HarnessSpec, MiddlewareSpec, TaskSpec
 __all__ = [
     "build_task",
     "build_telemetry",
+    "check_telemetry",
     "install_middleware",
     "model_access",
+    "output_schema",
     "required_hooks",
     "unsupported_sections",
 ]
@@ -41,8 +43,6 @@ def unsupported_sections(spec: HarnessSpec) -> list[str]:
     Loading such a spec fails rather than silently skipping a control (R4).
     """
     found: list[str] = []
-    if spec.evals.online is not None and spec.evals.online.sample_rate > 0:
-        found.append("evals.online")
     if spec.sidecar.url is not None:
         found.append("sidecar")
     return found
@@ -73,7 +73,22 @@ def middleware_name(item: MiddlewareSpec, duplicates: set[str]) -> str:
     return f"{item.use}[{item.id}]" if item.use in duplicates and item.id else item.use
 
 
+def check_telemetry(spec: HarnessSpec) -> None:
+    """An exporter needs the harness to configure the SDK (R5).
+
+    Raises:
+        SpecError: For an ``exporter`` without ``configure_sdk``.
+    """
+    settings = spec.observability
+    if not settings.configure_sdk and settings.exporter != "none":
+        raise SpecError(
+            f"observability.exporter: {settings.exporter} needs observability.configure_sdk: "
+            "true; otherwise the app's own OpenTelemetry setup decides where spans go (R5)"
+        )
+
+
 def build_telemetry(spec: HarnessSpec, registry: Registry) -> Telemetry:
+    check_telemetry(spec)
     settings = spec.observability
     if settings.configure_sdk:
         setup = registry.provider("Telemetry", "otel.sdk").build(settings.provider_settings())
@@ -82,12 +97,15 @@ def build_telemetry(spec: HarnessSpec, registry: Registry) -> Telemetry:
             exporter=settings.exporter,
             endpoint=settings.endpoint,
         )
-    elif settings.exporter != "none":
-        raise SpecError(
-            f"observability.exporter: {settings.exporter} needs observability.configure_sdk: "
-            "true; otherwise the app's own OpenTelemetry setup decides where spans go (R5)"
-        )
     return Telemetry(capture_content=settings.capture_content)
+
+
+def output_schema(output: type[Any] | None) -> dict[str, JsonValue] | None:
+    """The JSON Schema of a task's output as run results carry it (serialized), or
+    ``None`` when the task returns whatever the model says."""
+    if output is None:
+        return None
+    return TypeAdapter(output).json_schema(mode="serialization")
 
 
 def model_access(

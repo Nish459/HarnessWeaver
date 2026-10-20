@@ -9,6 +9,7 @@ Typed extraction from customer support messages, governed by HarnessWeaver.
 harnessweaver spec validate --env offline     # check the spec
 harnessweaver doctor --env offline            # adoption level and what to do next
 harnessweaver test                            # run the tests offline
+harnessweaver eval run --env offline          # grade evals/golden.yaml; exits 1 on a regression
 HARNESSWEAVER_ENV=offline python -m app.main  # run the task once
 ```
 

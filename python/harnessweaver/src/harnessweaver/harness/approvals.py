@@ -127,6 +127,9 @@ class ApprovalMixin(RunMixin):
         channel.closed = False
         channel.seq = max([e.seq for e in await self._state.events(record.run_id)], default=-1) + 1
         previous = record.result.trace if record.result is not None else ()
+        recorded = 0
+        if self._effective.spec.state.record:
+            recorded = len(await self._state.recording(record.run_id))
         ctx = self._context(
             envelope,
             task.info if task is not None else None,
@@ -135,6 +138,7 @@ class ApprovalMixin(RunMixin):
             trace_events=previous,
             grants=checkpoint.grants,
             context_ids=checkpoint.context_ids,
+            recorded=recorded,
         )
         return LiveRun(record, ctx, task, checkpoint.input, channel)
 
@@ -194,6 +198,13 @@ class ApprovalMixin(RunMixin):
         self._telemetry.approval(run_id, approval_id, answer.decision)
         if request.expires_at is not None and self._clock.now() > request.expires_at:
             return await self._expire(run)
+        if checkpoint.approval_hook and checkpoint.approval_digest:
+            await run.ctx.record(
+                "approval",
+                checkpoint.approval_digest,
+                hook=checkpoint.approval_hook,
+                decision=answer,
+            )
         grants = list(checkpoint.grants)
         if answer.decision != "reject" and checkpoint.approval_hook and checkpoint.approval_digest:
             grants.append(

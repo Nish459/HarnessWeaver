@@ -500,9 +500,9 @@ tools:       { manifests: [ "tools/*.tool.yaml" ], require_manifest: true }
 policy:      { use: cel_lite, rules: [ { when: "args.amount_usd > 100", effect: require_approval } ] }
 approvals:   { use: memory, timeout: 24h, on_timeout: escalate }
 budgets:     { per_run: { max_usd: 2.00, deadline: 5m } }
-state:       { use: sqlite, path: .harness/state.db }
+state:       { use: sqlite, path: .harness/state.db, record: false }   # record: keep runs for replay
 observability: { exporter: otlp, capture_content: false }
-evals:       { <task>: [ evals/golden.yaml ], online: { sample_rate: 0.05 } }
+evals:       { <task>: [ evals/golden.yaml ], online: { sample_rate: 0.05, graders: [ schema_valid ] } }
 tasks:       { <task>: { version: 1.0.0, runner: direct, output: "app.schemas:Invoice", budget: {...} } }
 # Profiles only:
 require_level: { default: L1, tiers: { customer_facing: L2, takes_actions: L3 } }
@@ -751,7 +751,7 @@ The core declares extras for convenience (`harnessweaver[openai]`, `harnessweave
 | `context` | `ContextProvider`, `Memory` | `passthrough`, `memory` (in-memory docs with ACL + lexical search), namespaced memory with TTL | pgvector, OpenSearch, Qdrant | `context.after` |
 | `state` | `StateStore` | `memory`, `sqlite` | Postgres, Redis | `run.*`, `approval.resolved` |
 | `observability` | `Telemetry` | OTel API telemetry, in-memory `RunTrace`; plugin: `otel.sdk` (SDK and exporters) | Langfuse, Phoenix, Logfire exporters | all |
-| `evals` | `Evaluator`, `DatasetStore` | built-in runner + deterministic graders + `llm_judge` | promptfoo, DeepEval, Ragas, Pydantic Evals | `run.end` |
+| `evals` | `Evaluator`; `DatasetStore` (planned) | `Harness.evaluate`, the deterministic graders and `llm_judge`, online sampling | promptfoo, DeepEval, Ragas, Pydantic Evals | `run.end` |
 
 ## 15. Integration styles and runners
 
@@ -871,7 +871,7 @@ flowchart TD
 
 **Policy at `run.start`.** A rule with `hook: run.start` decides whether a run or session may start, using `principal`, `tenant`, `task` and `labels` only (checked at load). `deny` blocks the run (`policy_denied`) and `require_approval` escalates it, because a run can't wait before it starts. Only these rules restrict a run: `default_effect` applies to tool calls.
 
-`harnessweaver policy test` (planned, 2.3) runs table-driven cases against the same decision. The same manifests generate allow-lists for the MCP gateway and LiteLLM's tool-permission guardrail (`harnessweaver gateway`, planned), so apps that call tools over the network get identical rules.
+**Dry runs** (ADR-0036). `Harness.authorize(tool, args, principal=, tenant=, task=, labels=)` runs steps 1 to 7 for a call that never executes, with `dry_run=True`: a rate-limit place taken is given back, and nothing is approved. `harnessweaver policy test` checks a table of such calls (`policy_tests.yaml`; schema `policy-tests`) against what each row expects: the `decision` and, when given, its `code`, `step` and `approver_role`. The same manifests generate allow-lists for the MCP gateway and LiteLLM's tool-permission guardrail (`harnessweaver gateway`, planned), so apps that call tools over the network get identical rules.
 
 ## 18. Approvals, state and durability
 
@@ -912,6 +912,7 @@ stateDiagram-v2
 - **Background runs.** Inside `async with harness:`, `harness.submit(...)` returns a run id at once. `harness.stream(run_id)` yields `RunEvent`s: `status` and `approval` events from the state store's event log, plus live `trace` and streamed `chunk` events.
 - **Idempotency.** `harness.run(..., idempotency_key=k)` returns the stored result for `(tenant, task, k)` instead of re-running.
 - **Durable runners.** Long-running work delegates to Temporal or DBOS through a `DurableRunner` plugin (planned). HarnessWeaver never builds its own scheduler.
+- **Recording and replay** (ADR-0035). With `state.record: true` a run keeps, in order, every model answer (with the digest of the request), tool result (with the call's digest) and human approval it got, as `RecordedCall`s in the state store. `harness.replay(run_id)` runs the task again on a copy of the harness built from the current spec: its model answers from the recording in order, its tools return the recorded result of a matching call and never execute, recorded approvals answer the approvals asked for again, and its runs stay in memory. The `ReplayReport` compares statuses, outputs and the decisions in the two traces (outcomes other than a plain continue, and coded notes), and counts changed requests and calls the recording didn't have. Recordings hold content, so they are off by default and an org can lock them off (R9).
 
 ## 19. Routing and decisions
 
@@ -982,6 +983,7 @@ The tokenizer, the lexical score, the hashing embedder and the cascade are part 
 - **Built-in guards.** `regex.deny`, `pii.regex` (e-mail, phone, Luhn-checked card numbers, US SSN, IPv4), `secrets.scan` (private keys, cloud and API keys, tokens, JWTs, credential assignments), `injection.heuristic` (weighted phrases; cheap and easy to evade), `size.limit`, `topic.deny`, `grounded.citations` (output sentences cite the context ids the run kept, ADR-0032) and `llm.judge` (a governed, budgeted model call; its own explanation isn't kept, R9). A finding can be marked `private` (as `pii.regex`'s are), which marks the run private (S3). Their patterns are part of the contract, written in regex syntax Python and TypeScript share.
 - **Location transparency.** `where: local | sidecar` picks where a guard runs. App code doesn't change.
 - **Shadow mode (R8).** `mode: log_only` records "would have fired" without enforcing. The evals module reports would-fire rates and false positives; promotion to `enforce` is a reviewed one-line change.
+- **Firing notes** (ADR-0036). A guard whose verdict isn't `allow` adds a `harness.guard` note to the trace: code `guard_fired`, or `guard_shadow` in shadow mode, with the guard's full name (`guardrails.input[pii]`, `tasks.<task>.guardrails.output[<id>]`), its action and its finding types, never the content (R9). `doctor`, `guard_fired` graders and the shadow-guard report use the same names.
 - **Validation.** Pydantic schema validation, then up to `max_repairs` (default 1) repair attempts. Each attempt sends the validation errors back to the model and is traced as a note with code `repair` (field locations and messages only, never the values, R9). Then `on_failure: escalate | block`. Business rules are cel-lite expressions over `output`, `input` and `task` installed as `output.before` middleware: a rule's `when` describes a violation, like a policy rule's `when` (ADR-0023). A true `when`, or one that can't be evaluated, asks for a repair with the rule's `message`.
 
 ## 21. Context and memory
@@ -1006,16 +1008,28 @@ memory: { use: memory, default_ttl: 30d }
 - **Content.** `capture_content: false` by default (R9). It is usually locked by the org baseline. When on, `gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.tool.call.arguments` and `gen_ai.tool.call.result` hold the content after `model.before`, `model.after`, `tool.before` and `tool.after` middleware, so redactions apply.
 - **Errors.** Spans record an error's type (`error.type`), never its message (R9).
 - **One owner (R5).** The core uses only the OTel *API*. The `otel.sdk` provider from `harnessweaver-otel` configures the SDK and the `exporter` (`console` or `otlp` at `endpoint`) only when `observability.configure_sdk: true`, and leaves an app's own SDK setup alone, so apps that already configure OTel aren't double-configured. An `exporter` without `configure_sdk` is a load error.
-- **RunTrace.** A framework-neutral, in-memory record of every hook outcome is always kept on the `RunResult`. It powers `assert_trace` in tests and `harnessweaver replay`.
+- **RunTrace.** A framework-neutral, in-memory record of every hook outcome is always kept on the `RunResult`. It powers `assert_trace` in tests, eval graders (`guard_fired`) and the decision comparison of `harnessweaver replay` (ADR-0035).
 - **Logs** go through loguru and are off until the app turns them on: `logger.enable("harnessweaver")`, plus `"harnessweaver_<plugin>"` for a plugin's own logs (ADR-0024). The harness never adds a sink, so where logs go is the app's choice; an app on the standard `logging` module adds a loguru sink that forwards each record. Logs carry ids and error types, never content (R9); the conformance suite checks loguru and `logging` output alike.
 
 ## 23. Evals
 
-- **One dataset format** (YAML) serves CI and production sampling: `suite`, `task`, `cases` (`input`, `expect`), `graders`, `thresholds`.
-- **Deterministic graders:** `exact`, `contains`, `regex`, `schema_valid`, `field_equals`, `numeric_close`, `citation_present`, `guard_fired`. There is also an `llm_judge` grader.
-- **`harnessweaver eval run --suite ci`** compares results against `.harness/baselines/<suite>.json` and exits non-zero on regression.
-- **Online sampling** at `run.end` (`evals.online.sample_rate`) writes graded samples to the state store.
-- **Shadow-guard report:** would-fire rate and false positives per `log_only` guard.
+```mermaid
+flowchart LR
+    data[evals/golden.yaml] --> run[Harness.evaluate: each case's task run]
+    run --> grade[graders: deterministic or llm_judge]
+    grade --> suite[SuiteResult: pass rate vs threshold]
+    suite --> base{baseline .harness/baselines/task.suite.json}
+    base -->|a passing case now fails| fail[exit 1]
+    prod[production runs] -->|run.end, sampled by run id| online[online graders -> OnlineSample]
+    online --> report[eval report: grader rates, shadow guards]
+```
+
+- **One dataset format** (ADR-0033; schema `eval-dataset`) serves CI and production: `suite`, `task`, `graders` (every case gets them), `thresholds.pass_rate` (default 1.0) and `cases`, each with an `id`, `input`, `expect`, its own extra `graders`, `principal` and `tenant`. A grader is written as its name or as `{name: settings}`; a single setting fills the field the grader's config names in `SHORTHAND` (`{field_equals: total}`). Each grader in a case is labelled `name`, `name:value` (a text, number or boolean setting) or `name#n` (a list or map; `n` counts that grader's uses in the case's list from 1), and a label can't repeat.
+- **Graders are `Evaluator` providers**, so plugins can add more. The deterministic ones score 1 or 0 (fixtures suite `evals`): `exact` (JSON equality: numbers by value, never a boolean as a number), `field_equals` and `numeric_close` (a dotted path such as `line_items.1.amount`, compared with the same path in `expect`; `tolerance` defaults to 1e-6), `contains`, `regex` and `citation_present` (the output's text: a string as it is, anything else as canonical JSON with sorted keys, no spaces, non-ASCII kept and integral numbers without a fraction), `schema_valid` (the run completed and its output matches the task's output schema, ADR-0026), `guard_fired` (a guard fired or would have, by id or full name; `fired: false` for cases that must stay quiet) and `status` (the run ended with one of the listed statuses, for red-team sets). `llm_judge` asks a model for a 0 to 1 score against a `rubric` and passes at `threshold`; it grades inside a session, so its calls are governed and budgeted, and its own reason isn't kept (R9). Grader reasons name fields, texts by position and rules, never content. A grader that raises fails its case, not the suite.
+- **`Harness.evaluate(dataset)`** runs every case's task in order and returns a `SuiteResult`: each case's grades and guard firings, the pass rate (to 6 decimals; the threshold is compared before rounding) and each grader's pass rate.
+- **`harnessweaver eval run`** (ADR-0034) runs the spec's suites with their runs kept in memory and compares each with `.harness/baselines/<task>.<suite>.json` (schema `baseline`). A case that passed in the baseline and fails now is a regression. It exits 1 when a suite misses its threshold or regresses and 2 when the suites can't run; `--update-baseline` writes the results of suites that meet their thresholds.
+- **Online sampling** at `run.end`. `evals.online.sample_rate` picks a run when FNV-1a 32 of its id, over 2^32, is below the rate, so every process and language agrees. The `evals.online` middleware (platform band, fails open: it is observability, not a control) grades the run with `evals.online.graders`, which must be deterministic (load error otherwise), and keeps an `OnlineSample` (the run id, task, tenant, status, grades and guard firings, but no content) in the state store. `Harness.samples()` and `harnessweaver eval report` read them.
+- **Shadow-guard report.** For each `log_only` guard: the runs, how many it would have fired on, the rate, and, in an eval suite, its false positives (cases it would fire on that don't expect it with a `guard_fired` grader) and misses (cases that expect it where it wouldn't fire). `eval run` prints it per suite; `eval report` gives the would-fire rate over production samples.
 
 ## 24. Cross-language delivery
 
@@ -1157,6 +1171,10 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | **0030** | Context governance (ACL re-check, labels, caps) runs inside the governed context call, before the `context.after` middleware, for fetched and app-supplied items alike; every drop is traced by item id | Defense in depth against a misbehaving provider can't depend on middleware order, and the same rules must cover items the app retrieved itself | Accepted |
 | **0031** | `Memory` is a key-value port with expiry, namespaced by the harness as `(tenant, principal, task)` and exposed as `s.memory`; the built-in provider is in-process | A namespaced store is infrastructure every app needs; what to remember stays with the app or its agent framework, so the core gains no memory model (R12) | Accepted |
 | **0032** | `grounded.citations` checks that output sentences (ending at `.`, `!` or `?` and a space, or a line break) of at least `min_words` words cite a context id in square brackets; it proposes `repair` when fewer than `min_supported` do, or when a citation names an id the run didn't keep | A cheap, deterministic grounding check that catches made-up sources; scoring how well a source supports a claim is left to later groundedness scorers and judges | Accepted |
+| **0033** | Eval datasets are YAML with `suite`, `task`, suite and case `graders`, `thresholds` and `cases`; graders are `Evaluator` providers built from `{name: settings}`, where a single setting fills the config's `SHORTHAND` field, and are labelled `name`, `name:value` or `name#n`. Deterministic graders score 0 or 1 and read non-text outputs as canonical JSON. `status` joins the guide's graders | One format for CI and production; labels make baselines and reports stable without ids on every grader; a port lets promptfoo, DeepEval or Ragas plug in; canonical text and number rules let Python and TypeScript grade identically (fixtures suite `evals`); red-team sets need to assert that a run was blocked | Accepted |
+| **0034** | Baselines live in `.harness/baselines/<task>.<suite>.json`; a regression is a case that passed in the baseline and fails now; `eval run` exits 1 for a missed threshold or a regression and 2 when it can't run. Online sampling picks runs by FNV-1a of the run id, grades them only with deterministic graders in a platform-band `run.end` middleware that fails open, and keeps `OnlineSample`s (no content) through new `StateStore` methods. A shadow guard's false positives are cases without a `guard_fired` grader naming it | Per-task file names avoid two tasks' `golden` suites colliding; CI must tell a quality drop from a broken setup; a hash of the id samples the same runs everywhere; judges' cost and latency don't belong in production runs, and sampling must never fail a run (R2 is for controls); eval cases are the ground truth for promoting a guard (R8) | Accepted |
+| **0035** | `state.record: true` keeps each run's model answers, tool results and approvals as `RecordedCall`s through new `StateStore` methods. `Harness.replay` and `harnessweaver replay` run the task again on a copy of the harness built from the current spec, answering from the recording, never executing tools, answering repeated approvals from the recorded ones, with the copy's runs in memory; the report compares statuses, outputs and trace decisions | The guide's replay of production runs against current code and spec needs the run's inputs from outside, and a replay must never repeat a side effect or spend tokens. Recordings hold content, so they are opt-in, kept only in the app's own store, and lockable by the org (R9) | Accepted |
+| **0036** | `ToolGovernor.authorize` takes `dry_run`, and `Harness.authorize` runs steps 1 to 7 on a call that never executes; `harnessweaver policy test` checks tables of calls with it. Guards that fire are traced as `harness.guard` notes (`guard_fired`, `guard_shadow`) naming the guard as `doctor` does | Policy tests must exercise exactly the production decision, including manifests, approval rules and the trifecta, without using up rate limits; eval graders and reports need guard firings as data, not parsed from reasons | Accepted |
 
 ## 29. Deviations from the design guide
 

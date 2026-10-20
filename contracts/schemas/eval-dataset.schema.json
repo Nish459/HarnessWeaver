@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:eval-dataset",
+  "title": "EvalDataset",
+  "$defs": {
+    "EvalCase": {
+      "additionalProperties": false,
+      "description": "One case: the input the task runs on and what the graders compare against.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "input": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null
+        },
+        "expect": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null,
+          "description": "What comparing graders expect."
+        },
+        "graders": {
+          "default": [],
+          "description": "Added to the suite's.",
+          "items": {
+            "$ref": "#/$defs/GraderItem"
+          },
+          "title": "Graders",
+          "type": "array"
+        },
+        "principal": {
+          "default": "eval",
+          "minLength": 1,
+          "title": "Principal",
+          "type": "string"
+        },
+        "tenant": {
+          "default": "default",
+          "minLength": 1,
+          "title": "Tenant",
+          "type": "string"
+        },
+        "tags": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "EvalCase",
+      "type": "object"
+    },
+    "GraderItem": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "JsonValue": {},
+    "Thresholds": {
+      "additionalProperties": false,
+      "properties": {
+        "pass_rate": {
+          "default": 1.0,
+          "description": "Share of cases that must pass.",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Pass Rate",
+          "type": "number"
+        }
+      },
+      "title": "Thresholds",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A suite of cases for one task (DESIGNS No. 23).",
+  "properties": {
+    "suite": {
+      "minLength": 1,
+      "title": "Suite",
+      "type": "string"
+    },
+    "task": {
+      "minLength": 1,
+      "title": "Task",
+      "type": "string"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "graders": {
+      "default": [],
+      "description": "Every case gets these.",
+      "items": {
+        "$ref": "#/$defs/GraderItem"
+      },
+      "title": "Graders",
+      "type": "array"
+    },
+    "thresholds": {
+      "$ref": "#/$defs/Thresholds",
+      "default": {
+        "pass_rate": 1.0
+      }
+    },
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/EvalCase"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "suite",
+    "task",
+    "cases"
+  ],
+  "type": "object"
+}

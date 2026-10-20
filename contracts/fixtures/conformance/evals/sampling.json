@@ -1,0 +1,12 @@
+{
+  "suite": "evals",
+  "description": "Online sampling: a run is sampled when FNV-1a 32 of its id's UTF-8 bytes, divided by 2^32, is below the sample rate.",
+  "cases": [
+    { "name": "below the rate", "run_id": "run_0004", "rate": 0.08, "expect": { "sampled": true } },
+    { "name": "above the rate", "run_id": "run_0001", "rate": 0.08, "expect": { "sampled": false } },
+    { "name": "just below a half", "run_id": "run_a", "rate": 0.5, "expect": { "sampled": true } },
+    { "name": "well above a half", "run_id": "a", "rate": 0.5, "expect": { "sampled": false } },
+    { "name": "a rate of 1 samples everything", "run_id": "a", "rate": 1, "expect": { "sampled": true } },
+    { "name": "a rate of 0 samples nothing", "run_id": "run_0004", "rate": 0, "expect": { "sampled": false } }
+  ]
+}

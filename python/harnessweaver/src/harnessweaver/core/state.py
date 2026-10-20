@@ -13,17 +13,20 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, JsonValue
 
 from harnessweaver.core.digests import canonical_digest
 from harnessweaver.core.envelope import Envelope, Labels
-from harnessweaver.core.messages import ToolCall, Usage
+from harnessweaver.core.messages import ModelRequest, ModelResponse, ToolCall, Usage
 from harnessweaver.core.results import RunResult
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest, RunStatus
+from harnessweaver.core.tools import ToolResult
 
 __all__ = [
     "Checkpoint",
     "Grant",
     "MeterSnapshot",
+    "RecordedCall",
     "RunRecord",
     "call_digest",
     "output_digest",
+    "request_digest",
 ]
 
 
@@ -35,6 +38,11 @@ def call_digest(call: ToolCall) -> str:
 def output_digest(output: JsonValue) -> str:
     """Identify a candidate output."""
     return canonical_digest({"output": output})
+
+
+def request_digest(request: ModelRequest) -> str:
+    """Identify what a model was asked; request metadata isn't part of it."""
+    return canonical_digest({"request": request.model_dump(mode="json", exclude={"metadata"})})
 
 
 class _Record(BaseModel):
@@ -98,3 +106,25 @@ class Checkpoint(_Record):
     context_ids: tuple[str, ...] = Field(
         default=(), description="Ids of the context items the run kept, for citation checks."
     )
+
+
+class RecordedCall(_Record):
+    """What a recorded run got from outside: a model's answer, a tool's result, or a
+    human's approval, in order (``state.record: true``, ADR-0035).
+
+    ``harnessweaver replay`` feeds these back to the run instead of calling out.
+    Unlike traces, recordings hold content: the state store keeps them like it
+    keeps a run's input, and they are off unless the spec turns them on (R9).
+    """
+
+    run_id: str = Field(min_length=1)
+    seq: int = Field(ge=0)
+    kind: Literal["model", "tool", "approval"]
+    digest: str = Field(
+        description="model: request_digest of the request; tool: call_digest; "
+        "approval: call_digest or output_digest of what it covers."
+    )
+    response: ModelResponse | None = None
+    result: ToolResult | None = None
+    hook: Literal["tool.before", "output.before"] | None = None
+    decision: ApprovalDecision | None = None

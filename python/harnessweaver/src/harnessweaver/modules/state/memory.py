@@ -2,9 +2,10 @@
 
 from pydantic import BaseModel, ConfigDict
 
+from harnessweaver.core.evals import OnlineSample
 from harnessweaver.core.plugins import provider
 from harnessweaver.core.results import RunEvent
-from harnessweaver.core.state import Checkpoint, RunRecord
+from harnessweaver.core.state import Checkpoint, RecordedCall, RunRecord
 
 __all__ = ["MemoryStateConfig", "MemoryStateStore"]
 
@@ -23,7 +24,8 @@ class MemoryStateConfig(BaseModel):
     latency_class="fast",
 )
 class MemoryStateStore:
-    """Runs, checkpoints, idempotency records and events, kept in dictionaries.
+    """Runs, checkpoints, idempotency records, events, recordings and online samples,
+    kept in dictionaries.
 
     Records are immutable models, so they are stored as they are.
     """
@@ -33,6 +35,8 @@ class MemoryStateStore:
         self._checkpoints: dict[str, Checkpoint] = {}
         self._keys: dict[tuple[str, str, str], str] = {}
         self._events: dict[str, dict[int, RunEvent]] = {}
+        self._recordings: dict[str, dict[int, RecordedCall]] = {}
+        self._samples: dict[str, OnlineSample] = {}
 
     async def put_run(self, record: RunRecord) -> None:
         self._runs[record.run_id] = record
@@ -59,6 +63,20 @@ class MemoryStateStore:
         """Events in ``seq`` order; a repeated ``seq`` replaces the earlier event."""
         stored = self._events.get(run_id, {})
         return [stored[seq] for seq in sorted(stored)]
+
+    async def append_recording(self, call: RecordedCall) -> None:
+        self._recordings.setdefault(call.run_id, {})[call.seq] = call
+
+    async def recording(self, run_id: str) -> list[RecordedCall]:
+        stored = self._recordings.get(run_id, {})
+        return [stored[seq] for seq in sorted(stored)]
+
+    async def put_sample(self, sample: OnlineSample) -> None:
+        self._samples.pop(sample.run_id, None)
+        self._samples[sample.run_id] = sample
+
+    async def samples(self, task: str | None = None) -> list[OnlineSample]:
+        return [s for s in self._samples.values() if task is None or s.task == task]
 
     async def aclose(self) -> None:
         return None

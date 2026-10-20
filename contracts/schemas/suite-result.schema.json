@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:suite-result",
+  "title": "SuiteResult",
+  "$defs": {
+    "CaseResult": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "status": {
+          "$ref": "#/$defs/RunStatus"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Run Id"
+        },
+        "grades": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GraderResult"
+          },
+          "title": "Grades",
+          "type": "array"
+        },
+        "guards": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GuardFiring"
+          },
+          "title": "Guards",
+          "type": "array"
+        },
+        "cost_usd": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Usd"
+        }
+      },
+      "required": [
+        "id",
+        "passed",
+        "status"
+      ],
+      "title": "CaseResult",
+      "type": "object"
+    },
+    "GraderResult": {
+      "additionalProperties": false,
+      "properties": {
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Score",
+          "type": "number"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Names fields and rules, not content.",
+          "title": "Reason"
+        },
+        "grader": {
+          "description": "The grader's label.",
+          "minLength": 1,
+          "title": "Grader",
+          "type": "string"
+        }
+      },
+      "required": [
+        "passed",
+        "score",
+        "grader"
+      ],
+      "title": "GraderResult",
+      "type": "object"
+    },
+    "GuardAction": {
+      "description": "What a guardrail wants done with the content it checked.\n\nThe guardrails module maps actions onto hook outcomes (DESIGNS No. 9).",
+      "enum": [
+        "allow",
+        "redact",
+        "repair",
+        "escalate",
+        "require_approval",
+        "block",
+        "log_only"
+      ],
+      "title": "GuardAction",
+      "type": "string"
+    },
+    "GuardFiring": {
+      "additionalProperties": false,
+      "description": "A guard whose verdict wasn't ``allow``, read from the run's trace.",
+      "properties": {
+        "guard": {
+          "description": "Its full name, like guardrails.input[pii].",
+          "minLength": 1,
+          "title": "Guard",
+          "type": "string"
+        },
+        "action": {
+          "$ref": "#/$defs/GuardAction"
+        },
+        "shadow": {
+          "default": false,
+          "description": "In log_only mode: it would have fired.",
+          "title": "Shadow",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "guard",
+        "action"
+      ],
+      "title": "GuardFiring",
+      "type": "object"
+    },
+    "RunStatus": {
+      "description": "Where a run is in its lifecycle (DESIGNS No. 18).",
+      "enum": [
+        "pending",
+        "running",
+        "awaiting_approval",
+        "completed",
+        "blocked",
+        "escalated",
+        "failed",
+        "cancelled"
+      ],
+      "title": "RunStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A suite's cases, its pass rate and whether it meets its threshold.",
+  "properties": {
+    "suite": {
+      "minLength": 1,
+      "title": "Suite",
+      "type": "string"
+    },
+    "task": {
+      "minLength": 1,
+      "title": "Task",
+      "type": "string"
+    },
+    "threshold": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Threshold",
+      "type": "number"
+    },
+    "pass_rate": {
+      "description": "To 6 decimal places.",
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Pass Rate",
+      "type": "number"
+    },
+    "passed": {
+      "description": "pass_rate >= threshold.",
+      "title": "Passed",
+      "type": "boolean"
+    },
+    "grader_rates": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "description": "Share of cases each grader passed.",
+      "title": "Grader Rates",
+      "type": "object"
+    },
+    "cases": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/CaseResult"
+      },
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "suite",
+    "task",
+    "threshold",
+    "pass_rate",
+    "passed"
+  ],
+  "type": "object"
+}

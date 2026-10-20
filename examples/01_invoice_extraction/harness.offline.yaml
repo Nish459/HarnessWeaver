@@ -1,9 +1,23 @@
 # HARNESSWEAVER_ENV=offline: a scripted model in place of the gateway, so the
 # example runs with no network and no keys (R14). Its first answer has a date
 # that isn't a date and a total that isn't a number; the harness asks for one
-# repair, and the second answer is valid.
+# repair, and the second answer is valid. The rule answers the golden set's
+# other invoice, so `harnessweaver eval run -e offline` passes.
 models:
   provider: scripted
+  rules:
+    - contains: "Invoice 7781"
+      reply:
+        output:
+          invoice_number: "7781"
+          vendor: Contoso Paper
+          issued_on: "2026-08-01"
+          currency: USD
+          line_items:
+            - { description: A4 paper ream, quantity: 10, unit_price: 5.00, amount: 50.00 }
+          subtotal: 50.00
+          tax: 0.00
+          total: 50.00
   replies:
     - output:
         invoice_number: INV-2026-0042

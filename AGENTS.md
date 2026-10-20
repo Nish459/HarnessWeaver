@@ -68,6 +68,7 @@ uv sync --all-packages          # install every workspace package + dev tools in
 | Run an example offline | `HARNESSWEAVER_ENV=offline uv run python examples/01_invoice_extraction/run.py` |
 | CLI from source | `uv run harnessweaver --help` |
 | Check a spec | `uv run harnessweaver spec validate <spec> -e offline`, `uv run harnessweaver doctor <spec>`, `uv run harnessweaver hooks <spec>` |
+| Evals, policy tests, replay | `uv run harnessweaver eval run <spec> -e offline`, `uv run harnessweaver policy test <spec>`, `uv run harnessweaver replay <run_id> <spec>` |
 | TypeScript | `pnpm -C typescript install && pnpm -C typescript test && pnpm -C typescript build` |
 | Docs site | `make docs` (`mkdocs build --strict`) |
 

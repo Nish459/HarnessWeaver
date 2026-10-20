@@ -82,8 +82,11 @@ class Governor:
         call: ToolCall,
         tool: ToolDescription,
         approval: ApprovalDecision | None,
+        *,
+        dry_run: bool = False,
     ) -> ToolVerdict:
-        """Steps 1 to 7 for one call; the verdict is traced (R13)."""
+        """Steps 1 to 7 for one call; the verdict is traced (R13). A dry run gives
+        back the rate-limit place it took."""
         reservation: Reservation | None = None
         verdict = self._registry(ctx, tool) or self._schema(call, tool)
         if verdict is None:
@@ -95,7 +98,7 @@ class Governor:
                 effect, verdict = await self._judge(ctx, call, effect, reasons)
             if verdict is None:
                 verdict = self._approval(effect, role, reasons, approval)
-        if verdict.decision != "allow" and reservation is not None:
+        if reservation is not None and (dry_run or verdict.decision != "allow"):
             self.limiter.release(reservation)
         ctx.trace.note(
             _SOURCE,

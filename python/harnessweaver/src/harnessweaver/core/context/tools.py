@@ -110,6 +110,7 @@ class ToolCalls(RunContextBase):
                 result = ToolResult(
                     call_id=call.id, output={"error": type(exc).__name__}, is_error=True
                 )
+            await self.record("tool", call_digest(call), result=result)
             if self.governor is not None:
                 result = await self.governor.sanitize(self, call, description, result)
             after = await self.emit(

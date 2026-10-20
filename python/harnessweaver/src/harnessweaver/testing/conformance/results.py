@@ -12,6 +12,7 @@ from harnessweaver.core.bus import HookBus
 from harnessweaver.core.decisions import Decision
 from harnessweaver.core.envelope import Envelope, FakeClock
 from harnessweaver.core.errors import ProviderError
+from harnessweaver.core.evals import Grade, OnlineSample
 from harnessweaver.core.guards import GuardAction, GuardResult
 from harnessweaver.core.hooks import Band, HookPoint
 from harnessweaver.core.messages import ModelResponse, StreamChunk
@@ -25,11 +26,12 @@ from harnessweaver.core.ports import StreamingModelProvider
 from harnessweaver.core.results import RunEvent
 from harnessweaver.core.retrieval import ContextItem
 from harnessweaver.core.runs import RunStatus
-from harnessweaver.core.state import Checkpoint, RunRecord
-from harnessweaver.core.tools import SandboxLimits, SandboxResult
+from harnessweaver.core.state import Checkpoint, RecordedCall, RunRecord
+from harnessweaver.core.tools import SandboxLimits, SandboxResult, ToolResult
 from harnessweaver.modules.guardrails import Guard, guard_handler
 from harnessweaver.testing.conformance.builds import build
 from harnessweaver.testing.conformance.common import Subject, conformance_env, expect
+from harnessweaver.testing.conformance.evaluators import evaluator_contract, sample_eval_samples
 from harnessweaver.testing.kit import harness_for_test, output, scripted
 from harnessweaver.testing.samples import (
     CANARY,
@@ -46,8 +48,15 @@ __all__ = ["check_deterministic", "check_results", "check_timeout_blocks", "sess
 
 @contextmanager
 def session_run() -> Iterator[Any]:
-    """A harness whose scripted model also answers ``llm.judge`` and ``llm`` routing questions."""
-    answer = {"pass": True, "reason": "fine", "choice": "billing", "confidence": 0.9}
+    """A harness whose scripted model also answers ``llm.judge``, ``llm`` routing and
+    ``llm_judge`` grading questions."""
+    answer = {
+        "pass": True,
+        "reason": "fine",
+        "choice": "billing",
+        "confidence": 0.9,
+        "score": 0.8,
+    }
     yield harness_for_test({}, model=scripted(output(answer)))
 
 
@@ -107,7 +116,30 @@ async def _state_contract(store: Any) -> None:
     expect(
         [e.seq for e in await store.events("run_conformance")] == [0, 1, 2], "events in seq order"
     )
+    for seq in (1, 0):
+        result = ToolResult(call_id="c", output=seq)
+        call = RecordedCall(
+            run_id="run_conformance", seq=seq, kind="tool", digest="d", result=result
+        )
+        await store.append_recording(call)
+    recorded = [c.seq for c in await store.recording("run_conformance")]
+    expect(recorded == [0, 1], "recordings in seq order")
+    expect(await store.recording("run_missing") == [], "no recording for an unknown run")
+    for run_id, task in (("run_conformance", "x"), ("run_other", "y")):
+        sample = OnlineSample(
+            run_id=run_id, task=task, tenant="t", at=now, status=RunStatus.COMPLETED
+        )
+        await store.put_sample(sample)
+    expect([s.run_id for s in await store.samples("x")] == ["run_conformance"], "samples by task")
+    expect(len(await store.samples()) == 2, "every sample")
     await store.aclose()
+
+
+async def evaluator_grades(provider: Any) -> list[Grade]:
+    """A grader's grades for the sample runs, inside a session (judges call models)."""
+    with session_run() as harness:
+        async with harness.session():
+            return [await provider.grade(sample) for sample in sample_eval_samples()]
 
 
 async def _policy_results(engine: Any) -> list[PolicyDecision]:
@@ -193,6 +225,8 @@ async def check_results(subject: Subject) -> None:
         expect(len({len(v) for v in vectors}) == 1, f"{item.name} vectors differ in length")
     elif item.port == "Memory":
         await _memory_contract(item.name, provider)
+    elif item.port == "Evaluator":
+        evaluator_contract(item.name, await evaluator_grades(provider))
     elif item.port == "ApprovalChannel":
         # A live channel refuses the network in test mode (R14).
         with contextlib.suppress(ProviderError):
@@ -224,6 +258,10 @@ async def check_deterministic(subject: Subject) -> None:
         first_vectors = await build(subject.contribution).embed(texts)
         second_vectors = await build(subject.contribution).embed(texts)
         expect(first_vectors == second_vectors, f"{item.name} embedded differently the second time")
+    elif item.port == "Evaluator":
+        first_grades = await evaluator_grades(build(subject.contribution))
+        second_grades = await evaluator_grades(build(subject.contribution))
+        expect(first_grades == second_grades, f"{item.name} graded differently the second time")
     elif item.port == "PolicyEngine":
         first_policy = await _policy_results(build(subject.contribution))
         second_policy = await _policy_results(build(subject.contribution))

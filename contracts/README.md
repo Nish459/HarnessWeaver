@@ -35,6 +35,9 @@ make schemas-check    # report drift
 | `trace-event` | One entry in a run's trace: a hook that fired, a middleware's outcome or failure, or a framework note |
 | `run-result`, `run-event` | A run's status, output or error, usage, cost and trace; and the progress events `harness.stream` yields |
 | `error-info` | The serializable error taxonomy |
+| `eval-dataset`, `eval-sample`, `grade`, `suite-result`, `baseline`, `online-sample` | Eval datasets, what a grader sees and says, a suite's results, its stored baseline, and a graded production sample |
+| `policy-tests` | A `harnessweaver policy test` table: tool calls and the governor's expected verdicts |
+| `recorded-call`, `replay-report` | What a recorded run got from outside (`state.record`), and what replaying it found |
 
 Every schema has `$id` `urn:harnessweaver:v1:<name>`. Within `harnessweaver/v1`, changes are additive only (V2).
 
@@ -70,6 +73,7 @@ The fields of a case depend on the suite:
 | `guards` | `guard` + `config` + `content` (and the run's kept `context_ids`, for `grounded.citations`), or a pipeline: `stage`, `guards: [{id, use, config, action, mode, parallel}]`, `content` | the provider's `{action, content, findings, score}`, or the combined `outcome`, the payload's `content` afterwards and a trace `note` |
 | `governor` | a `definition`; a `rate`; a `schema` and `value`; `rules`, `default_effect` and a policy `request`; a `tool` (manifest fields) with `args` and the run's `principal`, `tenant`, `task`, `labels`, `policy`, `tools`, `task_approvals`, `previous_calls`, `approved`; or an `output` with an output `policy` | the `canonical` text and `digest`; `{count, seconds}`; `{valid, locations}` or `{error}`; the `{effect, rule}`; the `{decision, step, code}`; or the sanitized `{output, truncated, untrusted}` |
 | `routing` | `tokens`; `a` and `b` (with `dims` for embeddings); `embed` and `dims`; a `stage` (`rules` or `lexical`) with its `config` and a `request`; or a cascade's `stages` (`{answer}` or `{error}`, optional `threshold`), `options` and `default` | the tokens; the `similarity` or `cosine` (6 decimals); the `vector`; the decision `{kind, choice, confidence}`; or the winning `decision` `{kind, choice, stage}` and per-stage `won` |
+| `evals` | a `grader` (as a dataset writes it) and a `sample`; a `dataset`; a `summarize` (`threshold`, `cases` with grades); a `baseline` and the `current` cases; a `run_id` and `rate`; or `shadow_guards` and `cases` (`graders`, `guards` that fired) | `{passed}` (score 1 or 0) or `{error: "unknown" \| "invalid"}`; the grader labels by case or `{error: "invalid"}`; `{pass_rate, passed, grader_rates}`; `{regressed, fixed, added, removed, regression}`; `{sampled}`; or the `report` per guard |
 
 Expected values are written by hand from the design, never copied from an implementation's output. When `expect.type` is given for a number, implementations must also return that cel-lite type (`int` or `double`).
 

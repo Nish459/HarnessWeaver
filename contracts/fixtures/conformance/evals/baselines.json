@@ -1,0 +1,53 @@
+{
+  "suite": "evals",
+  "description": "Suite summaries (pass rate to 6 decimals, threshold, per-grader rates) and comparisons with a stored baseline. A case that passed in the baseline and fails now is a regression; ids are listed in sorted order.",
+  "cases": [
+    {
+      "name": "a summary below its threshold",
+      "summarize": {
+        "threshold": 0.9,
+        "cases": [
+          { "id": "a", "grades": [ { "grader": "exact", "passed": true }, { "grader": "contains:x", "passed": true } ] },
+          { "id": "b", "grades": [ { "grader": "exact", "passed": true }, { "grader": "contains:x", "passed": false } ] },
+          { "id": "c", "grades": [ { "grader": "exact", "passed": true } ] }
+        ]
+      },
+      "expect": { "pass_rate": 0.666667, "passed": false, "grader_rates": { "exact": 1.0, "contains:x": 0.5 } }
+    },
+    {
+      "name": "a summary that meets its threshold exactly",
+      "summarize": {
+        "threshold": 0.5,
+        "cases": [
+          { "id": "a", "grades": [ { "grader": "status:blocked", "passed": true } ] },
+          { "id": "b", "grades": [ { "grader": "status:blocked", "passed": false } ] }
+        ]
+      },
+      "expect": { "pass_rate": 0.5, "passed": true, "grader_rates": { "status:blocked": 0.5 } }
+    },
+    {
+      "name": "without a baseline every case is new",
+      "baseline": null,
+      "current": { "cases": { "b": false, "a": true } },
+      "expect": { "regressed": [], "fixed": [], "added": ["a", "b"], "removed": [], "regression": false }
+    },
+    {
+      "name": "a case that passed and fails now is a regression",
+      "baseline": { "suite": "golden", "task": "t", "pass_rate": 0.666667, "cases": { "a": true, "b": true, "c": false } },
+      "current": { "cases": { "a": true, "b": false, "c": true, "d": false } },
+      "expect": { "regressed": ["b"], "fixed": ["c"], "added": ["d"], "removed": [], "regression": true }
+    },
+    {
+      "name": "removing a passing case isn't a regression",
+      "baseline": { "suite": "golden", "task": "t", "pass_rate": 1.0, "cases": { "a": true, "z": true } },
+      "current": { "cases": { "a": true } },
+      "expect": { "regressed": [], "fixed": [], "added": [], "removed": ["z"], "regression": false }
+    },
+    {
+      "name": "regressions are listed in sorted order",
+      "baseline": { "suite": "golden", "task": "t", "pass_rate": 1.0, "cases": { "b": true, "a": true } },
+      "current": { "cases": { "b": false, "a": false } },
+      "expect": { "regressed": ["a", "b"], "fixed": [], "added": [], "removed": [], "regression": true }
+    }
+  ]
+}

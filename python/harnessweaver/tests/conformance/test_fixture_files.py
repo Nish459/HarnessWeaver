@@ -7,6 +7,7 @@ SUITES_WITH_RUNNERS = {
     "budgets",
     "bus",
     "durations",
+    "evals",
     "expr",
     "governor",
     "guards",

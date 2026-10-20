@@ -1,0 +1,52 @@
+{
+  "suite": "evals",
+  "description": "The shadow-guard report for log_only guards over an eval suite. A case expects a guard to fire when it has a guard_fired grader naming it (by full name, or by the id in its brackets) without fired: false; firing anywhere else is a false positive.",
+  "cases": [
+    {
+      "name": "would-fire rate, false positives and misses",
+      "shadow_guards": ["guardrails.input[injection]", "guardrails.output[toxicity]"],
+      "cases": [
+        {
+          "id": "attack-1",
+          "graders": [ { "guard_fired": "injection" } ],
+          "guards": [ { "guard": "guardrails.input[injection]", "action": "block", "shadow": true } ]
+        },
+        { "id": "attack-2", "graders": [ { "guard_fired": "guardrails.input[injection]" } ], "guards": [] },
+        {
+          "id": "benign-1",
+          "graders": ["exact"],
+          "guards": [ { "guard": "guardrails.input[injection]", "action": "block", "shadow": true } ]
+        },
+        {
+          "id": "benign-2",
+          "graders": ["exact"],
+          "guards": [
+            { "guard": "guardrails.output[toxicity]", "action": "redact", "shadow": true },
+            { "guard": "guardrails.input[pii]", "action": "redact", "shadow": false }
+          ]
+        },
+        { "id": "benign-3", "graders": [ { "guard_fired": { "guard": "toxicity", "fired": false } } ], "guards": [] }
+      ],
+      "expect": {
+        "report": [
+          { "guard": "guardrails.input[injection]", "runs": 5, "would_fire": 2, "rate": 0.4, "false_positives": ["benign-1"], "misses": ["attack-2"] },
+          { "guard": "guardrails.output[toxicity]", "runs": 5, "would_fire": 1, "rate": 0.2, "false_positives": ["benign-2"], "misses": [] }
+        ]
+      }
+    },
+    {
+      "name": "a guard that never fires",
+      "shadow_guards": ["tasks.t.guardrails.output[secrets]"],
+      "cases": [
+        { "id": "a", "graders": ["exact"], "guards": [] },
+        { "id": "b", "graders": ["exact"], "guards": [] },
+        { "id": "c", "graders": ["exact"], "guards": [ { "guard": "guardrails.output[secrets]", "action": "block", "shadow": true } ] }
+      ],
+      "expect": {
+        "report": [
+          { "guard": "tasks.t.guardrails.output[secrets]", "runs": 3, "would_fire": 0, "rate": 0.0, "false_positives": [], "misses": [] }
+        ]
+      }
+    }
+  ]
+}

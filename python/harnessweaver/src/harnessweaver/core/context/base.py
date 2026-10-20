@@ -1,8 +1,8 @@
 """The state of one run and the hook plumbing its governed operations share."""
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Awaitable, Callable, Iterable, Mapping
 from datetime import timedelta
-from typing import Any, NoReturn
+from typing import Any, Literal, NoReturn
 
 from pydantic import JsonValue
 
@@ -44,7 +44,7 @@ from harnessweaver.core.ports import (
     ToolBackend,
     ToolGovernor,
 )
-from harnessweaver.core.state import Grant
+from harnessweaver.core.state import Grant, RecordedCall
 from harnessweaver.core.telemetry import Telemetry
 from harnessweaver.core.trace import RunTrace
 
@@ -76,6 +76,8 @@ class RunContextBase:
         memory: Memory | None = None,
         memory_ttl: timedelta | None = None,
         context_ids: Iterable[str] = (),
+        recorder: Callable[[RecordedCall], Awaitable[None]] | None = None,
+        recorded: int = 0,
     ) -> None:
         self._envelope = envelope
         self.bus = bus
@@ -97,6 +99,9 @@ class RunContextBase:
         self.memory_ttl = memory_ttl
         self.context_ids: set[str] = set(context_ids)
         """Ids of the context items this run kept, for ``grounded.citations``."""
+        self.recorder = recorder
+        """Keeps what the run gets from outside, for replay (``state.record``)."""
+        self._recorded = recorded
         self.input: JsonValue = None
         """The run's input after ``input.before``, for validation rules."""
         self.pending: PendingApproval | None = None
@@ -125,6 +130,19 @@ class RunContextBase:
         self._envelope = self._envelope.model_copy(
             update={"budget": self.meter.remaining(self._envelope.remaining())}
         )
+
+    async def record(
+        self, kind: Literal["model", "tool", "approval"], digest: str, **fields: Any
+    ) -> None:
+        """Keep a model answer, tool result or approval when the spec records runs
+        (``state.record: true``, ADR-0035)."""
+        if self.recorder is None:
+            return
+        call = RecordedCall(
+            run_id=self.run_id, seq=self._recorded, kind=kind, digest=digest, **fields
+        )
+        self._recorded += 1
+        await self.recorder(call)
 
     def mark_untrusted(self, source: str) -> None:
         """Record that untrusted content entered the run (S3)."""

@@ -14,9 +14,9 @@ way (ADR-0025, fixtures suite ``governor``):
 """
 
 from collections.abc import Callable, Sequence
-from typing import Final, Literal
+from typing import Final, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from harnessweaver.core.decisions import PolicyEffect
 from harnessweaver.core.envelope import Labels, Principal
@@ -25,11 +25,13 @@ from harnessweaver.core.tools import ToolInfo
 __all__ = [
     "RUN_POLICY_VARIABLES",
     "TOOL_POLICY_VARIABLES",
+    "PolicyCase",
     "PolicyConfig",
     "PolicyDecision",
     "PolicyHook",
     "PolicyRequest",
     "PolicyRule",
+    "PolicyTests",
     "decide_by_rules",
 ]
 
@@ -138,3 +140,41 @@ def decide_by_rules(
         return best
     effect = default_effect if hook == "tool.before" else PolicyEffect.ALLOW
     return PolicyDecision(effect=effect, reason=f"no policy rule matched; default {effect.value}")
+
+
+class PolicyCase(BaseModel):
+    """One row of a ``harnessweaver policy test`` table: a tool call, who makes it, and
+    what the governor must decide (steps 1 to 7, as a dry run)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: str = Field(min_length=1)
+    description: str | None = None
+    tool: str = Field(min_length=1)
+    args: dict[str, JsonValue] = Field(default_factory=dict[str, JsonValue])
+    principal: Principal | str = "anonymous"
+    tenant: str = Field(default="default", min_length=1)
+    task: str | None = None
+    labels: Labels = Labels()
+    expect: Literal["allow", "require_approval", "block"]
+    code: str | None = Field(default=None, description="The verdict's code, when given.")
+    step: int | None = Field(default=None, ge=1, le=7, description="The deciding step.")
+    approver_role: str | None = Field(default=None, description="Who must approve, when given.")
+
+
+class PolicyTests(BaseModel):
+    """A file of :class:`PolicyCase` rows."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    description: str | None = None
+    cases: tuple[PolicyCase, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _unique_ids(self) -> Self:
+        seen: set[str] = set()
+        for case in self.cases:
+            if case.id in seen:
+                raise ValueError(f"case {case.id} is listed twice")
+            seen.add(case.id)
+        return self

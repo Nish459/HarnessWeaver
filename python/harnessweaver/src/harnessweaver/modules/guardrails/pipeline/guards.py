@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any, Final, Literal
 
+from pydantic import JsonValue
+
 from harnessweaver.core.context import current_run
 from harnessweaver.core.envelope import Envelope
 from harnessweaver.core.guards import GuardAction, GuardResult
@@ -68,6 +70,8 @@ class Guard:
     mode: Literal["enforce", "log_only"] = "enforce"
     fail_mode: FailMode = "closed"
     timeout: timedelta | None = None
+    name: str = ""
+    """Its full name, like ``guardrails.input[pii]``: what traces and eval reports use."""
 
     @property
     def shadow(self) -> bool:
@@ -89,11 +93,33 @@ async def check(guard: Guard, texts: Sequence[str], env: Envelope) -> Verdict:
     ctx = current_run()
     telemetry = ctx.telemetry if ctx is not None else None
     if telemetry is None:
-        return await _check(guard, texts, env)
+        verdict = await _check(guard, texts, env)
+        _note(guard, verdict)
+        return verdict
     with telemetry.guard_span(guard.id, None, guard.mode) as span:
         verdict = await _check(guard, texts, env)
         telemetry.guard_done(span, verdict.action.value, list(verdict.findings))
+        _note(guard, verdict)
         return verdict
+
+
+def _note(guard: Guard, verdict: Verdict) -> None:
+    """Trace a guard that fired, or would have in shadow mode, by name (R8, R13)."""
+    ctx = current_run()
+    if ctx is None or verdict.action in (GuardAction.ALLOW, GuardAction.LOG_ONLY):
+        return
+    name = guard.name or guard.id
+    verb = "would " if guard.shadow else ""
+    ctx.trace.note(
+        "harness.guard",
+        f"{name} {verb}{verdict.action.value}",
+        code="guard_shadow" if guard.shadow else "guard_fired",
+        details={
+            "guard": name,
+            "action": verdict.action.value,
+            "findings": list[JsonValue](verdict.findings),
+        },
+    )
 
 
 async def _check(guard: Guard, texts: Sequence[str], env: Envelope) -> Verdict:

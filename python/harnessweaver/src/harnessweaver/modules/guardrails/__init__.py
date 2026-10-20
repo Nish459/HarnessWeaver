@@ -6,6 +6,7 @@ from harnessweaver.modules.guardrails.pipeline import (
     Guard,
     Verdict,
     check,
+    configured_guards,
     guard_handler,
     install_guardrails,
 )
@@ -40,6 +41,7 @@ __all__ = [
     "TopicDeny",
     "Verdict",
     "check",
+    "configured_guards",
     "guard_handler",
     "install_guardrails",
 ]

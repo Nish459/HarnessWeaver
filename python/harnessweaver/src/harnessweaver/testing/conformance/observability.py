@@ -14,6 +14,7 @@ from harnessweaver.core.plugins import (
 from harnessweaver.core.telemetry import Telemetry
 from harnessweaver.testing.conformance.builds import build, sample_settings
 from harnessweaver.testing.conformance.common import LATENCY_LIMITS, Subject, expect
+from harnessweaver.testing.conformance.evaluators import sample_eval_samples
 from harnessweaver.testing.conformance.results import session_run
 from harnessweaver.testing.kit import harness_for_test, output, scripted
 from harnessweaver.testing.samples import (
@@ -136,10 +137,12 @@ async def check_latency(subject: Subject, runs: int = 20) -> None:
         "ModelProvider",
         "StateStore",
         "PolicyEngine",
+        "Evaluator",
     ):
         return
     limit = LATENCY_LIMITS[item.latency_class]
     requests = sample_policy_requests()
+    samples = sample_eval_samples()
     provider = build(subject.contribution)
     durations: list[float] = []
     with session_run() as harness:
@@ -152,6 +155,8 @@ async def check_latency(subject: Subject, runs: int = 20) -> None:
                     await provider(sample_decision_request())
                 elif item.port == "PolicyEngine":
                     await provider.decide(requests[index % len(requests)])
+                elif item.port == "Evaluator":
+                    await provider.grade(samples[index % len(samples)])
                 elif item.port == "ModelProvider":
                     try:
                         await provider.generate(sample_request(), session.envelope)

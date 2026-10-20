@@ -2,7 +2,7 @@
 
 import math
 from collections.abc import AsyncIterator, Mapping, Sequence
-from typing import Any
+from typing import Any, Self
 
 import anyio
 from anyio.abc import TaskGroup
@@ -22,6 +22,7 @@ from harnessweaver.core.ports import (
     ApprovalChannel,
     ContextGovernor,
     Memory,
+    ModelProvider,
     PolicyEngine,
     StateStore,
     ToolBackend,
@@ -81,6 +82,10 @@ class HarnessBase:
         self._active: dict[str, ActiveRun] = {}
         self._channels: dict[str, Channel] = {}
 
+    def _rebuilt(self, *, model: ModelProvider, state: StateStore, telemetry: Telemetry) -> Self:
+        """The same spec built again with these parts, for replays (``Harness`` builds it)."""
+        raise NotImplementedError
+
     # --- introspection ----------------------------------------------------------------------
 
     @property
@@ -133,6 +138,7 @@ class HarnessBase:
         grants: Sequence[Grant] = (),
         can_suspend: bool = True,
         context_ids: Sequence[str] = (),
+        recorded: int = 0,
     ) -> RunContext:
         run_id = envelope.run_id
 
@@ -163,6 +169,8 @@ class HarnessBase:
             memory=self._memory,
             memory_ttl=self._effective.spec.memory.default_ttl,
             context_ids=context_ids,
+            recorder=self._state.append_recording if self._effective.spec.state.record else None,
+            recorded=recorded,
         )
 
     # --- events -----------------------------------------------------------------------------

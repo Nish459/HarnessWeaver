@@ -32,6 +32,7 @@ from harnessweaver.core.ports import (
     ModelProvider,
     StreamingModelProvider,
 )
+from harnessweaver.core.state import request_digest
 from harnessweaver.core.telemetry import elapsed
 
 
@@ -98,6 +99,7 @@ class ModelCalls(RunContextBase):
             with self._model_span(sent, name) as span:
                 started = time.perf_counter()
                 response = await self._call_provider(sent, provider)
+                await self.record("model", request_digest(sent), response=response)
                 cost, source = resolve_cost(response, sent, self.models.prices)
                 over = self.meter.record_model_call(response.usage, cost)
                 usage: dict[str, JsonValue] = {

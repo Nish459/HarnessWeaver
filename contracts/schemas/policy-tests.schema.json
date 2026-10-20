@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:policy-tests",
+  "title": "PolicyTests",
+  "$defs": {
+    "JsonValue": {},
+    "Labels": {
+      "additionalProperties": false,
+      "description": "What kind of data a run has touched. Drives the lethal-trifecta check (RULES S3).",
+      "properties": {
+        "data_class": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Classification of the run's data, e.g. 'confidential'.",
+          "title": "Data Class"
+        },
+        "untrusted_seen": {
+          "default": false,
+          "description": "Untrusted content (retrieved context, tool output) entered.",
+          "title": "Untrusted Seen",
+          "type": "boolean"
+        },
+        "private_seen": {
+          "default": false,
+          "description": "Private data (e.g. PII) was read or found in the input.",
+          "title": "Private Seen",
+          "type": "boolean"
+        },
+        "sources": {
+          "default": [],
+          "description": "Where untrusted or private data came from, in order.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Sources",
+          "type": "array"
+        }
+      },
+      "title": "Labels",
+      "type": "object"
+    },
+    "PolicyCase": {
+      "additionalProperties": false,
+      "description": "One row of a ``harnessweaver policy test`` table: a tool call, who makes it, and\nwhat the governor must decide (steps 1 to 7, as a dry run).",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "tool": {
+          "minLength": 1,
+          "title": "Tool",
+          "type": "string"
+        },
+        "args": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Args",
+          "type": "object"
+        },
+        "principal": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Principal"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "anonymous",
+          "title": "Principal"
+        },
+        "tenant": {
+          "default": "default",
+          "minLength": 1,
+          "title": "Tenant",
+          "type": "string"
+        },
+        "task": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task"
+        },
+        "labels": {
+          "$ref": "#/$defs/Labels",
+          "default": {
+            "data_class": null,
+            "untrusted_seen": false,
+            "private_seen": false,
+            "sources": []
+          }
+        },
+        "expect": {
+          "enum": [
+            "allow",
+            "require_approval",
+            "block"
+          ],
+          "title": "Expect",
+          "type": "string"
+        },
+        "code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The verdict's code, when given.",
+          "title": "Code"
+        },
+        "step": {
+          "anyOf": [
+            {
+              "maximum": 7,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The deciding step.",
+          "title": "Step"
+        },
+        "approver_role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Who must approve, when given.",
+          "title": "Approver Role"
+        }
+      },
+      "required": [
+        "id",
+        "tool",
+        "expect"
+      ],
+      "title": "PolicyCase",
+      "type": "object"
+    },
+    "Principal": {
+      "additionalProperties": false,
+      "description": "Who a run acts for.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "roles": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Roles",
+          "type": "array"
+        },
+        "attrs": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Attrs",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "Principal",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A file of :class:`PolicyCase` rows.",
+  "properties": {
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/PolicyCase"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "cases"
+  ],
+  "type": "object"
+}

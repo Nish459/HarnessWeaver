@@ -60,6 +60,16 @@ RESERVED_NAMESPACES: Final = frozenset(
         "size",
         "topic",
         "grounded",
+        # evals
+        "exact",
+        "contains",
+        "schema_valid",
+        "field_equals",
+        "numeric_close",
+        "citation_present",
+        "guard_fired",
+        "status",
+        "llm_judge",
     }
 )
 """Namespaces owned by the built-in plugin. Bare names (``direct``) are their own

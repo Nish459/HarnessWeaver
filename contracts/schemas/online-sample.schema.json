@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:online-sample",
+  "title": "OnlineSample",
+  "$defs": {
+    "GraderResult": {
+      "additionalProperties": false,
+      "properties": {
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Score",
+          "type": "number"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Names fields and rules, not content.",
+          "title": "Reason"
+        },
+        "grader": {
+          "description": "The grader's label.",
+          "minLength": 1,
+          "title": "Grader",
+          "type": "string"
+        }
+      },
+      "required": [
+        "passed",
+        "score",
+        "grader"
+      ],
+      "title": "GraderResult",
+      "type": "object"
+    },
+    "GuardAction": {
+      "description": "What a guardrail wants done with the content it checked.\n\nThe guardrails module maps actions onto hook outcomes (DESIGNS No. 9).",
+      "enum": [
+        "allow",
+        "redact",
+        "repair",
+        "escalate",
+        "require_approval",
+        "block",
+        "log_only"
+      ],
+      "title": "GuardAction",
+      "type": "string"
+    },
+    "GuardFiring": {
+      "additionalProperties": false,
+      "description": "A guard whose verdict wasn't ``allow``, read from the run's trace.",
+      "properties": {
+        "guard": {
+          "description": "Its full name, like guardrails.input[pii].",
+          "minLength": 1,
+          "title": "Guard",
+          "type": "string"
+        },
+        "action": {
+          "$ref": "#/$defs/GuardAction"
+        },
+        "shadow": {
+          "default": false,
+          "description": "In log_only mode: it would have fired.",
+          "title": "Shadow",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "guard",
+        "action"
+      ],
+      "title": "GuardFiring",
+      "type": "object"
+    },
+    "RunStatus": {
+      "description": "Where a run is in its lifecycle (DESIGNS No. 18).",
+      "enum": [
+        "pending",
+        "running",
+        "awaiting_approval",
+        "completed",
+        "blocked",
+        "escalated",
+        "failed",
+        "cancelled"
+      ],
+      "title": "RunStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A production run sampled at ``run.end`` and graded (``evals.online``).\n\nIt names the run instead of copying its content: the run's record holds that.",
+  "properties": {
+    "run_id": {
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "task": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Task"
+    },
+    "tenant": {
+      "minLength": 1,
+      "title": "Tenant",
+      "type": "string"
+    },
+    "at": {
+      "format": "date-time",
+      "title": "At",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/RunStatus"
+    },
+    "grades": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/GraderResult"
+      },
+      "title": "Grades",
+      "type": "array"
+    },
+    "guards": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/GuardFiring"
+      },
+      "title": "Guards",
+      "type": "array"
+    }
+  },
+  "required": [
+    "run_id",
+    "tenant",
+    "at",
+    "status"
+  ],
+  "type": "object"
+}

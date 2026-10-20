@@ -17,15 +17,25 @@ from pydantic import TypeAdapter
 from harnessweaver.core.decisions import Decision, DecisionRequest
 from harnessweaver.core.envelope import Envelope
 from harnessweaver.core.errors import ErrorInfo
+from harnessweaver.core.evals import (
+    Baseline,
+    EvalDataset,
+    EvalSample,
+    Grade,
+    OnlineSample,
+    SuiteResult,
+)
 from harnessweaver.core.guards import GuardResult
 from harnessweaver.core.hooks import HookEvent
 from harnessweaver.core.manifests import ToolManifest
 from harnessweaver.core.messages import ModelRequest, ModelResponse, ToolCall
 from harnessweaver.core.outcomes import Outcome
-from harnessweaver.core.policy import PolicyDecision, PolicyRequest
+from harnessweaver.core.policy import PolicyDecision, PolicyRequest, PolicyTests
+from harnessweaver.core.replay import ReplayReport
 from harnessweaver.core.results import RunEvent, RunResult
 from harnessweaver.core.retrieval import ContextItem
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest
+from harnessweaver.core.state import RecordedCall
 from harnessweaver.core.tools import SandboxResult, ToolInfo, ToolResult, ToolVerdict
 from harnessweaver.core.trace import TraceEvent
 from harnessweaver.spec.models import HarnessSpec, ProfileSpec
@@ -71,6 +81,15 @@ CONTRACTS: Final[dict[str, Any]] = {
     "run-result": RunResult,
     "run-event": RunEvent,
     "error-info": ErrorInfo,
+    "eval-dataset": EvalDataset,
+    "eval-sample": EvalSample,
+    "grade": Grade,
+    "suite-result": SuiteResult,
+    "baseline": Baseline,
+    "online-sample": OnlineSample,
+    "policy-tests": PolicyTests,
+    "recorded-call": RecordedCall,
+    "replay-report": ReplayReport,
 }
 """Every exported contract, by schema file name (without ``.schema.json``)."""
 

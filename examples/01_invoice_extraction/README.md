@@ -58,13 +58,13 @@ before the model call.
 | File | What it shows |
 | --- | --- |
 | [harness.yaml](harness.yaml) | The task, its typed input and output, the prompt, budgets, prices and business rules |
-| [harness.offline.yaml](harness.offline.yaml) | The offline overlay: an invalid answer, then a valid one |
+| [harness.offline.yaml](harness.offline.yaml) | The offline overlay: an invalid answer, then a valid one, and an answer for the second golden case |
 | [invoices/models.py](invoices/models.py) | `InvoiceDoc`, `LineItem`, `Invoice` |
 | [prompts/extract_invoice@1.md](prompts/extract_invoice@1.md) | The versioned prompt (`name@version`, ADR-0013) |
-| [evals/golden.yaml](evals/golden.yaml) | Golden cases, graded by the evals module once it lands (*planned*) |
+| [evals/golden.yaml](evals/golden.yaml) | Golden cases: `harnessweaver eval run examples/01_invoice_extraction/harness.yaml -e offline` grades them |
 | [run.py](run.py) | The whole app: load, run, print |
 | [l0_instrument.py](l0_instrument.py) and [instrument.yaml](instrument.yaml) | L0: govern an existing OpenAI client in three lines |
-| [tests/](tests/test_invoice_extraction.py) | Repair, escalation, redaction, secrets, budgets, L0, `doctor` |
+| [tests/](tests/test_invoice_extraction.py) | Repair, escalation, redaction, secrets, budgets, L0, `doctor`, the golden set |
 
 ## Business rules
 

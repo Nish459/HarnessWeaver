@@ -7,6 +7,9 @@ import typer
 import harnessweaver
 from harnessweaver_cli import __version__
 from harnessweaver_cli.doctor import doctor
+from harnessweaver_cli.evals import eval_app
+from harnessweaver_cli.policy import policy_app
+from harnessweaver_cli.replay import replay
 from harnessweaver_cli.scaffold import init, run_tests
 from harnessweaver_cli.spec_commands import contracts_app, hooks, spec_app
 
@@ -24,6 +27,9 @@ app.command(
     name="test", context_settings={"allow_extra_args": True, "ignore_unknown_options": True}
 )(run_tests)
 app.add_typer(contracts_app, name="contracts")
+app.add_typer(eval_app, name="eval")
+app.add_typer(policy_app, name="policy")
+app.command()(replay)
 
 
 def _print_version(value: bool) -> None:

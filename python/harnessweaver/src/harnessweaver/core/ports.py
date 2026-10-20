@@ -15,6 +15,7 @@ from pydantic import JsonValue
 
 from harnessweaver.core.decisions import Decision, DecisionRequest
 from harnessweaver.core.envelope import Clock, Envelope
+from harnessweaver.core.evals import EvalSample, Grade, OnlineSample
 from harnessweaver.core.guards import GuardResult
 from harnessweaver.core.manifests import ToolManifest
 from harnessweaver.core.messages import ModelRequest, ModelResponse, StreamChunk, ToolCall, ToolSpec
@@ -22,7 +23,7 @@ from harnessweaver.core.policy import PolicyDecision, PolicyRequest
 from harnessweaver.core.results import RunEvent
 from harnessweaver.core.retrieval import ContextItem
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest
-from harnessweaver.core.state import Checkpoint, RunRecord
+from harnessweaver.core.state import Checkpoint, RecordedCall, RunRecord
 from harnessweaver.core.tools import SandboxLimits, SandboxResult, ToolInfo, ToolResult, ToolVerdict
 from harnessweaver.core.trace import RunTrace
 
@@ -36,6 +37,7 @@ __all__ = [
     "ContextProvider",
     "Decider",
     "Embedder",
+    "Evaluator",
     "GovernedRun",
     "Guardrail",
     "Memory",
@@ -142,6 +144,22 @@ class StateStore(Protocol):
 
     async def events(self, run_id: str) -> list[RunEvent]: ...
 
+    async def append_recording(self, call: RecordedCall) -> None:
+        """Keep one recorded call (``state.record: true``); a repeated ``seq`` replaces it."""
+        ...
+
+    async def recording(self, run_id: str) -> list[RecordedCall]:
+        """A run's recorded calls in ``seq`` order."""
+        ...
+
+    async def put_sample(self, sample: OnlineSample) -> None:
+        """Keep a graded online sample (``evals.online``); one per run."""
+        ...
+
+    async def samples(self, task: str | None = None) -> list[OnlineSample]:
+        """Online samples, oldest first, for one task or all."""
+        ...
+
     async def aclose(self) -> None: ...
 
 
@@ -149,6 +167,15 @@ class Guardrail(Protocol):
     """Port ``Guardrail``: checks one piece of content (DESIGNS No. 20)."""
 
     async def check(self, content: str, env: Envelope) -> GuardResult: ...
+
+
+class Evaluator(Protocol):
+    """Port ``Evaluator``: grades one eval sample (DESIGNS No. 23).
+
+    Graders only measure; they never grant anything (R3).
+    """
+
+    async def grade(self, sample: EvalSample) -> Grade: ...
 
 
 class Decider(Protocol):
@@ -229,7 +256,9 @@ class ToolGovernor(Protocol):
 
     ``authorize`` runs steps 1 to 7 on the call's final arguments, after the
     ``tool.before`` middleware; ``approval`` is the human answer the call
-    carries, if any. ``sanitize`` is step 9.
+    carries, if any. A ``dry_run`` decides without using anything up, such as a
+    rate limit (``Harness.authorize``, ``harnessweaver policy test``).
+    ``sanitize`` is step 9.
     """
 
     async def authorize(
@@ -238,6 +267,8 @@ class ToolGovernor(Protocol):
         call: ToolCall,
         tool: ToolDescription,
         approval: ApprovalDecision | None,
+        *,
+        dry_run: bool = False,
     ) -> ToolVerdict: ...
 
     async def sanitize(

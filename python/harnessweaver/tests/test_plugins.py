@@ -360,6 +360,10 @@ def test_discover_reads_entry_point_metadata(monkeypatch: pytest.MonkeyPatch) ->
     assert isinstance(PluginCatalog.default(), PluginCatalog)
 
 
+GRADERS = {"exact", "contains", "regex", "schema_valid", "field_equals", "numeric_close"}
+GRADERS |= {"citation_present", "guard_fired", "status", "llm_judge"}
+
+
 def test_built_in_names_are_reserved() -> None:
     assert {"direct", "session", "workflow", "memory", "sqlite", "pii"} <= hw.RESERVED_NAMESPACES
     builtin = PluginCatalog().load("harnessweaver")
@@ -389,4 +393,4 @@ def test_built_in_names_are_reserved() -> None:
         "semantic.hashing",
         "passthrough",
         "grounded.citations",
-    }
+    } | GRADERS

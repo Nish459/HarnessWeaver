@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:baseline",
+  "title": "Baseline",
+  "additionalProperties": false,
+  "description": "A suite's accepted results: ``.harness/baselines/<task>.<suite>.json``.",
+  "properties": {
+    "suite": {
+      "minLength": 1,
+      "title": "Suite",
+      "type": "string"
+    },
+    "task": {
+      "minLength": 1,
+      "title": "Task",
+      "type": "string"
+    },
+    "pass_rate": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Pass Rate",
+      "type": "number"
+    },
+    "cases": {
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "description": "Passed, by id.",
+      "title": "Cases",
+      "type": "object"
+    }
+  },
+  "required": [
+    "suite",
+    "task",
+    "pass_rate"
+  ],
+  "type": "object"
+}

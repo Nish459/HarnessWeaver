@@ -32,7 +32,7 @@ from harnessweaver.modules.guardrails.pipeline.guards import (
     check,
 )
 from harnessweaver.modules.guardrails.pipeline.handlers import guard_handler
-from harnessweaver.modules.guardrails.pipeline.install import install_guardrails
+from harnessweaver.modules.guardrails.pipeline.install import configured_guards, install_guardrails
 
 __all__ = [
     "LAYER_BANDS",
@@ -40,6 +40,7 @@ __all__ = [
     "Guard",
     "Verdict",
     "check",
+    "configured_guards",
     "guard_handler",
     "install_guardrails",
 ]

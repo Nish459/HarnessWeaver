@@ -8,6 +8,7 @@ from hw_recorder import RECORDER
 import harnessweaver as hw
 
 __all__ = [
+    "BrokenGrader",
     "Careful",
     "EchoSandbox",
     "Explodes",
@@ -68,6 +69,14 @@ class Careful:
 class Explodes:
     async def check(self, content: str, env: hw.Envelope) -> hw.GuardResult:
         raise RuntimeError("judge offline")
+
+
+@hw.provider(port="Evaluator", name="broken_grader", deterministic=True, latency_class="fast")
+class BrokenGrader:
+    """A grader that always raises: online sampling must fail open."""
+
+    async def grade(self, sample: hw.EvalSample) -> hw.Grade:
+        raise RuntimeError("grader offline")
 
 
 @hw.decider("vip")

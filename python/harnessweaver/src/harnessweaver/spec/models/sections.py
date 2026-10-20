@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from harnessweaver.core.decisions import PolicyEffect
 from harnessweaver.core.durations import Duration
 from harnessweaver.core.envelope import Budget
+from harnessweaver.core.evals import GraderItem, parse_graders
 from harnessweaver.core.guards import GuardAction
 from harnessweaver.core.hooks import Band, HookPoint
 from harnessweaver.core.policy import PolicyRule
@@ -217,7 +218,17 @@ class ObservabilitySpec(ProviderModel):
 
 
 class OnlineEvalsSpec(StrictModel):
+    """Sample production runs at ``run.end`` and grade them (DESIGNS No. 23)."""
+
     sample_rate: float = Field(default=0.0, ge=0, le=1)
+    graders: tuple[GraderItem, ...] = Field(
+        default=(), description="Deterministic graders; online samples have no expect."
+    )
+
+    @model_validator(mode="after")
+    def _graders_parse(self) -> Self:
+        parse_graders(self.graders)
+        return self
 
 
 class EvalsSpec(BaseModel):

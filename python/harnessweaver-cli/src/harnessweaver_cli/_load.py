@@ -9,6 +9,7 @@ import typer
 
 from harnessweaver import Harness
 from harnessweaver.core.errors import HarnessError, SpecError
+from harnessweaver.core.ports import StateStore
 from harnessweaver.core.registry import PluginCatalog
 from harnessweaver.spec import EffectiveSpec, load_spec, spec_from_documents
 from harnessweaver.spec.sources import BuiltinProfiles, PluginProfiles, ProfileDirectories
@@ -19,31 +20,44 @@ __all__ = ["fail", "load_effective", "load_harness", "spec_path"]
 DEFAULT_SPEC = Path("harness.yaml")
 
 
-def fail(error: HarnessError | str) -> typer.Exit:
-    """Print an error the way every command does and return the exit to raise."""
+def fail(error: HarnessError | str, code: int = 1) -> typer.Exit:
+    """Print an error the way every command does and return the exit to raise.
+
+    Commands that report checks (``eval run``, ``policy test``, ``replay``) exit 1
+    when a check fails and 2 when they can't run, so CI can tell the two apart.
+    """
     message = error.message if isinstance(error, HarnessError) else error
     typer.echo(f"error: {message}", err=True)
-    return typer.Exit(code=1)
+    return typer.Exit(code=code)
 
 
-def spec_path(path: Path | None) -> Path:
+def spec_path(path: Path | None, code: int = 1) -> Path:
     """The spec to load. Its directory becomes importable, as when the app runs from
     there, so ``tasks.*.input`` and handler paths resolve."""
     found = path or DEFAULT_SPEC
     if not found.is_file():
-        raise fail(f"no spec at {found}; pass the path to harness.yaml")
+        raise fail(f"no spec at {found}; pass the path to harness.yaml", code)
     directory = str(found.resolve().parent)
     if directory not in sys.path:
         sys.path.insert(0, directory)
     return found
 
 
-def load_harness(path: Path | None, env: str | None, profile_dirs: list[Path]) -> Harness:
-    """Load and build the harness, the same way an app does (every check runs)."""
+def load_harness(
+    path: Path | None,
+    env: str | None,
+    profile_dirs: list[Path],
+    *,
+    state: StateStore | None = None,
+    code: int = 1,
+) -> Harness:
+    """Load and build the harness, the same way an app does (every check runs).
+    ``state`` replaces the spec's state store (evals keep their runs in memory)."""
     try:
-        return Harness.load(spec_path(path), env=env, profile_dirs=profile_dirs)
+        effective = load_spec(spec_path(path, code), env=env, profile_dirs=profile_dirs)
+        return Harness.from_spec(effective, state=state)
     except HarnessError as exc:
-        raise fail(exc) from None
+        raise fail(exc, code) from None
 
 
 def _git_show(ref: str, path: str) -> str | None:

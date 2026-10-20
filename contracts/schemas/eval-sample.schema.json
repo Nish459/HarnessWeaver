@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:harnessweaver:v1:eval-sample",
+  "title": "EvalSample",
+  "$defs": {
+    "GuardAction": {
+      "description": "What a guardrail wants done with the content it checked.\n\nThe guardrails module maps actions onto hook outcomes (DESIGNS No. 9).",
+      "enum": [
+        "allow",
+        "redact",
+        "repair",
+        "escalate",
+        "require_approval",
+        "block",
+        "log_only"
+      ],
+      "title": "GuardAction",
+      "type": "string"
+    },
+    "GuardFiring": {
+      "additionalProperties": false,
+      "description": "A guard whose verdict wasn't ``allow``, read from the run's trace.",
+      "properties": {
+        "guard": {
+          "description": "Its full name, like guardrails.input[pii].",
+          "minLength": 1,
+          "title": "Guard",
+          "type": "string"
+        },
+        "action": {
+          "$ref": "#/$defs/GuardAction"
+        },
+        "shadow": {
+          "default": false,
+          "description": "In log_only mode: it would have fired.",
+          "title": "Shadow",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "guard",
+        "action"
+      ],
+      "title": "GuardFiring",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "RunStatus": {
+      "description": "Where a run is in its lifecycle (DESIGNS No. 18).",
+      "enum": [
+        "pending",
+        "running",
+        "awaiting_approval",
+        "completed",
+        "blocked",
+        "escalated",
+        "failed",
+        "cancelled"
+      ],
+      "title": "RunStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "What a grader sees: one run's outcome, and the case it ran for.",
+  "properties": {
+    "case": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The case id; none for online samples.",
+      "title": "Case"
+    },
+    "task": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Task"
+    },
+    "input": {
+      "$ref": "#/$defs/JsonValue",
+      "default": null
+    },
+    "expect": {
+      "$ref": "#/$defs/JsonValue",
+      "default": null,
+      "description": "None for online samples."
+    },
+    "output": {
+      "$ref": "#/$defs/JsonValue",
+      "default": null
+    },
+    "status": {
+      "$ref": "#/$defs/RunStatus",
+      "default": "completed"
+    },
+    "error_code": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Code"
+    },
+    "guards": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/GuardFiring"
+      },
+      "title": "Guards",
+      "type": "array"
+    },
+    "output_schema": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The JSON Schema of the task's output, if it has one.",
+      "title": "Output Schema"
+    }
+  },
+  "type": "object"
+}

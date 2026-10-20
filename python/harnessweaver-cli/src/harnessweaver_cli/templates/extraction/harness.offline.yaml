@@ -2,6 +2,14 @@
 # so tests and demos need no network and no keys (RULES R14).
 models:
   provider: scripted
+  rules:                      # one answer per golden case, so `eval run -e offline` passes
+    - contains: "crashes"
+      reply:
+        output:
+          category: bug
+          priority: 1
+          product: Mobile app
+          summary: The app crashes at login since the latest update.
   replies:
     - output:
         category: billing

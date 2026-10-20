@@ -26,14 +26,17 @@ from harnessweaver.core.errors import (
     SpecError,
     UnreachableHook,
 )
-from harnessweaver.core.ports import ModelProvider, ToolBackend
+from harnessweaver.core.evals import EvalDataset, SuiteResult
+from harnessweaver.core.ports import ModelProvider, StateStore, ToolBackend
 from harnessweaver.core.registry import PluginCatalog, Registry
 from harnessweaver.core.telemetry import Telemetry
 from harnessweaver.harness.build import (
     build_task,
     build_telemetry,
+    check_telemetry,
     install_middleware,
     model_access,
+    output_schema,
     required_hooks,
     unsupported_sections,
 )
@@ -46,7 +49,8 @@ from harnessweaver.harness.governance import (
     build_tools,
 )
 from harnessweaver.harness.records import PendingSession
-from harnessweaver.harness.wrap import WrapMixin
+from harnessweaver.harness.replay import ReplayMixin
+from harnessweaver.modules.evals import install_online_evals, load_dataset, run_suite
 from harnessweaver.modules.guardrails import install_guardrails
 from harnessweaver.modules.prompts import PromptStore
 from harnessweaver.modules.routing import install_routing
@@ -57,7 +61,7 @@ from harnessweaver.spec.loader import EffectiveSpec, load_spec
 __all__ = ["Harness"]
 
 
-class Harness(WrapMixin):
+class Harness(ReplayMixin):
     """The runtime built from one app's effective spec.
 
     Build it with :meth:`load` or :meth:`from_spec`. Use ``async with harness:``
@@ -103,14 +107,18 @@ class Harness(WrapMixin):
         catalog: PluginCatalog | None = None,
         telemetry: Telemetry | None = None,
         model: ModelProvider | None = None,
+        state: StateStore | None = None,
     ) -> Self:
         """Build a harness from an already loaded spec. See :meth:`load`.
 
         ``telemetry`` replaces the harness's own (for example to use specific
-        OpenTelemetry providers); ``observability.capture_content`` still applies.
+        OpenTelemetry providers); ``observability.capture_content`` still applies,
+        and the harness then configures no OpenTelemetry SDK itself.
         ``model`` replaces ``models.provider`` with a provider object, for tests
         and offline runs (``harnessweaver.testing.harness_for_test``); aliases,
-        prices and allow-lists still apply.
+        prices and allow-lists still apply. ``state`` replaces ``state.use`` with
+        a store object, as ``harnessweaver eval run`` does to keep eval runs out
+        of the app's store.
         """
         spec = effective.spec
         unsupported = unsupported_sections(spec)
@@ -125,13 +133,14 @@ class Harness(WrapMixin):
         )
         base = effective.path.parent if effective.path is not None else Path.cwd()
 
-        state = registry.provider("StateStore", spec.state.use).build(
+        store: StateStore = state or registry.provider("StateStore", spec.state.use).build(
             spec.state.provider_settings()
         )
-        built = build_telemetry(spec, registry)
-        if telemetry is not None:
+        if telemetry is None:
+            telemetry = build_telemetry(spec, registry)
+        else:
+            check_telemetry(spec)
             telemetry.capture_content = spec.observability.capture_content
-        telemetry = telemetry or built
         models = model_access(spec, registry, model)
         bus = HookBus()
         install_guardrails(effective, registry, bus)
@@ -149,13 +158,15 @@ class Harness(WrapMixin):
             name: build_task(effective, name, task, registry, bus, models, prompts, tools)
             for name, task in spec.tasks.items()
         }
+        schemas = {name: output_schema(entry.info.output_type) for name, entry in tasks.items()}
+        install_online_evals(spec, registry, bus, store, schemas)
         return cls(
             effective,
             registry=registry,
             bus=bus,
             tasks=tasks,
             models=models,
-            state=state,
+            state=store,
             prompts=prompts,
             tools=tools,
             clock=clock or SystemClock(),
@@ -165,6 +176,17 @@ class Harness(WrapMixin):
             approvals=approvals,
             context=context,
             memory=memory,
+        )
+
+    def _rebuilt(self, *, model: ModelProvider, state: StateStore, telemetry: Telemetry) -> Self:
+        return type(self).from_spec(
+            self._effective,
+            clock=self._clock,
+            tools=self._tools,
+            catalog=self._registry.catalog,
+            telemetry=telemetry,
+            model=model,
+            state=state,
         )
 
     # --- lifecycle --------------------------------------------------------------------------
@@ -228,6 +250,24 @@ class Harness(WrapMixin):
             )
         binding = Binding(self, task, principal, tenant, dict(attributes or {}))
         return info.target().bind(client, binding)
+
+    async def evaluate(self, dataset: EvalDataset | str | Path) -> SuiteResult:
+        """Run an eval suite: each case's task run, graded (DESIGNS No. 23).
+
+        A dataset path is read relative to the spec's directory. Judges grade
+        inside a session, so their model calls are governed and budgeted.
+        ``harnessweaver eval run`` adds baselines and the shadow-guard report.
+
+        Raises:
+            SpecError: For a dataset that isn't valid, or graders that can't be built.
+            NotFound: For a task the spec doesn't define.
+        """
+        if not isinstance(dataset, EvalDataset):
+            path = Path(dataset)
+            if not path.is_absolute() and self._effective.path is not None:
+                path = self._effective.path.parent / path
+            dataset = load_dataset(path)
+        return await run_suite(self, dataset)
 
     def session(
         self,

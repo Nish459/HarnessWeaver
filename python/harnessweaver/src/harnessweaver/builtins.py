@@ -15,6 +15,18 @@ from harnessweaver.modules.approvals import (
     WebhookChannel,
 )
 from harnessweaver.modules.context import MemoryContext, MemoryStore, PassthroughContext
+from harnessweaver.modules.evals import (
+    CitationPresent,
+    Contains,
+    Exact,
+    FieldEquals,
+    GuardFired,
+    LlmJudgeGrader,
+    NumericClose,
+    Regex,
+    SchemaValid,
+    Status,
+)
 from harnessweaver.modules.guardrails import (
     GroundedCitations,
     InjectionHeuristic,
@@ -67,6 +79,16 @@ plugin = Plugin(
         PassthroughContext,
         MemoryContext,
         MemoryStore,
+        Exact,
+        FieldEquals,
+        NumericClose,
+        Contains,
+        Regex,
+        SchemaValid,
+        CitationPresent,
+        GuardFired,
+        Status,
+        LlmJudgeGrader,
     ],
     runners=[DirectRunner, SessionRunner, WorkflowRunner],
     description="Runners and providers that ship with the harnessweaver core.",

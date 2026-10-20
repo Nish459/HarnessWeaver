@@ -43,6 +43,16 @@ def script(name: str) -> ModuleType:
     return module
 
 
+async def test_the_golden_set_passes_offline() -> None:
+    result = await hw.load(SPEC, env="offline").evaluate("evals/golden.yaml")
+    assert result.passed, [case.id for case in result.cases if not case.passed]
+    assert result.grader_rates == {
+        "schema_valid": 1.0,
+        "field_equals:invoice_number": 1.0,
+        "field_equals:total": 1.0,
+    }
+
+
 async def test_the_offline_run_repairs_the_first_answer() -> None:
     harness = hw.load(SPEC, env="offline")
     result = await harness.run("extract_invoice", DOC, principal="ap-clerk", tenant="acme")
