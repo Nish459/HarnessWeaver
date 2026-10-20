@@ -6,12 +6,15 @@ import typer
 
 import harnessweaver
 from harnessweaver_cli import __version__
+from harnessweaver_cli.add import add_app
 from harnessweaver_cli.doctor import doctor
 from harnessweaver_cli.evals import eval_app
+from harnessweaver_cli.plugins import plugin_app
 from harnessweaver_cli.policy import policy_app
 from harnessweaver_cli.replay import replay
 from harnessweaver_cli.scaffold import init, run_tests
 from harnessweaver_cli.spec import contracts_app, hooks, spec_app
+from harnessweaver_cli.tools import tools_app
 
 app = typer.Typer(
     name="harnessweaver",
@@ -30,6 +33,9 @@ app.add_typer(contracts_app, name="contracts")
 app.add_typer(eval_app, name="eval")
 app.add_typer(policy_app, name="policy")
 app.command()(replay)
+app.add_typer(add_app, name="add")
+app.add_typer(tools_app, name="tools")
+app.add_typer(plugin_app, name="plugin")
 
 
 def _print_version(value: bool) -> None:

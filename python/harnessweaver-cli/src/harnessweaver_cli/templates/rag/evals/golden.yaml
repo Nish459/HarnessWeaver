@@ -1,0 +1,14 @@
+# Golden questions for the answer task (harnessweaver eval run). An answer must be
+# routed right and cite the passage that supports it.
+suite: golden
+task: answer
+graders: [{ field_equals: topic }]
+cases:
+  - id: refund-time
+    input: "How long does a refund take?"
+    expect: { topic: billing }
+    graders: [{ citation_present: kb-refunds }]
+  - id: export-report
+    input: "How do I export a report?"
+    expect: { topic: product }
+    graders: [{ citation_present: kb-export }]

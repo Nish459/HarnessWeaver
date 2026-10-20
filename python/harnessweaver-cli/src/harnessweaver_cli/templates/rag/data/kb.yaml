@@ -1,0 +1,13 @@
+# The knowledge base the memory provider searches. It matches whole words, so a
+# passage should use the words people ask with. `acl: {}` is open to everyone; a
+# listed role or tenant restricts a passage to them.
+documents:
+  - id: kb-refunds
+    content: A refund goes back to the card you paid with. A refund can take up to five business days.
+    acl: {}
+  - id: kb-export
+    content: To export a report, open Reports, pick the report and choose Export as CSV.
+    acl: {}
+  - id: kb-refund-overrides
+    content: Staff only. Support leads can refund outside the 30 day window in the admin console.
+    acl: { roles: [staff] }

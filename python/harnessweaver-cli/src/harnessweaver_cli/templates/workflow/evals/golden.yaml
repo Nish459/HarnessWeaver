@@ -1,0 +1,9 @@
+# Golden tickets for the triage task (harnessweaver eval run).
+suite: golden
+task: triage
+graders: [{ field_equals: category }, { status: completed }]
+cases:
+  - id: double-charge
+    input: "I was charged twice for my Pro plan this month."
+    expect: { category: billing }
+    graders: [{ contains: { text: refunded, ignore_case: true } }]

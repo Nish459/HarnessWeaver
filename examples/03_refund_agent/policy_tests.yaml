@@ -1,0 +1,19 @@
+# harnessweaver policy test examples/03_refund_agent/harness.yaml --profile-dir examples/_org
+# The governor's verdict on each call, decided exactly as in production but nothing runs.
+cases:
+  - { id: small-refund, tool: refund_payment, args: { order_id: A-1002, amount_usd: 30 }, principal: casey, expect: allow }
+  - { id: big-refund, tool: refund_payment, args: { order_id: A-1001, amount_usd: 250 }, principal: casey, expect: require_approval, approver_role: finance }
+  - { id: over-the-cap, tool: refund_payment, args: { order_id: A-1003, amount_usd: 1500 }, principal: casey, expect: block, code: policy_denied }
+  - id: contractor
+    tool: refund_payment
+    args: { order_id: A-1002, amount_usd: 30 }
+    principal: { id: carl, roles: [contractor] }
+    expect: block
+    code: policy_denied
+  - id: mail-after-untrusted-private-data
+    tool: email_customer
+    args: { to: casey@example.com, body: Your refund is on its way. }
+    labels: { untrusted_seen: true, private_seen: true }
+    expect: block
+    code: trifecta
+  - { id: bad-order-id, tool: lookup_order, args: { order_id: "1; DROP TABLE" }, expect: block, step: 2 }

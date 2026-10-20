@@ -1,0 +1,22 @@
+# Golden questions for the support task: harnessweaver eval run
+# examples/02_support_rag/harness.yaml -e offline --profile-dir examples/_org
+suite: golden
+task: support
+graders: [{ status: completed }, { field_equals: intent }]
+cases:
+  - id: refund-time
+    input: "How long does a refund take?"
+    principal: gina
+    expect: { intent: billing }
+    graders: [{ citation_present: help-refunds }]
+  - id: outage
+    input: "The dashboard is down, what do I do?"
+    principal: gina
+    tenant: globex
+    expect: { intent: outage }
+    graders: [{ citation_present: [help-status, help-globex-sla] }]
+  - id: export
+    input: "How do I export a report?"
+    principal: gina
+    expect: { intent: howto }
+    graders: [{ citation_present: help-export }]

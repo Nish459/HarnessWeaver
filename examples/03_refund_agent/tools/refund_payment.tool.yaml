@@ -1,0 +1,20 @@
+# refund_payment: moves money. A refund over 100 USD waits for finance.
+apiVersion: harnessweaver/v1
+kind: Tool
+metadata: {name: refund_payment, version: 2.0.0, owner: payments-team}
+spec:
+  transport: native
+  handler: "refunds.tools:refund_payment"
+  description: "Refund part or all of an order's payment."
+  input_schema:
+    type: object
+    properties:
+      order_id: {type: string, pattern: "^A-[0-9]{4}$", description: "The order's id."}
+      amount_usd: {type: number, exclusiveMinimum: 0, description: "How much to refund, in USD."}
+    required: [order_id, amount_usd]
+  definition_digest: sha256:e1b147cb93a09c2d351e0c6de07976453d7e543f334d7639381bce318c405da9
+  side_effect: write_external
+  risk: medium
+  egress: [payments.acme.example]
+  rate_limit: {per_principal: 10/h}
+  approval: {when: "args.amount_usd > 100", approver_role: finance}

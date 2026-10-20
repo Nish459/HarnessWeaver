@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 import harnessweaver as hw
 from harnessweaver.core.registry import PluginCatalog, PluginSource
 from harnessweaver_cli.main import app
+from harnessweaver_cli.scaffold import BUILTIN_TEMPLATES
 
 runner = CliRunner()
 
@@ -99,6 +100,35 @@ def test_the_rendered_project_passes_its_own_tests(project: Path) -> None:
     """RULES T6, through ``harnessweaver test``: offline, test mode on."""
     result = runner.invoke(app, ["test", "-q", "-p", "no:cacheprovider"])
     assert result.exit_code == 0, result.output
+
+
+@pytest.mark.parametrize("template", [t for t in BUILTIN_TEMPLATES if t != "extraction"])
+def test_every_template_passes_its_own_tests(
+    template: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """RULES T6 for each built-in template: render it, then run its tests offline."""
+    root = tmp_path / f"demo-{template}"
+    assert runner.invoke(app, ["init", str(root), "-t", template]).exit_code == 0
+    assert "__app_name__" not in "".join(
+        (root / f).read_text(encoding="utf-8") for f in files(root)
+    )
+    monkeypatch.chdir(root)
+    result = runner.invoke(app, ["test", "-q", "-p", "no:cacheprovider"])
+    assert result.exit_code == 0, result.output
+    # Every template names its code "app"; this process must import this one's.
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    for name in [m for m in sys.modules if m == "app" or m.startswith("app.")]:
+        monkeypatch.delitem(sys.modules, name)
+    validated = runner.invoke(app, ["spec", "validate", "--env", "offline"])
+    assert validated.exit_code == 0, validated.output
+    for name in [m for m in sys.modules if m == "app" or m.startswith("app.")]:
+        del sys.modules[name]
+
+
+def test_scaffolds_arent_templates(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["init", str(tmp_path / "x"), "-t", "_plugin"])
+    assert result.exit_code == 1
+    assert "no template '_plugin'" in result.output
 
 
 def test_test_passes_pytest_failures_through(project: Path) -> None:

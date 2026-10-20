@@ -1,0 +1,12 @@
+# The offline overlay: HARNESSWEAVER_ENV=offline swaps the model for a scripted one,
+# so tests and demos need no network and no keys (RULES R14). The first reply draft
+# misses the category, so every offline run shows the review loop.
+models:
+  provider: scripted
+  rules:
+    - { contains: "Classify", reply: { text: "billing" } }
+    - { contains: "Summarize", reply: { text: "The customer was charged twice for the Pro plan." } }
+    - { contains: "Write a reply", times: 1, reply: { text: "Thanks for reaching out, we are looking into it." } }
+    - { contains: "Write a reply", reply: { text: "Sorry about the billing error: we refunded the second charge for your Pro plan." } }
+  replies:
+    - text: "other"

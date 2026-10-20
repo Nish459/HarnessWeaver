@@ -69,6 +69,8 @@ uv sync --all-packages          # install every workspace package + dev tools in
 | CLI from source | `uv run harnessweaver --help` |
 | Check a spec | `uv run harnessweaver spec validate <spec> -e offline`, `uv run harnessweaver doctor <spec>`, `uv run harnessweaver hooks <spec>` |
 | Evals, policy tests, replay | `uv run harnessweaver eval run <spec> -e offline`, `uv run harnessweaver policy test <spec>`, `uv run harnessweaver replay <run_id> <spec>` |
+| Grow a spec | `uv run harnessweaver add guard <use> <spec>` (shadow mode), `uv run harnessweaver add tool <module:function> <spec>`, `uv run harnessweaver tools pin <spec>` |
+| Plugins | `uv run harnessweaver plugin list`, `uv run harnessweaver plugin new <namespace> <dir>` (a standalone package) |
 | TypeScript | `pnpm -C typescript install && pnpm -C typescript test && pnpm -C typescript build` |
 | Docs site | `make docs` (`mkdocs build --strict`) |
 

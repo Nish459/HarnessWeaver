@@ -1,0 +1,13 @@
+# The offline overlay: HARNESSWEAVER_ENV=offline swaps the model for a scripted one,
+# so tests and demos need no network and no keys (RULES R14). Each rule answers a
+# question the golden set asks (matched on the prompt's question line), citing the
+# passage the retrieval finds for it.
+models:
+  provider: scripted
+  rules:
+    - contains: "Question: How long does a refund"
+      reply: { text: "A refund goes back to the card you paid with within five business days [kb-refunds]." }
+    - contains: "Question: How do I export"
+      reply: { text: "Open Reports, pick a report and choose Export as CSV [kb-export]." }
+  replies:
+    - text: "I don't know."

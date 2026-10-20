@@ -1,0 +1,16 @@
+# The offline overlay: HARNESSWEAVER_ENV=offline swaps the model for a scripted one,
+# so tests and demos need no network and no keys (RULES R14). Rules match the last
+# message: the customer's request, or the result of the tool just called.
+models:
+  provider: scripted
+  rules:
+    - { role: tool, contains: "refunded", reply: { text: "Your refund is on its way." } }
+    - { role: tool, contains: "shipped", reply: { text: "Your order has shipped and arrives soon." } }
+    - contains: "refund 900"
+      reply: { tool_calls: [{ name: refund_payment, arguments: { order_id: A-1002, amount_usd: 900 } }] }
+    - contains: "refund"
+      reply: { tool_calls: [{ name: refund_payment, arguments: { order_id: A-1001, amount_usd: 120 } }] }
+    - contains: "where is"
+      reply: { tool_calls: [{ name: lookup_order, arguments: { order_id: A-1001 } }] }
+  replies:
+    - text: "How can I help with your order?"

@@ -178,7 +178,7 @@ def build_task(
     missing = sorted(h.value for h in required - info.reaches)
     if missing:
         raise UnreachableHook(
-            f"{where}: runner {info.name} can't reach {', '.join(missing)}, which the "
+            f"{where}: runner {task.runner.use} can't reach {', '.join(missing)}, which the "
             f"baseline needs (RULES R4)",
             task=name,
             hooks=list[JsonValue](missing),
@@ -206,6 +206,6 @@ def build_task(
             on_failure=validation.on_failure,
         ),
         runner=runner,
-        runner_name=info.name,
+        runner_name=task.runner.use,  # qualified (pydantic_ai.agent), as the registry looks it up
         resumable=info.resumable,
     )

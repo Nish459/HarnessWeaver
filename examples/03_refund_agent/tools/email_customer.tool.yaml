@@ -1,0 +1,19 @@
+# email_customer: sends mail out of Acme. After untrusted text and private data
+# entered a run, the lethal-trifecta check blocks it (tools.trifecta: block, S3).
+apiVersion: harnessweaver/v1
+kind: Tool
+metadata: {name: email_customer, version: 1.0.0, owner: payments-team}
+spec:
+  transport: native
+  handler: "refunds.tools:email_customer"
+  description: "Send an email to a customer."
+  input_schema:
+    type: object
+    properties:
+      to: {type: string, description: "The customer's email address."}
+      body: {type: string, maxLength: 2000}
+    required: [to, body]
+  definition_digest: sha256:f6bc2e45a9f0a5909e7291a2402fe0db501466d9201ea371f50eca2a5d32ea89
+  side_effect: write_external
+  risk: medium
+  egress: [mail.acme.example]

@@ -1,0 +1,38 @@
+# __app_name__: a support agent that looks up orders and issues refunds.
+# The agent profile blocks injection attempts in the input, redacts secrets in tool
+# results, caps tool calls, and requires a manifest for every tool (RULES S2).
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata:
+  name: __app_name__
+  owner: your-team
+  risk_tier: takes_actions
+extends: ["profile://agent"]
+
+models:
+  provider: openai.chat              # any OpenAI-compatible endpoint, usually LiteLLM Proxy
+  base_url: http://localhost:4000    # the gateway holds the provider keys (RULES S1)
+  api_key_env: LITELLM_API_KEY
+  default: fast
+  aliases: { fast: your-fast-model }
+
+# Each tool's manifest says what it touches, how risky it is, and when a person
+# must approve a call (DESIGNS No. 17).
+tools:
+  manifests: ["tools/*.tool.yaml"]
+
+# Deterministic rules every call passes, after the manifest's own checks.
+policy:
+  rules:
+    - { id: refund-cap, when: "tool.name == 'refund_payment' && args.amount_usd > 500", effect: deny }
+
+tasks:
+  support:
+    version: 1.0.0
+    # A Pydantic AI agent runs the task; the harness governs each model and tool call.
+    runner: { use: pydantic_ai.agent, agent: "app.agent:support_agent" }
+    tools: [lookup_order, refund_payment]
+    budget: { max_tool_calls: 5, max_model_calls: 6, max_usd: 0.20 }
+
+evals:
+  support: [evals/redteam.yaml]

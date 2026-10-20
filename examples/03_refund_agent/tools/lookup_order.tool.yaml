@@ -1,0 +1,19 @@
+# lookup_order: reads an order, including the customer's personal data, so a run
+# that calls it holds private data (S3).
+apiVersion: harnessweaver/v1
+kind: Tool
+metadata: {name: lookup_order, version: 1.0.0, owner: payments-team}
+spec:
+  transport: native
+  handler: "refunds.tools:lookup_order"
+  description: "Look up an order: its status, total, billing account and any customer note."
+  input_schema:
+    type: object
+    properties:
+      order_id: {type: string, pattern: "^A-[0-9]{4}$", description: "The order's id, such as A-1001."}
+    required: [order_id]
+  definition_digest: sha256:a860f0a0ecfad3cc9c52ee9e5813e12d2532dec299b7f9faff326a45ba25c267
+  side_effect: read
+  risk: low
+  data_access: ["pii:customer"]
+  output: {label: untrusted}          # customers write the notes: never trust them (S3)

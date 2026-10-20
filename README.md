@@ -57,7 +57,7 @@ result = await harness.run("extract_invoice", InvoiceDoc(text=doc), principal=us
 ```bash
 uv sync --all-packages
 HARNESSWEAVER_ENV=offline uv run python examples/01_invoice_extraction/run.py   # offline, no keys
-uv run harnessweaver init ../my-app     # your own project, from the extraction template
+uv run harnessweaver init ../my-app     # your own project; -t rag | agent | workflow | chat for others
 uv run harnessweaver test ../my-app     # its tests, offline
 ```
 
@@ -65,7 +65,9 @@ uv run harnessweaver test ../my-app     # its tests, offline
 | --- | --- |
 | [01 Invoice extraction](examples/01_invoice_extraction/README.md) | L1 in the Run style: typed output with repair, PII redaction, a secrets check, budgets; L0 in three lines |
 | [Org baseline](examples/_org/README.md) | The profile a platform team publishes: locks, bounds and a required level per risk tier |
-| 02-04 *(planned)* | Support assistant (L2), refund agent with approvals (L3), a TypeScript app through the sidecar |
+| [02 Support assistant](examples/02_support_rag/README.md) | The Session style for a customer-facing app: routing, ACL-checked context, injection guards, citations, the org baseline's locks |
+| [03 Refund agent](examples/03_refund_agent/README.md) | Run and Wrap styles with a Pydantic AI agent: governed tools, policy, the lethal trifecta, approvals, a red-team eval set, an app's own plugin |
+| 04 *(planned)* | A TypeScript app through the sidecar |
 
 ## Packages
 

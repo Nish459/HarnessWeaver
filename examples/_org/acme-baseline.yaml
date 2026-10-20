@@ -2,14 +2,16 @@
 #
 # Apps pick it up with `extends: ["org://acme-baseline@^1"]` and find it through
 # HARNESSWEAVER_PROFILE_PATH (or --profile-dir), which points at this directory.
-# Platform security owns this file; tightening it is a major version (V3).
+# Platform security owns this file; tightening it is a major version (V3), and
+# loosening it (1.1.0 allowed pydantic_ai and Acme's own acme plugins) a minor one.
 apiVersion: harnessweaver/v1
 kind: Profile
-metadata: { name: acme-baseline, version: 1.0.0, owner: platform-security }
+metadata: { name: acme-baseline, version: 1.1.0, owner: platform-security }
 
-# Only plugins the platform team has reviewed (S8).
+# Only plugins the platform team has reviewed (S8): first-party ones, and `acme`,
+# the namespace of Acme's own guards and middleware.
 plugins:
-  allow: [openai, anthropic, otel]
+  allow: [openai, anthropic, otel, pydantic_ai, acme]
 
 # Internal tools guard their inputs and outputs; riskier apps go further.
 require_level:

@@ -1,0 +1,39 @@
+# __app_name__: a three-stage ticket pipeline with a parallel stage and a review loop.
+# The workflow profile blocks secrets in the output and gives each run five minutes.
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata:
+  name: __app_name__
+  owner: your-team
+  risk_tier: internal
+extends: ["profile://workflow"]
+
+models:
+  provider: openai.chat              # any OpenAI-compatible endpoint, usually LiteLLM Proxy
+  base_url: http://localhost:4000    # the gateway holds the provider keys (RULES S1)
+  api_key_env: LITELLM_API_KEY
+  default: fast
+  aliases: { fast: your-fast-model }
+
+tasks:
+  triage:
+    version: 1.0.0
+    # A fixed graph (R12): clean, then classify and summarize in parallel, then a
+    # reply that a reviewer checks; it is rewritten with the feedback, at most 3 times.
+    runner:
+      use: workflow
+      output: reply
+      steps:
+        - { id: clean, handler: "app.steps:clean" }
+        - { id: classify, handler: "app.steps:classify", needs: [clean] }
+        - { id: summarize, handler: "app.steps:summarize", needs: [clean] }
+        - id: reply
+          handler: "app.steps:reply"
+          needs: [classify, summarize]
+          evaluator: "app.steps:review"
+          max_rounds: 3
+          on_reject: escalate        # a person takes over a reply the reviewer never accepts
+    budget: { max_model_calls: 6, max_usd: 0.10 }
+
+evals:
+  triage: [evals/golden.yaml]

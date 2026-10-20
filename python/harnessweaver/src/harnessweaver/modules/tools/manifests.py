@@ -13,10 +13,15 @@ from harnessweaver.core.manifests import ToolManifest
 from harnessweaver.core.policy import TOOL_POLICY_VARIABLES
 from harnessweaver.spec.yaml import load_yaml_file
 
-__all__ = ["approval_rules", "load_manifests"]
+__all__ = ["approval_rules", "load_manifest", "load_manifests", "manifest_files"]
 
 
-def _paths(patterns: Sequence[str], base: Path) -> list[Path]:
+def manifest_files(patterns: Sequence[str], base: Path) -> list[Path]:
+    """The files ``tools.manifests`` globs match, relative to ``base``, in order and once each.
+
+    Raises:
+        SpecError: For a pattern that matches no file.
+    """
     found: list[Path] = []
     for pattern in patterns:
         if Path(pattern).is_absolute():
@@ -51,31 +56,41 @@ def _problems(exc: ValidationError) -> str:
     )
 
 
-def load_manifests(patterns: Sequence[str], base: Path) -> list[ToolManifest]:
-    """Read every ``kind: Tool`` file the globs match, relative to the spec's directory.
+def load_manifest(path: Path) -> ToolManifest:
+    """Read one ``kind: Tool`` file. A schema file named by ``input_schema: {$ref: path}``
+    is read relative to the manifest, and the schema must use only the supported
+    keywords (ADR-0026).
 
-    A schema file named by ``input_schema: {$ref: path}`` is read relative to the
-    manifest. Each schema must use only the supported keywords (ADR-0026), each
-    ``approval.when`` must compile, and names must be unique.
+    Raises:
+        SpecError: Naming the file and the problem.
+    """
+    document = load_yaml_file(path)
+    if not isinstance(document, dict) or document.get("kind") != "Tool":
+        raise SpecError(f"{path} isn't a 'kind: Tool' manifest")
+    _resolve_schema(document, path)  # pyright: ignore[reportUnknownArgumentType]
+    try:
+        manifest = ToolManifest.model_validate(document)
+    except ValidationError as exc:
+        raise SpecError(f"{path}: {_problems(exc)}") from None
+    try:
+        check_schema(manifest.spec.input_schema)
+    except SchemaError as exc:
+        raise SpecError(f"{path}: spec.input_schema.{exc}") from None
+    return manifest
+
+
+def load_manifests(patterns: Sequence[str], base: Path) -> list[ToolManifest]:
+    """Read every ``kind: Tool`` file the globs match, relative to the spec's directory
+    (see :func:`load_manifest`). Each ``approval.when`` must compile, and names must
+    be unique.
 
     Raises:
         SpecError: Naming the file and the problem.
     """
     manifests: list[ToolManifest] = []
     seen: dict[str, Path] = {}
-    for path in _paths(patterns, base):
-        document = load_yaml_file(path)
-        if not isinstance(document, dict) or document.get("kind") != "Tool":
-            raise SpecError(f"{path} isn't a 'kind: Tool' manifest")
-        _resolve_schema(document, path)  # pyright: ignore[reportUnknownArgumentType]
-        try:
-            manifest = ToolManifest.model_validate(document)
-        except ValidationError as exc:
-            raise SpecError(f"{path}: {_problems(exc)}") from None
-        try:
-            check_schema(manifest.spec.input_schema)
-        except SchemaError as exc:
-            raise SpecError(f"{path}: spec.input_schema.{exc}") from None
+    for path in manifest_files(patterns, base):
+        manifest = load_manifest(path)
         if manifest.name in seen:
             raise SpecError(
                 f"{path}: tool {manifest.name!r} is also defined in {seen[manifest.name]}"

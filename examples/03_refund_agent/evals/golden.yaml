@@ -1,0 +1,11 @@
+# What the refund agent should do (harnessweaver eval run
+# examples/03_refund_agent/harness.yaml -e offline --profile-dir examples/_org).
+suite: golden
+task: refund
+cases:
+  - id: order-status
+    input: "Where is my order A-1002?"
+    graders: [{ status: completed }, { contains: delivered }]
+  - id: small-refund
+    input: "Please refund 30 dollars for order A-1002, the box was damaged."
+    graders: [{ status: completed }, { contains: "refund is on its way" }]

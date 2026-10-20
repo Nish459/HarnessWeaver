@@ -1,0 +1,39 @@
+# __app_name__: a chat assistant whose answers stream, moderated as they are produced.
+# The chat profile redacts PII in the input and cuts a stream (or blocks an answer)
+# that leaks a secret.
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata:
+  name: __app_name__
+  owner: your-team
+  risk_tier: internal
+extends: ["profile://chat"]
+
+models:
+  provider: openai.chat              # any OpenAI-compatible endpoint, usually LiteLLM Proxy
+  base_url: http://localhost:4000    # the gateway holds the provider keys (RULES S1)
+  api_key_env: LITELLM_API_KEY
+  default: fast
+  aliases: { fast: your-fast-model }
+
+# The conversation so far, kept per tenant and principal for a day (DESIGNS No. 21).
+memory: { use: memory, default_ttl: 1d }
+
+guardrails:
+  input:
+    # Topics this assistant doesn't handle; the run is blocked before the model.
+    - id: off-topic
+      use: topic.deny
+      action: block
+      topics:
+        medical: [diagnosis, prescription, symptoms]
+        legal: [lawsuit, sue, legal advice]
+
+tasks:
+  chat:
+    version: 1.0.0
+    runner: { use: session, handler: "app.chat:reply" }
+    budget: { max_model_calls: 2, max_usd: 0.02 }
+
+evals:
+  chat: [evals/golden.yaml]

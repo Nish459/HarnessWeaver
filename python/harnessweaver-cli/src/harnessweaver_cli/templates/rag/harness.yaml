@@ -1,0 +1,50 @@
+# __app_name__: answers from a knowledge base, citing the passages it used.
+# The rag profile redacts PII and blocks injection attempts in the question,
+# drops retrieved passages that carry injections, and blocks secrets in answers.
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata:
+  name: __app_name__
+  owner: your-team
+  risk_tier: internal
+extends: ["profile://rag"]
+
+models:
+  provider: openai.chat              # any OpenAI-compatible endpoint, usually LiteLLM Proxy
+  base_url: http://localhost:4000    # the gateway holds the provider keys (RULES S1)
+  api_key_env: LITELLM_API_KEY
+  default: fast
+  aliases: { fast: your-fast-model }
+
+# Which part of the knowledge base a question is about. The first confident stage
+# wins; with none, the default answers (DESIGNS No. 19).
+routing:
+  topic:
+    options: [billing, product]
+    cascade:
+      - id: words
+        use: lexical
+        threshold: 0.2
+        utterances:
+          billing: [how long does a refund take, refund my payment, I was charged twice, where is my invoice]
+          product: [how do I export a report, change my settings, how does this feature work]
+    default: product
+
+# Passages carry ACLs; one without an ACL is dropped (require_acl), and a passage
+# the asking principal may not see never reaches the model (DESIGNS No. 21).
+context:
+  kb: { use: memory, file: data/kb.yaml, max_items: 3, require_acl: true }
+
+guardrails:
+  output:
+    # Every answer sentence cites a passage the run retrieved; otherwise repair once.
+    - { id: citations, use: grounded.citations, min_supported: 1.0, action: repair }
+
+tasks:
+  answer:
+    version: 1.0.0
+    runner: { use: session, handler: "app.flow:answer" }
+    budget: { max_model_calls: 3, max_usd: 0.05 }
+
+evals:
+  answer: [evals/golden.yaml]

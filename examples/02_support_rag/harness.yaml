@@ -1,0 +1,69 @@
+# Example 02: a customer support assistant at adoption level L4 (Session style).
+#
+# The app code owns the flow (route, retrieve, answer) and calls the harness for
+# each step. Acme's baseline makes a customer-facing app reach L2 at least; this one
+# defines a task with an eval suite too, so doctor reports L4.
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata:
+  name: support-assistant
+  owner: cx-team
+  risk_tier: customer_facing         # acme-baseline requires L2 for these
+  description: Answers Acme customers' questions from the help center, citing its articles.
+
+# acme-baseline: reviewed plugins only, PII redaction and the secrets check (both
+# locked), no content in telemetry, budget caps. rag: injection checks on the
+# question and on retrieved articles.
+extends: ["org://acme-baseline@^1", "profile://rag"]
+
+models:
+  provider: openai.chat              # LiteLLM Proxy in front of the real models
+  base_url: http://localhost:4000    # the gateway holds the provider keys (S1) and owns retries (R5)
+  api_key_env: LITELLM_API_KEY
+  default: fast
+  aliases: { fast: fast-chat, strong: strong-chat }   # the aliases the baseline allows
+
+# Which kind of question this is. Rules are exact and run first; the lexical
+# stage decides when it is confident enough; otherwise the default answers.
+routing:
+  intent:
+    options: [outage, billing, howto]
+    cascade:
+      - id: outage-words
+        use: rules
+        rules:
+          - { when: "text.matches('(down|outage|not loading|Down|Outage)')", choice: outage }
+      - id: words
+        use: lexical
+        threshold: 0.3
+        utterances:
+          billing: [how long does a refund take, I was charged twice, where is my invoice, cancel my plan]
+          howto: [how do I export a report, how do I add a user, change my settings]
+    default: howto
+
+# Help-center articles, each with an ACL: open, or for one customer (tenant). The
+# harness re-checks every ACL, so one customer's contract never reaches another's
+# answers (DESIGNS No. 21).
+context:
+  help: { use: memory, file: data/help_center.yaml, max_items: 4, max_tokens: 800, require_acl: true }
+
+guardrails:
+  output:
+    # Every sentence of an answer cites an article the run retrieved; otherwise repair once.
+    - { id: citations, use: grounded.citations, min_supported: 1.0, action: repair }
+
+# Who may ask at all: only identified callers (run.start rules only restrict).
+policy:
+  rules:
+    - { id: known-callers, hook: run.start, when: "principal.id == 'anonymous'", effect: deny }
+
+tasks:
+  support:
+    version: 1.0.0
+    # The same flow the app calls in a session, as a task, so evals can run it.
+    runner: { use: session, handler: "support.flow:answer" }
+    output: support.models:Reply
+    budget: { max_model_calls: 3, max_usd: 0.05, deadline: 20s }
+
+evals:
+  support: [evals/golden.yaml]

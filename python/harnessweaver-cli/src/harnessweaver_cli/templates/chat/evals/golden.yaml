@@ -1,0 +1,10 @@
+# Golden messages for the chat task (harnessweaver eval run).
+suite: golden
+task: chat
+cases:
+  - id: greeting
+    input: "Hi, my name is Ann."
+    graders: [{ status: completed }, { contains: "Nice to meet you" }]
+  - id: off-topic
+    input: "Can you give me a diagnosis for these symptoms?"
+    graders: [{ status: blocked }, { guard_fired: off-topic }]

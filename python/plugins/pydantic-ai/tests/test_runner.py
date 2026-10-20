@@ -50,6 +50,7 @@ async def test_a_task_runs_on_the_harness_model() -> None:
     result = await harness.run("t", "I was charged twice")
     assert result.ok, result.error
     assert result.output == {"category": "billing"}
+    assert harness.runner_of("t").reaches >= {hw.HookPoint.TOOL_BEFORE}  # found by its full name
     assert pai_agents.hooks(result.run_id) == [
         "run.start",
         "input.before",

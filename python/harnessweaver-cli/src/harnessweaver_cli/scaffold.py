@@ -3,13 +3,16 @@
 Templates are directories copied as they are; the only substitution is the
 project name for the marker ``__app_name__`` in file contents (there is no
 template language, R12). Built-in templates ship with the CLI; a plugin's
-templates are named ``<namespace>.<template>`` (DESIGNS No. 13).
+templates are named ``<namespace>.<template>`` (DESIGNS No. 13). Templates whose
+names start with ``_`` are scaffolds for other commands (``plugin new``), not
+projects.
 """
 
 import os
 import re
 import subprocess
 import sys
+from collections.abc import Mapping
 from importlib import resources
 from importlib.resources.abc import Traversable
 from pathlib import Path
@@ -21,15 +24,33 @@ from harnessweaver.core.errors import HarnessError
 from harnessweaver.ports import TEST_MODE_ENV
 from harnessweaver_cli._load import fail
 
-__all__ = ["BUILTIN_TEMPLATES", "init", "render_template", "run_tests"]
+__all__ = [
+    "BUILTIN_TEMPLATES",
+    "copy_tree",
+    "init",
+    "render_template",
+    "run_tests",
+    "template_root",
+]
 
 MARKER: Final = "__app_name__"
-BUILTIN_TEMPLATES: Final = ("extraction",)
+BUILTIN_TEMPLATES: Final = ("extraction", "rag", "agent", "workflow", "chat")
 _NAME = re.compile(r"^[a-z][a-z0-9-]*$")
 _SKIP = {"__pycache__", ".pytest_cache", ".DS_Store"}
 
 
-def _template_root(name: str) -> Traversable:
+def template_root(name: str) -> Traversable:
+    """Where template ``name`` lives: in the CLI, or in the plugin that ships it.
+
+    Raises:
+        typer.Exit: For a template nobody ships.
+    """
+    if name.startswith("_"):
+        raise fail(f"no template {name!r}; built-in templates: {', '.join(BUILTIN_TEMPLATES)}")
+    return _root(name)
+
+
+def _root(name: str) -> Traversable:
     if "." not in name:
         root = resources.files("harnessweaver_cli").joinpath("templates", name)
         if not root.is_dir():
@@ -60,15 +81,22 @@ def _files(root: Traversable, prefix: Path = Path()) -> list[tuple[Path, Travers
     return found
 
 
-def render_template(
-    name: str, directory: Path, app_name: str, *, force: bool = False
+def _filled(text: str, markers: Mapping[str, str]) -> str:
+    for marker, value in markers.items():
+        text = text.replace(marker, value)
+    return text
+
+
+def copy_tree(
+    root: Traversable, directory: Path, markers: Mapping[str, str], *, force: bool = False
 ) -> list[Path]:
-    """Copy template ``name`` into ``directory``. Returns the files written.
+    """Copy the files under ``root`` into ``directory``, replacing each marker with its
+    value in file contents and in paths. Returns the files written.
 
     Raises:
         typer.Exit: If a file would be overwritten (without ``force``).
     """
-    files = _files(_template_root(name))
+    files = [(Path(_filled(str(relative), markers)), source) for relative, source in _files(root)]
     clashes = [str(relative) for relative, _ in files if (directory / relative).exists()]
     if clashes and not force:
         raise fail(f"{', '.join(clashes)} already exist in {directory}; use --force to overwrite")
@@ -76,11 +104,21 @@ def render_template(
     for relative, source in files:
         target = directory / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(
-            source.read_text(encoding="utf-8").replace(MARKER, app_name), encoding="utf-8"
-        )
+        target.write_text(_filled(source.read_text(encoding="utf-8"), markers), encoding="utf-8")
         written.append(target)
     return written
+
+
+def render_template(
+    name: str, directory: Path, app_name: str, *, force: bool = False
+) -> list[Path]:
+    """Copy template ``name`` into ``directory``, named ``app_name``. Returns the files written.
+
+    Raises:
+        typer.Exit: For an unknown template, or if a file would be overwritten
+            (without ``force``).
+    """
+    return copy_tree(template_root(name), directory, {MARKER: app_name}, force=force)
 
 
 def init(

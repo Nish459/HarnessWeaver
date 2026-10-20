@@ -1,0 +1,12 @@
+# The offline overlay: HARNESSWEAVER_ENV=offline swaps the model for a scripted one,
+# so tests and demos need no network and no keys (RULES R14). Answers stream in chunks.
+models:
+  provider: scripted
+  rules:
+    - contains: "my name is"
+      reply: { text: "Nice to meet you!", chunks: ["Nice ", "to meet ", "you!"] }
+    - contains: "what is my name"
+      reply: { text: "You told me your name is Ann.", chunks: ["You told me ", "your name is Ann."] }
+  replies:
+    - text: "Happy to help. What would you like to know?"
+      chunks: ["Happy to help. ", "What would you like to know?"]

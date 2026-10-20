@@ -1,0 +1,57 @@
+# Example 03: a refund agent at adoption level L4 (Run style, and Wrap in wrap.py).
+#
+# A Pydantic AI agent decides what to do; the harness decides what it may do. Every
+# tool call passes the manifest, the policy, the lethal-trifecta check and approval
+# rules, and Acme's own middleware and guard run next to the built-in ones.
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata:
+  name: refund-agent
+  owner: payments-team
+  risk_tier: takes_actions           # acme-baseline requires L3 for these
+  description: Handles customers' refund requests for Acme orders.
+
+# acme-baseline: reviewed plugins only, PII redaction, the secrets check, no content
+# in telemetry, approval for high-risk tools, budget caps. agent: injection checks on
+# the request, secrets redacted from tool results, capped tool calls.
+extends: ["org://acme-baseline@^1", "profile://agent"]
+
+plugins:
+  local: ["refunds.acme"]            # Acme's own plugin (namespace acme), in this repo
+
+models:
+  provider: openai.chat              # LiteLLM Proxy in front of the real models
+  base_url: http://localhost:4000    # the gateway holds the provider keys (S1) and owns retries (R5)
+  api_key_env: LITELLM_API_KEY
+  default: fast
+  aliases: { fast: fast-chat, strong: strong-chat }
+
+middleware:
+  - { use: acme.no_weekend_refunds, band: app }
+
+guardrails:
+  tool_result:
+    - { id: account-ids, use: acme.account_ids, action: redact }   # never show account numbers to the model
+
+tools:
+  manifests: ["tools/*.tool.yaml"]
+  trifecta: block                    # untrusted + private + egress: no mail goes out (S3)
+
+# Deterministic rules every call passes (R3): deny beats approval beats allow.
+policy:
+  rules:
+    - { id: refund-cap, when: "tool.name == 'refund_payment' && args.amount_usd > 1000", effect: deny }
+    - { id: no-contractor-refunds, when: "tool.name == 'refund_payment' && 'contractor' in principal.roles", effect: deny }
+
+approvals: { approver_role: finance, timeout: 24h, on_timeout: escalate }
+
+tasks:
+  refund:
+    version: 1.0.0
+    runner: { use: pydantic_ai.agent, agent: "refunds.agent:refund_agent" }
+    output: str
+    tools: [lookup_order, refund_payment, email_customer]
+    budget: { max_tool_calls: 6, max_model_calls: 8, max_usd: 0.50, deadline: 2m }
+
+evals:
+  refund: [evals/golden.yaml, evals/redteam.yaml]

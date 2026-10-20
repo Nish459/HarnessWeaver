@@ -41,6 +41,12 @@ All notable changes to the HarnessWeaver packages are recorded here. The format 
 - `Harness.wrap(agent, task=...)`: wrap style for agent frameworks, with the adapter found from the agent's type as `instrument()` finds one (DESIGNS No. 15, ADR-0037).
 - Adapters govern what their framework runs itself: `RunContext.call_tool(call, backend=...)` runs a framework's own tool through `tool.before`, the governor and `tool.after`, and `RunContext.approval_needed(call, reason)` brings an approval the framework asks for to the harness's approvers. During a replay the recording answers an adapter's own model and tool calls too (`RunContext.replaying`, ADR-0035).
 - `harnessweaver-pydantic-ai`: the `pydantic_ai.agent` runner (the spec's models or the agent's own, the task's prompt and tools, `deps`, repairs as `ModelRetry`, approvals that suspend and resume through Pydantic AI's deferred tools, including tools marked `requires_approval=True`) and the `wrap()` adapter for Pydantic AI agents, both governing through `HarnessCapability` (ADR-0037). `make conformance` covers it.
+- `harnessweaver add guard` adds a guard in shadow mode (`mode: log_only`, R8), and `harnessweaver add tool` writes a tool manifest from a function's signature and Google-style docstring and adds its directory to `tools.manifests`. Both edit `harness.yaml` with its comments kept (ruamel.yaml, ADR-0016), and a guard whose edit doesn't load is taken back out.
+- `harnessweaver tools pin` writes each manifest's `definition_digest` (S2); `--tool` pins one.
+- `harnessweaver plugin new <namespace>` scaffolds a standalone plugin package (entry point, `hw.Plugin`, a sample `<namespace>.banned_words` guard, and tests whose `pytest` run includes the conformance suite), and `harnessweaver plugin list` shows installed plugins with their versions, contract ranges and compatibility.
+- Project templates `rag`, `agent` (a Pydantic AI agent with governed tools and a red-team eval set), `workflow` and `chat`, each passing its own tests offline (T6).
+- Example 02, `examples/02_support_rag`: a customer-facing support assistant in the Session style with routing, ACL-checked context, injection guards on questions and retrieved articles, citations, a `run.start` policy, and tests that Acme's baseline locks hold.
+- Example 03, `examples/03_refund_agent`: a refund agent in the Run style (the `pydantic_ai.agent` runner) and the Wrap style (`harness.wrap` on an existing agent), with governed tools, policy rules, the lethal-trifecta check, finance approvals, Acme's own middleware and guard as a local plugin, `policy_tests.yaml`, and a red-team eval set that passes offline (the Phase 2 gate).
 - `harnessweaver-openai`: the `openai.chat` provider (retries off, LiteLLM cost header, streaming) and the `instrument()` adapter for `OpenAI` / `AsyncOpenAI`.
 - `harnessweaver-anthropic`: the `anthropic.messages` provider (adaptive thinking, `effort`, server-side refusal fallbacks on by default, thinking blocks replayed unchanged across a tool loop, streaming) and the `instrument()` adapter for `Anthropic` / `AsyncAnthropic`.
 - `harnessweaver-otel`: the `otel.sdk` provider, which sets up the OpenTelemetry SDK with a console or OTLP exporter when `observability.configure_sdk: true` and leaves an app's own setup alone (R5).
@@ -90,6 +96,8 @@ All notable changes to the HarnessWeaver packages are recorded here. The format 
 
 ### Changed
 
+- `examples/_org/acme-baseline.yaml` 1.1.0 also allows the `pydantic_ai` and `acme` plugins (a loosening, so a minor version, V3).
+- `harnessweaver init` refuses template names starting with `_`, which are scaffolds for other commands.
 - The `StateStore` port gains `append_recording`, `recording`, `put_sample` and `samples`, and the `ToolGovernor` port's `authorize` takes `dry_run`. `Harness.from_spec` takes a `state` store; given `telemetry`, it no longer configures an OpenTelemetry SDK itself.
 - The extraction template's and Example 01's offline overlays answer every golden case, so `harnessweaver eval run -e offline` passes on them; both test their golden sets.
 - Logging goes through loguru (ADR-0024), which becomes the core's fifth dependency (RULES R6). The core and `harnessweaver-otel` are silent until the app opts in with `logger.enable("harnessweaver")` / `logger.enable("harnessweaver_otel")`, and never add sinks. The conformance suite's raw-content check (R9) captures loguru and `logging` output alike.
@@ -97,4 +105,5 @@ All notable changes to the HarnessWeaver packages are recorded here. The format 
 
 ### Fixed
 
+- `Harness.runner_of()`, and so `harnessweaver doctor`, failed for a task run by a plugin's runner (such as `pydantic_ai.agent`): it looked the runner up by its short name.
 - A guard with `action: require_approval` in `guardrails.output` asked for approval again after a human approved the output, so the run never completed. The guardrails pipeline now honours `OutputEvent.approval`: the approval answers `require_approval` and is traced as a `guard_approved` note, while `block`, `escalate`, `repair`, redactions and shadow guards still apply (DESIGNS No. 18, No. 20). The `guards` conformance fixtures gain approved-output cases (`approved: true`).

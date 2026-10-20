@@ -104,6 +104,8 @@ extraPaths = [
     "python/harnessweaver/tests/fixtures",
     "python/plugins/pydantic-ai/tests",
     "examples/01_invoice_extraction",
+    "examples/02_support_rag",
+    "examples/03_refund_agent",
 ]
 # RULES C1: strict on the contract-heavy core.
 strict = [

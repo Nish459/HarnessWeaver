@@ -1,0 +1,17 @@
+# refund_payment: moves money. A refund over 50 USD waits for a support lead.
+apiVersion: harnessweaver/v1
+kind: Tool
+metadata: { name: refund_payment, version: 1.0.0, owner: your-team }
+spec:
+  transport: native
+  handler: "app.tools:refund_payment"
+  description: Refund part or all of an order's payment.
+  input_schema:
+    type: object
+    properties:
+      order_id: { type: string, description: "The order's id." }
+      amount_usd: { type: number, minimum: 0, description: "How much to refund, in USD." }
+    required: [order_id, amount_usd]
+  side_effect: write_external
+  risk: medium
+  approval: { when: "args.amount_usd > 50", approver_role: support-lead }
