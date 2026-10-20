@@ -37,7 +37,7 @@ from harnessweaver.modules.evals import (
 )
 from harnessweaver.modules.state import MemoryStateStore
 from harnessweaver_cli._load import fail, load_harness
-from harnessweaver_cli.spec_commands import Env, Format, Path_, ProfileDirs
+from harnessweaver_cli.spec import Env, Format, Path_, ProfileDirs
 
 __all__ = ["eval_app"]
 

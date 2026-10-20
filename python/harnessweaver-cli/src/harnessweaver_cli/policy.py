@@ -35,7 +35,7 @@ from harnessweaver.core.tools import ToolVerdict
 from harnessweaver.modules.state import MemoryStateStore
 from harnessweaver.spec.yaml import load_yaml_file
 from harnessweaver_cli._load import fail, load_harness
-from harnessweaver_cli.spec_commands import Env, Format, Path_, ProfileDirs
+from harnessweaver_cli.spec import Env, Format, Path_, ProfileDirs
 
 __all__ = ["policy_app"]
 

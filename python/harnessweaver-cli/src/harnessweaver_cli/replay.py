@@ -16,7 +16,7 @@ from harnessweaver import Harness
 from harnessweaver.core.errors import HarnessError
 from harnessweaver.core.replay import ReplayReport
 from harnessweaver_cli._load import fail, load_harness
-from harnessweaver_cli.spec_commands import Env, Format, Path_, ProfileDirs
+from harnessweaver_cli.spec import Env, Format, Path_, ProfileDirs
 
 __all__ = ["replay"]
 
