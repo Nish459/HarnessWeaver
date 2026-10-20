@@ -81,6 +81,8 @@ class HarnessBase:
         self._group: TaskGroup | None = None
         self._active: dict[str, ActiveRun] = {}
         self._channels: dict[str, Channel] = {}
+        self._replaying = False
+        """Set on the copy a replay runs (ADR-0035)."""
 
     def _rebuilt(self, *, model: ModelProvider, state: StateStore, telemetry: Telemetry) -> Self:
         """The same spec built again with these parts, for replays (``Harness`` builds it)."""
@@ -171,6 +173,7 @@ class HarnessBase:
             context_ids=context_ids,
             recorder=self._state.append_recording if self._effective.spec.state.record else None,
             recorded=recorded,
+            replaying=self._replaying,
         )
 
     # --- events -----------------------------------------------------------------------------

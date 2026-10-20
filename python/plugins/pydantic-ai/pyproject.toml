@@ -26,5 +26,8 @@ dependencies = [
     "pydantic-ai-slim>=2.57,<3",
 ]
 
+[project.entry-points."harnessweaver.plugins"]
+pydantic_ai = "harnessweaver_pydantic_ai:plugin"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/harnessweaver_pydantic_ai"]

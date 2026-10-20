@@ -100,7 +100,11 @@ include = ["python", "scripts", "examples"]
 # Templates are copied into new projects, where their own imports resolve.
 exclude = ["**/__pycache__", "**/.venv", "**/templates/**"]
 # The runtime tests load this plugin module through plugins.local; examples import their own code.
-extraPaths = ["python/harnessweaver/tests/fixtures", "examples/01_invoice_extraction"]
+extraPaths = [
+    "python/harnessweaver/tests/fixtures",
+    "python/plugins/pydantic-ai/tests",
+    "examples/01_invoice_extraction",
+]
 # RULES C1: strict on the contract-heavy core.
 strict = [
     "python/harnessweaver/src/harnessweaver/core",

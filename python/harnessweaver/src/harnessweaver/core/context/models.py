@@ -77,7 +77,8 @@ class ModelCalls(RunContextBase):
 
         Budgets are checked before the call and after it. A ``Retry`` at
         ``model.after`` re-asks the model up to :data:`MODEL_RETRIES` times.
-        Adapters pass ``provider`` to send the call through the client they wrap.
+        Adapters pass ``provider`` to send the call through the client they wrap;
+        during a replay the recording answers instead (ADR-0035).
 
         Raises:
             RunInterrupted: When a hook or a budget halts the run.
@@ -151,7 +152,7 @@ class ModelCalls(RunContextBase):
     async def _call_provider(
         self, request: ModelRequest, override: ModelProvider | None
     ) -> ModelResponse:
-        provider = override or self.models.provider
+        provider = self.models.provider if self.replaying else override or self.models.provider
         if provider is None:
             raise SpecError("no model provider is configured; set models.provider")
         try:

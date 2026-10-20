@@ -78,6 +78,7 @@ class RunContextBase:
         context_ids: Iterable[str] = (),
         recorder: Callable[[RecordedCall], Awaitable[None]] | None = None,
         recorded: int = 0,
+        replaying: bool = False,
     ) -> None:
         self._envelope = envelope
         self.bus = bus
@@ -102,6 +103,9 @@ class RunContextBase:
         self.recorder = recorder
         """Keeps what the run gets from outside, for replay (``state.record``)."""
         self._recorded = recorded
+        self.replaying = replaying
+        """True while a replay runs the task: the recording answers every model and tool
+        call, including those an adapter would make itself (ADR-0035)."""
         self.input: JsonValue = None
         """The run's input after ``input.before``, for validation rules."""
         self.pending: PendingApproval | None = None

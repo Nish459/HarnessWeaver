@@ -161,6 +161,7 @@ class ReplayMixin(ChecksMixin):
         model, tools = RecordedModel(calls), RecordedTools(self._tools, calls)
         twin = self._rebuilt(model=model, state=MemoryStateStore(), telemetry=_quiet())
         twin._tools = tools  # every call gets a recorded result; none executes
+        twin._replaying = True  # adapters' own models and tools aren't used either
         result = await twin.run(
             record.task,
             record.input,

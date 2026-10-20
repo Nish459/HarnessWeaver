@@ -10,6 +10,7 @@ from harnessweaver.core.context.access import PendingApproval
 from harnessweaver.core.context.base import RunContextBase
 from harnessweaver.core.errors import (
     RunBlocked,
+    RunInterrupted,
     SpecError,
 )
 from harnessweaver.core.hooks import (
@@ -22,6 +23,7 @@ from harnessweaver.core.outcomes import (
     Suspend,
 )
 from harnessweaver.core.ports import (
+    ToolBackend,
     ToolDescription,
 )
 from harnessweaver.core.state import call_digest
@@ -36,7 +38,7 @@ class ToolCalls(RunContextBase):
             return contextlib.nullcontext(None)
         return self.telemetry.tool_span(call, tool)
 
-    async def call_tool(self, call: ToolCall) -> ToolResult:
+    async def call_tool(self, call: ToolCall, *, backend: ToolBackend | None = None) -> ToolResult:
         """Make one governed tool call: ``tool.before``, the governor, the tool, ``tool.after``.
 
         A call a human already approved carries the approval into ``tool.before``,
@@ -44,10 +46,16 @@ class ToolCalls(RunContextBase):
         arguments the middleware leaves (steps 1 to 7) and sanitizes the result
         before ``tool.after`` (step 9, ADR-0025).
 
+        Adapters pass ``backend`` to describe and run a tool that the framework they
+        wrap executes itself, such as a Pydantic AI agent's own function. It is
+        governed exactly like the run's tools, and during a replay the recording
+        answers instead of it (ADR-0035, ADR-0037).
+
         Raises:
             RunInterrupted: When a hook or a budget halts the run.
         """
-        description = self.tools.describe(call.name)
+        tools = backend or self.tools
+        description = tools.describe(call.name)
         if description is None:
             reason = f"tool {call.name!r} isn't registered"
             self.trace.note(
@@ -98,7 +106,8 @@ class ToolCalls(RunContextBase):
         self._refresh_budget()
         with self._tool_span(call, description.info) as span:
             try:
-                result = await self.tools.execute(call, self._envelope)
+                runs = self.tools if self.replaying else tools
+                result = await runs.execute(call, self._envelope)
             except Exception as exc:
                 # The model sees that the tool failed, not why: the message may hold content (R9).
                 self.trace.note(
@@ -126,6 +135,40 @@ class ToolCalls(RunContextBase):
         if description.info.reads_private_data:
             self.mark_private(f"tool:{call.name}")
         return final
+
+    def approval_needed(
+        self,
+        call: ToolCall,
+        reason: str,
+        *,
+        tool: ToolInfo | None = None,
+        approver_role: str | None = None,
+    ) -> RunInterrupted | None:
+        """The error that pauses the run until a human approves ``call`` (DESIGNS No. 18),
+        or ``None`` once one has.
+
+        Adapters raise it for approvals the framework they wrap asks for itself, such
+        as a Pydantic AI tool with ``requires_approval=True`` (ADR-0037). The approval
+        is matched by the call's name and arguments, so once approved the call passes
+        ``tool.before`` without asking again. A run that can't suspend escalates.
+        """
+        digest = call_digest(call)
+        if self._grant(HookPoint.TOOL_BEFORE, digest) is not None:
+            return None
+        self.trace.note(
+            "harness.approvals", reason, hook=HookPoint.TOOL_BEFORE, code="approval_requested"
+        )
+        self.pending = PendingApproval(
+            HookPoint.TOOL_BEFORE,
+            reason,
+            approver_role,
+            digest,
+            call=call,
+            tool=tool or ToolInfo(name=call.name),
+        )
+        return self.interrupt(
+            HookPoint.TOOL_BEFORE, Suspend(reason=reason, approver_role=approver_role)
+        )
 
     def tool_specs(self, names: Iterable[str]) -> list[ToolDescription]:
         """Describe tools by name.

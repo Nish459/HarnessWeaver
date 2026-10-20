@@ -122,7 +122,7 @@ flowchart LR
 
 ### Add an adapter or runner
 1. Declare `reaches=[...]` honestly (R4). Loading must fail when the baseline needs a hook you can't reach.
-2. Inject governed model calls and governed tools; bridge native callbacks onto hook points; translate errors into the taxonomy.
+2. Inject governed model calls and governed tools (`RunContext.generate(provider=...)` and `RunContext.call_tool(backend=...)` for calls the framework makes itself); bridge native callbacks onto hook points; translate errors into the taxonomy.
 3. No framework types in hook payloads (R7).
 4. Pass the adapter conformance suite (declared hooks fire in documented order).
 

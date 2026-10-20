@@ -1,7 +1,8 @@
 """Wrap style: adapters that govern an existing client or framework (DESIGNS No. 15).
 
-``harness.instrument(client)`` finds an adapter for the client's type and returns
-a governed client. Each call it makes goes through the harness:
+``harness.instrument(client)`` and ``harness.wrap(agent)`` find an adapter for
+the target's type and return a governed stand-in. Each model call it makes goes
+through the harness:
 
 * inside a run or session, the call is one governed model call of that run;
 * otherwise it becomes a small run of its own: ``run.start``, ``input.before`` on
@@ -57,7 +58,8 @@ class CallProvider:
 
 @dataclass(frozen=True, slots=True)
 class Binding:
-    """What ``harness.instrument()`` gives an adapter: how to make governed calls."""
+    """What ``harness.instrument()`` and ``harness.wrap()`` give an adapter: how to make
+    governed calls, and the task, principal, tenant and attributes of the runs they make."""
 
     harness: "Harness"
     task: str | None = None

@@ -236,7 +236,44 @@ class Harness(ReplayMixin):
             UnreachableHook: If the adapter can't reach a hook the baseline or
                 the budgets need (R4).
         """
-        info = self._adapter_for(client, adapter)
+        return self._bind(client, task, principal, tenant, attributes, adapter)
+
+    def wrap[T](
+        self,
+        agent: T,
+        *,
+        task: str | None = None,
+        principal: Principal | str = "anonymous",
+        tenant: str = "default",
+        attributes: Mapping[str, str] | None = None,
+        adapter: str | None = None,
+    ) -> T:
+        """Return a governed version of an agent from another framework (DESIGNS No. 15).
+
+        ``agent = harness.wrap(my_pydantic_agent, task="support_agent")``: the
+        adapter is found from the agent's type as :meth:`instrument` finds one, and
+        each run of the returned agent is governed: a run of its own, or part of
+        the harness run or session it runs inside. ``task`` names the task whose
+        budget and middleware apply.
+
+        Raises:
+            UnknownProvider: If no installed plugin wraps the agent's type.
+            PluginNotAllowed: If that plugin isn't in ``plugins.allow``.
+            UnreachableHook: If the adapter can't reach a hook the baseline or
+                the budgets need (R4).
+        """
+        return self._bind(agent, task, principal, tenant, attributes, adapter)
+
+    def _bind[T](
+        self,
+        target: T,
+        task: str | None,
+        principal: Principal | str,
+        tenant: str,
+        attributes: Mapping[str, str] | None,
+        adapter: str | None,
+    ) -> T:
+        info = self._adapter_for(target, adapter)
         if task is not None and task in self._tasks:
             budget = self._effective.run_budget(task)
         else:
@@ -249,7 +286,7 @@ class Harness(ReplayMixin):
                 hooks=list[JsonValue](missing),
             )
         binding = Binding(self, task, principal, tenant, dict(attributes or {}))
-        return info.target().bind(client, binding)
+        return info.target().bind(target, binding)
 
     async def evaluate(self, dataset: EvalDataset | str | Path) -> SuiteResult:
         """Run an eval suite: each case's task run, graded (DESIGNS No. 23).

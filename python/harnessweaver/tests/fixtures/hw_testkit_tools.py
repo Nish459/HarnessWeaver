@@ -1,11 +1,14 @@
 """Helpers for the governance, routing and context tests: native tool handlers, a
-sandbox, guards, a custom routing stage and a context provider that leaks."""
+sandbox, guards, a custom routing stage, a context provider that leaks, and a
+handler that calls a model and a tool the way an adapter does."""
 
 from typing import Any
 
 from hw_recorder import RECORDER
 
 import harnessweaver as hw
+from harnessweaver.adapters import CallProvider
+from harnessweaver.ports import ToolDescription
 
 __all__ = [
     "BrokenGrader",
@@ -13,8 +16,11 @@ __all__ = [
     "EchoSandbox",
     "Explodes",
     "LeakyContext",
+    "OwnTools",
     "cite_then_refund",
     "lookup_order",
+    "own_approval",
+    "own_calls",
     "refund_payment",
     "send_email",
     "vip",
@@ -115,3 +121,46 @@ async def cite_then_refund(s: hw.Session, input: Any) -> Any:
     items = await s.context("kb").fetch("refunds")
     await s.tool("refund", amount=500)
     return {"cited": [item.id for item in items]}
+
+
+class OwnTools:
+    """A tool backend an adapter brings: the framework it wraps runs ``weather`` itself."""
+
+    def describe(self, name: str) -> ToolDescription | None:
+        if name != "weather":
+            return None
+        manifest = hw.ToolManifest.model_validate(
+            {"metadata": {"name": "weather"}, "spec": {"description": "Today's weather."}}
+        )
+        return ToolDescription.from_manifest(manifest)
+
+    async def execute(self, call: hw.ToolCall, env: hw.Envelope) -> hw.ToolResult:
+        RECORDER.handled.append(("weather", dict(call.arguments)))
+        return hw.ToolResult(call_id=call.id, output={"sky": "clear"})
+
+
+async def own_calls(s: hw.Session, input: Any) -> Any:
+    """A session-runner handler whose model and tool calls go through its own provider
+    and tool backend, as an adapter's do (ADR-0037)."""
+    ctx = s.run_context
+
+    async def ask(request: hw.ModelRequest) -> hw.ModelResponse:
+        RECORDER.notes.append(("own model", len(request.messages)))
+        return hw.ModelResponse(text="sunny")
+
+    request = hw.ModelRequest(messages=(hw.Message.user(str(input)),))
+    answer = await ctx.generate(request, provider=CallProvider(ask))
+    call = hw.ToolCall(id="call_w", name="weather", arguments={"city": str(input)})
+    result = await ctx.call_tool(call, backend=OwnTools())
+    return {"text": answer.text, "weather": result.output}
+
+
+async def own_approval(s: hw.Session, input: Any) -> Any:
+    """Like :func:`own_calls`, but the framework asks a human before calling ``weather``."""
+    ctx = s.run_context
+    call = hw.ToolCall(id="call_w", name="weather", arguments={"city": str(input)})
+    error = ctx.approval_needed(call, "the framework asks first", approver_role="ops")
+    if error is not None:
+        raise error
+    result = await ctx.call_tool(call, backend=OwnTools())
+    return result.output
