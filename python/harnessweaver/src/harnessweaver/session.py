@@ -287,16 +287,25 @@ class Session:
             raise SpecError(f"unknown guard stage {stage!r}; use validate() for output")
         return await self._ctx.check_input(content)
 
-    async def validate(self, stage: Literal["output"], value: Any) -> Any:
+    async def validate(
+        self, stage: Literal["output"], value: Any, *, output: type[Any] | None = None
+    ) -> Any:
         """Check a final output (``output.before``). Returns it, possibly modified.
 
+        With ``output``, the value is first parsed into that type, as ``generate``
+        parses a model's answer (a JSON string is decoded first).
+
         Raises:
-            ValidationFailed: When a middleware asks for a repair; in session
-                style the app decides how to repair.
+            ValidationFailed: When the value isn't an ``output``, or a middleware
+                asks for a repair; in session style the app decides how to repair.
             RunInterrupted: When a hook halts the run.
         """
         if stage != "output":
             raise SpecError(f"unknown validation stage {stage!r}")
+        if output is not None:
+            value, problem = parse_output(to_json(value), output)
+            if problem is not None:
+                raise ValidationFailed(problem)
         result = await self._ctx.check_output(to_json(value))
         if isinstance(result.outcome, Retry):
             raise ValidationFailed(result.outcome.reason)

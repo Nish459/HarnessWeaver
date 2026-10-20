@@ -1,0 +1,3375 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "harnessd",
+    "description": "The HarnessWeaver sidecar: one harness.yaml, served to every language.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "summary": "Health",
+        "description": "Liveness, and the versions served. The only route without a token (S6).",
+        "operationId": "health_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health V1 Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/spec": {
+      "get": {
+        "summary": "Spec",
+        "description": "The effective spec harnessd serves: every layer merged, locks and bounds applied.",
+        "operationId": "spec_v1_spec_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpecInfo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The spec or the request names something invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer token is required (S6)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request body doesn't match its schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "A provider failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/hooks": {
+      "get": {
+        "summary": "Hooks",
+        "description": "The middleware on every hook point, in the order it runs (``harnessweaver hooks``).",
+        "operationId": "hooks_v1_hooks_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Task"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/HookEntry"
+                    }
+                  },
+                  "title": "Response Hooks V1 Hooks Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The spec or the request names something invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer token is required (S6)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request body doesn't match its schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "A provider failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/policy/evaluate": {
+      "post": {
+        "summary": "Evaluate Policy",
+        "description": "What the policy engine alone decides (``policy.rules``, ADR-0025).",
+        "operationId": "evaluate_policy_v1_policy_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyDecision"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The spec or the request names something invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer token is required (S6)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request body doesn't match its schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "A provider failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/tools/{name}/authorize": {
+      "post": {
+        "summary": "Authorize",
+        "description": "The governor's verdict on a call (steps 1 to 7) as a dry run: nothing executes,\nno rate limit is used up (ADR-0036).",
+        "operationId": "authorize_v1_tools__name__authorize_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthorizeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolVerdict"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The spec or the request names something invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer token is required (S6)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request body doesn't match its schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "A provider failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/guards/providers/{name}:check": {
+      "post": {
+        "summary": "Check Provider",
+        "description": "Run one guardrail provider: what a ``where: sidecar`` guard asks (DESIGNS No. 24).\n\nThe provider must be allowed by the served spec's ``plugins.allow`` (S8).\nBuilt providers are kept per name and settings, since heavy ones (a PII\nmodel, a classifier) are slow to build.",
+        "operationId": "check_provider_v1_guards_providers__name__check_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderCheck"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuardResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The spec or the request names something invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer token is required (S6)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request body doesn't match its schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "A provider failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/guards/{stage}": {
+      "post": {
+        "summary": "Check Stage",
+        "description": "Run a stage's hook the way a session does: ``input`` fires ``input.before``,\n``context`` fires ``context.after`` (ACLs re-checked first, ADR-0030), and\n``output`` fires ``output.before``. Every guard and middleware at that hook runs.",
+        "operationId": "check_stage_v1_guards__stage__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "stage",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "input",
+                "context",
+                "output"
+              ],
+              "type": "string",
+              "title": "Stage"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StageCheck"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The spec or the request names something invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer token is required (S6)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request body doesn't match its schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "A provider failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/decisions/{router}": {
+      "post": {
+        "summary": "Decide",
+        "description": "Ask a router to choose (``route.decide``); the output is the ``Decision``.",
+        "operationId": "decide_v1_decisions__router__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "router",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Router"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The spec or the request names something invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer token is required (S6)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request body doesn't match its schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "A provider failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tools/{name}/sanitize": {
+      "post": {
+        "summary": "Sanitize",
+        "description": "What the harness does to a tool's result before a model sees it: the\ngovernor's step 9 (sanitizers, truncation, the untrusted label), then\n``tool.after`` with its ``tool_result`` guards. The output is the ``ToolResult``.",
+        "operationId": "sanitize_v1_tools__name__sanitize_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SanitizeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The spec or the request names something invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer token is required (S6)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request body doesn't match its schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "A provider failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/validate": {
+      "post": {
+        "summary": "Validate",
+        "description": "Check a final output against a task: parsed into its output type, then\n``output.before`` (guards and ``validation.rules``). A repair request ends the\nrun ``failed`` with a ``validation_failed`` error naming the problem.",
+        "operationId": "validate_v1_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The spec or the request names something invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer token is required (S6)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request body doesn't match its schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "A provider failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/runs": {
+      "post": {
+        "summary": "Start Run",
+        "description": "Run a task to the end, or until it waits for approval (``harness.run``).",
+        "operationId": "start_run_v1_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The spec or the request names something invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer token is required (S6)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request body doesn't match its schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "A provider failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/runs/{run_id}": {
+      "get": {
+        "summary": "Get Run",
+        "description": "The latest state of a run, check sessions included.",
+        "operationId": "get_run_v1_runs__run_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The spec or the request names something invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer token is required (S6)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request body doesn't match its schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "A provider failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runs/{run_id}/approvals/{approval_id}": {
+      "post": {
+        "summary": "Answer Approval",
+        "description": "Answer a pending approval and continue the run (DESIGNS No. 18).",
+        "operationId": "answer_approval_v1_runs__run_id__approvals__approval_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "approval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Approval Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalAnswer"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The spec or the request names something invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer token is required (S6)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request body doesn't match its schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "A provider failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/evals/run": {
+      "post": {
+        "summary": "Run Evals",
+        "description": "Run an eval suite: one given in the request, or a file the spec's ``evals``\nlists. Only listed files can be named, so a client can't make harnessd read\nany other file.",
+        "operationId": "run_evals_v1_evals_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvalRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuiteResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The spec or the request names something invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer token is required (S6)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request body doesn't match its schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "A provider failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Acl": {
+        "properties": {
+          "tenants": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tenants",
+            "default": []
+          },
+          "principals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Principals",
+            "default": []
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Acl",
+        "description": "Who may see a retrieved item. An empty list means \"no restriction\" for that part."
+      },
+      "ApprovalAnswer": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject",
+              "edit"
+            ],
+            "title": "Decision",
+            "default": "approve"
+          },
+          "approver": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Principal"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Approver"
+          },
+          "edited_args": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited Args"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "approver"
+        ],
+        "title": "ApprovalAnswer",
+        "description": "``POST /v1/runs/{run_id}/approvals/{approval_id}``: a human's answer."
+      },
+      "ApprovalRequest": {
+        "properties": {
+          "approval_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Approval Id"
+          },
+          "run_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Run Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "approver_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approver Role"
+          },
+          "call": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolCall"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Requested At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "approval_id",
+          "run_id",
+          "reason",
+          "requested_at"
+        ],
+        "title": "ApprovalRequest",
+        "description": "A suspended step waiting for a human."
+      },
+      "AuthorizeRequest": {
+        "properties": {
+          "principal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Principal"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Principal",
+            "description": "A principal or its id.",
+            "default": "anonymous"
+          },
+          "tenant": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Tenant",
+            "default": "default"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task",
+            "description": "The task whose controls apply."
+          },
+          "args": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Args"
+          },
+          "labels": {
+            "$ref": "#/components/schemas/Labels",
+            "description": "What the caller's run has seen, for the trifecta check.",
+            "default": {
+              "untrusted_seen": false,
+              "private_seen": false,
+              "sources": []
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AuthorizeRequest",
+        "description": "``POST /v1/tools/{name}/authorize``: a call to decide on, never run."
+      },
+      "Band": {
+        "type": "string",
+        "enum": [
+          "baseline",
+          "platform",
+          "app",
+          "task"
+        ],
+        "title": "Band",
+        "description": "Middleware priority bands, outermost first.\n\nThe spec assigns bands; a plugin can't place itself in ``baseline`` (S8)."
+      },
+      "Budget": {
+        "properties": {
+          "max_usd": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Usd"
+          },
+          "max_tokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tokens"
+          },
+          "max_model_calls": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Model Calls"
+          },
+          "max_tool_calls": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tool Calls"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^(\\d+(\\.\\d+)?(ms|d|h|m|s))+$"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 0.0
+                  }
+                ],
+                "description": "A duration such as '250ms', '20s', '5m' or '1h30m', or a number of seconds."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Budget",
+        "description": "Limits for one run. ``None`` means no limit at this layer."
+      },
+      "CaseResult": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "grades": {
+            "items": {
+              "$ref": "#/components/schemas/GraderResult"
+            },
+            "type": "array",
+            "title": "Grades",
+            "default": []
+          },
+          "guards": {
+            "items": {
+              "$ref": "#/components/schemas/GuardFiring"
+            },
+            "type": "array",
+            "title": "Guards",
+            "default": []
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "passed",
+          "status"
+        ],
+        "title": "CaseResult"
+      },
+      "ContextItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Where the item came from, e.g. the context provider name."
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "untrusted": {
+            "type": "boolean",
+            "title": "Untrusted",
+            "default": true
+          },
+          "acl": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Acl"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metadata": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "content",
+          "source"
+        ],
+        "title": "ContextItem",
+        "description": "One retrieved document or memory entry."
+      },
+      "DecideRequest": {
+        "properties": {
+          "principal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Principal"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Principal",
+            "description": "A principal or its id.",
+            "default": "anonymous"
+          },
+          "tenant": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Tenant",
+            "default": "default"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task",
+            "description": "The task whose controls apply."
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Options",
+            "default": []
+          },
+          "state": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "State"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default",
+            "description": "The answer when no stage decides."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DecideRequest",
+        "description": "``POST /v1/decisions/{router}``: what a router decides on."
+      },
+      "Envelope": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Run Id"
+          },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Run Id"
+          },
+          "tenant": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Tenant"
+          },
+          "principal": {
+            "$ref": "#/components/schemas/Principal"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task"
+          },
+          "task_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Version"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/Budget",
+            "default": {}
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          },
+          "labels": {
+            "$ref": "#/components/schemas/Labels",
+            "default": {
+              "untrusted_seen": false,
+              "private_seen": false,
+              "sources": []
+            }
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          },
+          "attributes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Attributes",
+            "description": "Free-form app tags, e.g. channel or region."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "tenant",
+          "principal"
+        ],
+        "title": "Envelope",
+        "description": "The immutable context every hook event carries."
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "budget_exceeded",
+          "deadline_exceeded",
+          "policy_denied",
+          "validation_failed",
+          "provider_error",
+          "tool_error",
+          "expression_error",
+          "spec_invalid",
+          "not_found",
+          "blocked",
+          "escalated",
+          "suspended",
+          "internal"
+        ],
+        "title": "ErrorCode",
+        "description": "Stable, language-neutral error codes."
+      },
+      "ErrorInfo": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "The error class name, e.g. 'LockViolation'."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "retryable": {
+            "type": "boolean",
+            "title": "Retryable",
+            "default": false
+          },
+          "details": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "type",
+          "message"
+        ],
+        "title": "ErrorInfo",
+        "description": "The serializable form of an error, as carried by hook events and the wire API."
+      },
+      "EvalCase": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "input": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "expect": {
+            "$ref": "#/components/schemas/JsonValue",
+            "description": "What comparing graders expect."
+          },
+          "graders": {
+            "items": {
+              "$ref": "#/components/schemas/GraderItem"
+            },
+            "type": "array",
+            "title": "Graders",
+            "description": "Added to the suite's.",
+            "default": []
+          },
+          "principal": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Principal",
+            "default": "eval"
+          },
+          "tenant": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Tenant",
+            "default": "default"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "EvalCase",
+        "description": "One case: the input the task runs on and what the graders compare against."
+      },
+      "EvalDataset": {
+        "properties": {
+          "suite": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Suite"
+          },
+          "task": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Task"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "graders": {
+            "items": {
+              "$ref": "#/components/schemas/GraderItem"
+            },
+            "type": "array",
+            "title": "Graders",
+            "description": "Every case gets these.",
+            "default": []
+          },
+          "thresholds": {
+            "$ref": "#/components/schemas/Thresholds",
+            "default": {
+              "pass_rate": 1.0
+            }
+          },
+          "cases": {
+            "items": {
+              "$ref": "#/components/schemas/EvalCase"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Cases"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "suite",
+          "task",
+          "cases"
+        ],
+        "title": "EvalDataset",
+        "description": "A suite of cases for one task (DESIGNS No. 23)."
+      },
+      "EvalRunRequest": {
+        "properties": {
+          "dataset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvalDataset"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File",
+            "description": "A file listed in the spec's evals."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "EvalRunRequest",
+        "description": "``POST /v1/evals/run``: a dataset, or one of the spec's own suite files."
+      },
+      "Finding": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Type",
+            "description": "What was found, e.g. 'EMAIL' or 'aws_key'."
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "private": {
+            "type": "boolean",
+            "title": "Private",
+            "description": "It's private data such as PII; finding it marks the run private (S3).",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "Finding",
+        "description": "Something a guardrail found. Never holds the raw matched text (R9)."
+      },
+      "GraderItem": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object"
+          }
+        ]
+      },
+      "GraderResult": {
+        "properties": {
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Names fields and rules, not content."
+          },
+          "grader": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Grader",
+            "description": "The grader's label."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "passed",
+          "score",
+          "grader"
+        ],
+        "title": "GraderResult"
+      },
+      "GuardAction": {
+        "type": "string",
+        "enum": [
+          "allow",
+          "redact",
+          "repair",
+          "escalate",
+          "require_approval",
+          "block",
+          "log_only"
+        ],
+        "title": "GuardAction",
+        "description": "What a guardrail wants done with the content it checked.\n\nThe guardrails module maps actions onto hook outcomes (DESIGNS No. 9)."
+      },
+      "GuardFiring": {
+        "properties": {
+          "guard": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Guard",
+            "description": "Its full name, like guardrails.input[pii]."
+          },
+          "action": {
+            "$ref": "#/components/schemas/GuardAction"
+          },
+          "shadow": {
+            "type": "boolean",
+            "title": "Shadow",
+            "description": "In log_only mode: it would have fired.",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "guard",
+          "action"
+        ],
+        "title": "GuardFiring",
+        "description": "A guard whose verdict wasn't ``allow``, read from the run's trace."
+      },
+      "GuardResult": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/GuardAction"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content",
+            "description": "Replacement content, for 'redact'."
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "type": "array",
+            "title": "Findings",
+            "default": []
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "GuardResult",
+        "description": "A guardrail's verdict on one piece of content."
+      },
+      "HookEntry": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "band": {
+            "type": "string",
+            "title": "Band"
+          },
+          "fail_mode": {
+            "type": "string",
+            "enum": [
+              "closed",
+              "open"
+            ],
+            "title": "Fail Mode"
+          },
+          "timeout_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout Seconds"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "band",
+          "fail_mode"
+        ],
+        "title": "HookEntry",
+        "description": "One middleware on a hook point, as ``GET /v1/hooks`` lists it, in run order."
+      },
+      "HookPoint": {
+        "type": "string",
+        "enum": [
+          "run.start",
+          "input.before",
+          "route.decide",
+          "context.after",
+          "model.before",
+          "model.after",
+          "stream.chunk",
+          "tool.before",
+          "tool.after",
+          "output.before",
+          "approval.resolved",
+          "run.error",
+          "run.end"
+        ],
+        "title": "HookPoint",
+        "description": "A named moment in the run lifecycle. The set is fixed and versioned (R11)."
+      },
+      "JsonValue": {},
+      "Labels": {
+        "properties": {
+          "data_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Class",
+            "description": "Classification of the run's data, e.g. 'confidential'."
+          },
+          "untrusted_seen": {
+            "type": "boolean",
+            "title": "Untrusted Seen",
+            "description": "Untrusted content (retrieved context, tool output) entered.",
+            "default": false
+          },
+          "private_seen": {
+            "type": "boolean",
+            "title": "Private Seen",
+            "description": "Private data (e.g. PII) was read or found in the input.",
+            "default": false
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources",
+            "description": "Where untrusted or private data came from, in order.",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Labels",
+        "description": "What kind of data a run has touched. Drives the lethal-trifecta check (RULES S3)."
+      },
+      "OutcomeKind": {
+        "type": "string",
+        "enum": [
+          "continue",
+          "retry",
+          "escalate",
+          "suspend",
+          "block"
+        ],
+        "title": "OutcomeKind"
+      },
+      "PolicyDecision": {
+        "properties": {
+          "effect": {
+            "$ref": "#/components/schemas/PolicyEffect"
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule",
+            "description": "The deciding rule's id; None if default."
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "effect"
+        ],
+        "title": "PolicyDecision",
+        "description": "A ``PolicyEngine``'s answer, with the rule that decided it."
+      },
+      "PolicyEffect": {
+        "type": "string",
+        "enum": [
+          "allow",
+          "require_approval",
+          "deny"
+        ],
+        "title": "PolicyEffect",
+        "description": "The outcome of a policy check, from most to least permissive."
+      },
+      "PolicyRequest": {
+        "properties": {
+          "hook": {
+            "type": "string",
+            "enum": [
+              "tool.before",
+              "run.start"
+            ],
+            "title": "Hook",
+            "default": "tool.before"
+          },
+          "principal": {
+            "$ref": "#/components/schemas/Principal"
+          },
+          "tenant": {
+            "type": "string",
+            "title": "Tenant"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task"
+          },
+          "task_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Version"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The tool, for tool.before."
+          },
+          "args": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Args",
+            "description": "The call's arguments."
+          },
+          "labels": {
+            "$ref": "#/components/schemas/Labels",
+            "default": {
+              "untrusted_seen": false,
+              "private_seen": false,
+              "sources": []
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "principal",
+          "tenant"
+        ],
+        "title": "PolicyRequest",
+        "description": "The question a ``PolicyEngine`` answers: may this run, or this call, go ahead?"
+      },
+      "Principal": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles",
+            "default": []
+          },
+          "attrs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Attrs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "Principal",
+        "description": "Who a run acts for."
+      },
+      "ProviderCheck": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "envelope": {
+            "$ref": "#/components/schemas/Envelope"
+          },
+          "settings": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Settings",
+            "description": "The provider's settings from the spec."
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage",
+            "description": "The guard's stage, checked if given."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "content",
+          "envelope"
+        ],
+        "title": "ProviderCheck",
+        "description": "``POST /v1/guards/providers/{name}:check``: one guardrail provider, run in the\nsidecar for a guard declared ``where: sidecar``."
+      },
+      "Risk": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ],
+        "title": "Risk",
+        "description": "How much harm a misused call could do."
+      },
+      "RunRequest": {
+        "properties": {
+          "task": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Task"
+          },
+          "input": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "principal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Principal"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Principal",
+            "default": "anonymous"
+          },
+          "tenant": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Tenant",
+            "default": "default"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "budget": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget",
+            "description": "Lower the task's overridable limits for this run (R10)."
+          },
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "task"
+        ],
+        "title": "RunRequest",
+        "description": "``POST /v1/runs``: run a task to the end, or until it waits for approval."
+      },
+      "RunResult": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Run Id"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task"
+          },
+          "task_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Version"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "output": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the run didn't complete: failed, blocked or escalated."
+          },
+          "approval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The pending approval, while awaiting_approval."
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage",
+            "default": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            }
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "cost_known": {
+            "type": "boolean",
+            "title": "Cost Known",
+            "description": "False if any model call's cost was unknown (ADR-0012).",
+            "default": true
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/TraceEvent"
+            },
+            "type": "array",
+            "title": "Trace",
+            "default": []
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "status"
+        ],
+        "title": "RunResult",
+        "description": "The state of a run: its status, output or error, usage, cost and trace."
+      },
+      "RunStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "running",
+          "awaiting_approval",
+          "completed",
+          "blocked",
+          "escalated",
+          "failed",
+          "cancelled"
+        ],
+        "title": "RunStatus",
+        "description": "Where a run is in its lifecycle (DESIGNS No. 18)."
+      },
+      "SanitizeRequest": {
+        "properties": {
+          "principal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Principal"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Principal",
+            "description": "A principal or its id.",
+            "default": "anonymous"
+          },
+          "tenant": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Tenant",
+            "default": "default"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task",
+            "description": "The task whose controls apply."
+          },
+          "arguments": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Arguments"
+          },
+          "output": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "is_error": {
+            "type": "boolean",
+            "title": "Is Error",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SanitizeRequest",
+        "description": "``POST /v1/tools/{name}/sanitize``: a result the caller's own tool returned."
+      },
+      "SideEffect": {
+        "type": "string",
+        "enum": [
+          "none",
+          "read",
+          "write_internal",
+          "write_external",
+          "destructive"
+        ],
+        "title": "SideEffect",
+        "description": "What a tool changes when it runs."
+      },
+      "SpecInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "api_version": {
+            "type": "string",
+            "title": "Api Version"
+          },
+          "tasks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "level": {
+            "type": "string",
+            "title": "Level",
+            "description": "The adoption level the spec reaches, e.g. 'L3'."
+          },
+          "required_level": {
+            "type": "string",
+            "title": "Required Level"
+          },
+          "spec": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Spec",
+            "description": "The merged spec, every layer applied."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "api_version",
+          "tasks",
+          "level",
+          "required_level",
+          "spec"
+        ],
+        "title": "SpecInfo",
+        "description": "``GET /v1/spec``: the effective spec harnessd serves."
+      },
+      "StageCheck": {
+        "properties": {
+          "principal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Principal"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Principal",
+            "description": "A principal or its id.",
+            "default": "anonymous"
+          },
+          "tenant": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Tenant",
+            "default": "default"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task",
+            "description": "The task whose controls apply."
+          },
+          "content": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "The context source, for 'context'."
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ContextItem"
+            },
+            "type": "array",
+            "title": "Items",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "StageCheck",
+        "description": "``POST /v1/guards/{stage}``: content for ``input`` or ``output``; ``source`` and\n``items`` for ``context``."
+      },
+      "SuiteResult": {
+        "properties": {
+          "suite": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Suite"
+          },
+          "task": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Task"
+          },
+          "threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Threshold"
+          },
+          "pass_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Pass Rate",
+            "description": "To 6 decimal places."
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed",
+            "description": "pass_rate >= threshold."
+          },
+          "grader_rates": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Grader Rates",
+            "description": "Share of cases each grader passed."
+          },
+          "cases": {
+            "items": {
+              "$ref": "#/components/schemas/CaseResult"
+            },
+            "type": "array",
+            "title": "Cases",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "suite",
+          "task",
+          "threshold",
+          "pass_rate",
+          "passed"
+        ],
+        "title": "SuiteResult",
+        "description": "A suite's cases, its pass rate and whether it meets its threshold."
+      },
+      "Thresholds": {
+        "properties": {
+          "pass_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Pass Rate",
+            "description": "Share of cases that must pass.",
+            "default": 1.0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Thresholds"
+      },
+      "ToolCall": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "arguments": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Arguments"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ToolCall",
+        "description": "A tool call proposed by a model."
+      },
+      "ToolInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "side_effect": {
+            "$ref": "#/components/schemas/SideEffect",
+            "default": "none"
+          },
+          "risk": {
+            "$ref": "#/components/schemas/Risk",
+            "default": "low"
+          },
+          "egress": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Egress",
+            "description": "Hosts the tool may reach.",
+            "default": []
+          },
+          "data_access": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Data Access",
+            "description": "Data it reads, e.g. 'pii:x'.",
+            "default": []
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scopes",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ToolInfo",
+        "description": "The parts of a tool manifest that policies and middleware decide on."
+      },
+      "ToolVerdict": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "require_approval",
+              "block"
+            ],
+            "title": "Decision"
+          },
+          "step": {
+            "type": "integer",
+            "maximum": 7.0,
+            "minimum": 1.0,
+            "title": "Step",
+            "description": "The governor step that decided."
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code",
+            "description": "Why, for blocks and approvals."
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "approver_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approver Role"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "decision",
+          "step",
+          "reason"
+        ],
+        "title": "ToolVerdict",
+        "description": "What the governor decided about one call, and at which of its steps (DESIGNS No. 17)."
+      },
+      "TraceEvent": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Seq",
+            "description": "Position in the run's trace, from 0."
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TraceKind"
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source",
+            "description": "Middleware name, or 'harness.<area>'."
+          },
+          "hook": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HookPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "band": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Band"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OutcomeKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modified": {
+            "type": "boolean",
+            "title": "Modified",
+            "description": "The middleware changed the payload.",
+            "default": false
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "details": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "seq",
+          "at",
+          "kind",
+          "source"
+        ],
+        "title": "TraceEvent",
+        "description": "One entry in a :class:`RunTrace`."
+      },
+      "TraceKind": {
+        "type": "string",
+        "enum": [
+          "hook",
+          "outcome",
+          "failure",
+          "note"
+        ],
+        "title": "TraceKind",
+        "description": "What a trace event records."
+      },
+      "Usage": {
+        "properties": {
+          "input_tokens": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Input Tokens",
+            "default": 0
+          },
+          "output_tokens": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Output Tokens",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Usage",
+        "description": "Token usage of one or more model calls."
+      },
+      "ValidateRequest": {
+        "properties": {
+          "principal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Principal"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Principal",
+            "description": "A principal or its id.",
+            "default": "anonymous"
+          },
+          "tenant": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Tenant",
+            "default": "default"
+          },
+          "task": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Task",
+            "description": "The task whose output type and rules apply."
+          },
+          "output": {
+            "$ref": "#/components/schemas/JsonValue"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "task"
+        ],
+        "title": "ValidateRequest",
+        "description": "``POST /v1/validate``: a final output to check against a task."
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "The token harnessd was started with (S6).",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

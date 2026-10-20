@@ -177,7 +177,7 @@ async def test_guard_configuration_errors(build: Builder) -> None:
                 guardrails={"tool_result": [{"use": "llm.judge", "criteria": "c"}]},
             )
         )
-    with pytest.raises(SpecError, match="sidecar"):
+    with pytest.raises(SpecError, match=r"needs sidecar\.url"):
         build(
             spec(
                 models=scripted({"text": "x"}),

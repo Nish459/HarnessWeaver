@@ -36,11 +36,14 @@ cov:
 	$(UV) run coverage run -m pytest -q --harnessweaver-conformance=$(CONFORMANCE_PLUGINS)
 	$(UV) run coverage report
 
-# Contract JSON Schemas are generated from the Pydantic models and checked in (ADR-0005).
+# Contract JSON Schemas are generated from the Pydantic models and checked in (ADR-0005),
+# and so is harnessd's OpenAPI document (ADR-0038).
 CONTRACTS_MAIN = import sys; from harnessweaver.contracts import main; sys.exit(main(sys.argv[1:]))
 
 schemas:
 	$(UV) run python -c "$(CONTRACTS_MAIN)" contracts/schemas
+	$(UV) run python -m harnessweaver_sidecar.openapi contracts/openapi
 
 schemas-check:
 	$(UV) run python -c "$(CONTRACTS_MAIN)" --check contracts/schemas
+	$(UV) run python -m harnessweaver_sidecar.openapi --check contracts/openapi

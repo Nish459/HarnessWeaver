@@ -985,7 +985,7 @@ The tokenizer, the lexical score, the hashing embedder and the cascade are part 
 - **Approved outputs** (fixtures suite `guards`). An output a human approved reaches `output.before` with `event.approval` (No. 18). A guard's `require_approval` on it is answered: the guard lets it through and adds a `harness.guard` note with code `guard_approved`, its full name and the approver's id (R13). The approval answers nothing else: `block`, `escalate` and `repair` still apply, redactions still chain, and a shadow guard still records what it would do. A rejection is never a grant.
 - **Bands.** A guard's band comes from the layer that declared it: org profiles -> `baseline`, built-in profiles -> `platform`, the app -> `app`, a task's own guards -> `task`. Baseline guards must fail closed (R2).
 - **Built-in guards.** `regex.deny`, `pii.regex` (e-mail, phone, Luhn-checked card numbers, US SSN, IPv4), `secrets.scan` (private keys, cloud and API keys, tokens, JWTs, credential assignments), `injection.heuristic` (weighted phrases; cheap and easy to evade), `size.limit`, `topic.deny`, `grounded.citations` (output sentences cite the context ids the run kept, ADR-0032) and `llm.judge` (a governed, budgeted model call; its own explanation isn't kept, R9). A finding can be marked `private` (as `pii.regex`'s are), which marks the run private (S3). Their patterns are part of the contract, written in regex syntax Python and TypeScript share.
-- **Location transparency.** `where: local | sidecar` picks where a guard runs. App code doesn't change.
+- **Location transparency.** `where: local | sidecar` picks where a guard's provider runs: in the app, or in harnessd at `sidecar.url` (No. 24, ADR-0038). The guard's place, action, mode and fail mode are the same either way, and app code doesn't change.
 - **Shadow mode (R8).** `mode: log_only` records "would have fired" without enforcing. The evals module reports would-fire rates and false positives; promotion to `enforce` is a reviewed one-line change.
 - **Firing notes** (ADR-0036). A guard whose verdict isn't `allow` adds a `harness.guard` note to the trace: code `guard_fired`, or `guard_shadow` in shadow mode, with the guard's full name (`guardrails.input[pii]`, `tasks.<task>.guardrails.output[<id>]`), its action and its finding types, never the content (R9). `doctor`, `guard_fired` graders and the shadow-guard report use the same names.
 - **Validation.** Pydantic schema validation, then up to `max_repairs` (default 1) repair attempts. Each attempt sends the validation errors back to the model and is traced as a note with code `repair` (field locations and messages only, never the values, R9). Then `on_failure: escalate | block`. Business rules are cel-lite expressions over `output`, `input` and `task` installed as `output.before` middleware: a rule's `when` describes a violation, like a policy rule's `when` (ADR-0023). A true `when`, or one that can't be evaluated, asks for a repair with the rule's `message`.
@@ -1080,6 +1080,49 @@ flowchart LR
 - OpenAPI for the sidecar's HTTP/JSON API. A protobuf definition mirrors it for future gRPC serving.
 - The OTel GenAI conventions plus `harness.*` attributes.
 - Language-neutral **conformance fixtures** that every implementation must pass.
+
+### harnessd
+
+`harnessd` (the `harnessweaver-sidecar` package) serves one effective spec over HTTP/JSON (ADR-0038). It loads the spec as an app does (layers, locks, plugins, tasks), so a client in any language gets exactly the decisions the Python core makes.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as App (Go, TypeScript, ...)
+    participant D as harnessd
+    participant H as Harness (the served spec)
+    App->>D: POST /v1/guards/input (bearer token)
+    D->>H: a one-step session: run.start, input.before, run.end
+    H-->>D: RunResult, output = the redacted input
+    D-->>App: 200 RunResult
+    App->>D: POST /v1/runs {task, input}
+    D->>H: harness.run(...)
+    H-->>App: RunResult (awaiting_approval)
+    App->>D: POST /v1/runs/{run_id}/approvals/{approval_id}
+    D->>H: harness.approve(...), then the run resumes
+```
+
+| Route | What it does | Answer |
+| --- | --- | --- |
+| `GET /v1/health` | Liveness and versions; the only route without a token | `{status, harnessd, harnessweaver}` |
+| `GET /v1/spec`, `GET /v1/hooks?task=` | The effective spec; the middleware on each hook point, in run order | `SpecInfo`; lists of `HookEntry` |
+| `POST /v1/guards/{stage}` | `input`, `context` or `output`: that stage's hook, as `s.guard`, `s.context(...).check` and `s.validate` run it | `RunResult` |
+| `POST /v1/guards/providers/{name}:check` | One guardrail provider, for a guard declared `where: sidecar` | `GuardResult` |
+| `POST /v1/decisions/{router}` | A routing decision (`route.decide`) | `RunResult`, output a `Decision` |
+| `POST /v1/policy/evaluate` | The policy engine alone | `PolicyDecision` |
+| `POST /v1/tools/{name}/authorize` | The governor's steps 1 to 7, as a dry run (ADR-0036) | `ToolVerdict` |
+| `POST /v1/tools/{name}/sanitize` | Step 9, then `tool.after`, on a result the caller's own tool returned | `RunResult`, output a `ToolResult` |
+| `POST /v1/validate` | A final output parsed into its task's output type, then `output.before` | `RunResult` |
+| `POST /v1/runs`, `GET /v1/runs/{run_id}`, `POST /v1/runs/{run_id}/approvals/{approval_id}` | Run a task, read a run, answer an approval | `RunResult` |
+| `POST /v1/evals/run` | An eval suite sent in the request, or a file the spec's `evals` lists | `SuiteResult` |
+
+- **Checks are one-step sessions.** A check opens a session for the principal, tenant and task the request names, makes its one governed call and closes it, so `run.start` rules, budgets, the trace and the stored run all apply. A block or a failed check is the `RunResult`'s `status` and `error`, not an HTTP error, and `GET /v1/runs/{run_id}` reads it later. The caller names the principal: holding the token makes it the app, which already decides who it acts for.
+- **Errors.** A taxonomy error that reaches a route answers with its `ErrorInfo`: 400 for `spec_invalid` and `expression_error`, 403 `policy_denied`, 404 `not_found`, 422 `validation_failed`, 502 for provider and tool errors. An invalid request is described by field locations and messages, never by the values it held (R9).
+- **Security (S6).** harnessd binds 127.0.0.1 unless told otherwise, refuses to start without a token (`HARNESSD_TOKEN`, or the variable `--token-env` names) and compares tokens in constant time.
+- **`where: sidecar`.** A guard declared so keeps its place on the bus, its action, mode, fail mode and timeout; only its provider's check is posted to `{sidecar.url}/v1/guards/providers/{name}:check`, with the token from `sidecar.token_env`. The provider needn't be installed next to the app; `plugins.allow` applies to its name on both sides (S8). The request uses the standard library in a worker thread (ADR-0003) and is refused in test mode (R14); a sidecar that can't answer is a provider error, which the guard's fail mode turns into a block or a pass (R2).
+- **Contracts.** `contracts/openapi/harnessd.openapi.json` is generated from the routes and the request models in `harnessweaver.core.sidecar` (`make schemas`) and drift-tested. `contracts/proto/harnessweaver/v1/harnessd.proto` mirrors every route in its `google.api.http` options, and a test keeps the two in step; gRPC is served later (ADR-0007).
+- **Image.** `deploy/harnessd/Dockerfile` builds from `uv.lock` on digest-pinned bases (S5) and runs as an unprivileged user. Inside the container harnessd listens on all of the container's interfaces; publish the port on the host's 127.0.0.1.
+- *Planned:* the `stream` guard stage, gRPC, and an approval page.
 
 ## 25. Packaging and dependency graph
 
@@ -1180,6 +1223,7 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | **0035** | `state.record: true` keeps each run's model answers, tool results and approvals as `RecordedCall`s through new `StateStore` methods. `Harness.replay` and `harnessweaver replay` run the task again on a copy of the harness built from the current spec, answering from the recording, never executing tools, answering repeated approvals from the recorded ones, with the copy's runs in memory; the report compares statuses, outputs and trace decisions | The guide's replay of production runs against current code and spec needs the run's inputs from outside, and a replay must never repeat a side effect or spend tokens. Recordings hold content, so they are opt-in, kept only in the app's own store, and lockable by the org (R9) | Accepted |
 | **0036** | `ToolGovernor.authorize` takes `dry_run`, and `Harness.authorize` runs steps 1 to 7 on a call that never executes; `harnessweaver policy test` checks tables of calls with it. Guards that fire are traced as `harness.guard` notes (`guard_fired`, `guard_shadow`) naming the guard as `doctor` does | Policy tests must exercise exactly the production decision, including manifests, approval rules and the trifecta, without using up rate limits; eval graders and reports need guard firings as data, not parsed from reasons | Accepted |
 | **0037** | Agent frameworks are governed through one adapter object per framework that sends each of the framework's model requests through `RunContext.generate(provider=...)` and each tool call through `RunContext.call_tool(backend=...)`, rather than through one framework hook per hook point. For Pydantic AI that is `HarnessCapability`: `wrap_run` opens a run when none is active, `before_model_request` wraps the model, `wrap_tool_execute` governs each call, `after_output_process` fires `output.before` (a repair request becomes `ModelRetry`) and `handle_deferred_tool_calls` brings `requires_approval` tools to the harness's approvers. The `pydantic_ai.agent` runner adds `DeferredToolRequests` to the agent's output types, suspends on a deferred call and resumes with `DeferredToolResults`; a wrapped agent escalates instead. During a replay the recording answers an adapter's own model and tool calls (`RunContext.replaying`). The plugin requires `pydantic-ai-slim>=2.57,<3` | Budgets, cost, telemetry, recording and the governor already live in the governed calls, and a framework's separate before and after hooks can't give them one place to run; Pydantic AI's deferred tools are its own way to pause a run, so a resumed run is the framework's own resume, not a copy of it; the harness, not the framework, decides which call a human approved (R3); a replay must never run an app's tool (ADR-0035) | Accepted |
+| **0038** | `harnessd` serves one effective spec over `/v1`, loaded as an app loads it. Checks (`guards/{stage}` for `input`, `context` and `output`, `decisions/{router}`, `tools/{name}/sanitize`, `validate`) each run as a one-step session and answer with its `RunResult`; lookups, runs, approvals, the policy engine, the governor's dry run and evals answer with the harness's own contracts. Request models are contracts in `harnessweaver.core.sidecar`; the OpenAPI document is generated from them and drift-tested, and the proto mirrors its routes. Every route except `health` needs the bearer token, compared in constant time; harnessd refuses to start without one and binds 127.0.0.1. Taxonomy errors map to HTTP statuses with `ErrorInfo` bodies; invalid requests are described by location, never by value. A guard declared `where: sidecar` keeps its place on the bus and posts its provider's check to `guards/providers/{name}:check`. Tool results go through `tools/{name}/sanitize` (step 9, then `tool.after`), not a `tool_result` guard stage | A session is already a run, so `run.start` rules, budgets, traces and stored results cover every check with no new machinery, and one answer shape keeps thin clients small; the app holding the token already decides who it acts for, as in-process code does; a remote provider behind the guard's own fail mode keeps R2; a governed call sanitizes and fires `tool.after` together, so a client can't do one without the other | Accepted |
 
 ## 29. Deviations from the design guide
 

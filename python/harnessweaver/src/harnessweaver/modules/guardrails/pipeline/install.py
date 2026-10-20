@@ -3,16 +3,18 @@
 from collections.abc import Sequence
 
 from harnessweaver.core.bus import HookBus
-from harnessweaver.core.errors import SpecError
+from harnessweaver.core.errors import PluginNotAllowed, SpecError
 from harnessweaver.core.hooks import (
     Band,
 )
 from harnessweaver.core.middleware import Registration
-from harnessweaver.core.registry import Registry
+from harnessweaver.core.ports import Guardrail
+from harnessweaver.core.registry import Registry, is_allowed, owner_of
 from harnessweaver.modules.guardrails.pipeline.guards import LAYER_BANDS, STAGE_HOOKS, Guard, Stage
 from harnessweaver.modules.guardrails.pipeline.handlers import guard_handler
+from harnessweaver.modules.guardrails.remote import TIMEOUT_SECONDS, RemoteGuardrail
 from harnessweaver.spec.loader import EffectiveSpec
-from harnessweaver.spec.models import GuardrailsSpec, GuardSpec, HarnessSpec
+from harnessweaver.spec.models import GuardrailsSpec, GuardSpec, HarnessSpec, SidecarSpec
 
 __all__ = ["configured_guards", "install_guardrails"]
 
@@ -23,19 +25,45 @@ def _band(effective: EffectiveSpec, path: str) -> Band:
     return LAYER_BANDS[origin.kind] if origin is not None else Band.APP
 
 
-def _guard(item: GuardSpec, index: int, stage: Stage, registry: Registry, prefix: str) -> Guard:
-    info = registry.provider("Guardrail", item.use)
-    if info.stages and stage not in info.stages:
-        raise SpecError(
-            f"guard {item.use} can't run at stage {stage!r}; it supports {', '.join(info.stages)}"
+def _provider(
+    item: GuardSpec,
+    stage: Stage,
+    registry: Registry,
+    sidecar: SidecarSpec,
+    allow: tuple[str, ...] | None,
+) -> Guardrail:
+    """The guard's provider: built here, or a stand-in that asks the sidecar.
+
+    A ``where: sidecar`` provider needn't be installed here, so the sidecar checks
+    its settings and stage; ``plugins.allow`` still applies to its name (S8).
+    """
+    if item.where == "local":
+        info = registry.provider("Guardrail", item.use)
+        if info.stages and stage not in info.stages:
+            supported = ", ".join(info.stages)
+            message = f"guard {item.use} can't run at stage {stage!r}; it supports {supported}"
+            raise SpecError(message)
+        return info.build(item.provider_settings())
+    if sidecar.url is None:
+        raise SpecError(f"guard {item.id or item.use}: where: sidecar needs sidecar.url")
+    owner = owner_of(item.use)
+    if not is_allowed(owner, allow):
+        raise PluginNotAllowed(
+            f"plugin namespace {owner!r} isn't in plugins.allow", namespace=owner
         )
-    if item.where != "local":
-        raise SpecError(f"guard {item.id or item.use}: where: {item.where} needs the sidecar")
+    timeout = item.timeout.total_seconds() if item.timeout is not None else TIMEOUT_SECONDS
+    return RemoteGuardrail(sidecar, item.use, item.provider_settings(), stage, timeout)
+
+
+def _guard(
+    item: GuardSpec, index: int, stage: Stage, registry: Registry, prefix: str, spec: HarnessSpec
+) -> Guard:
+    provider = _provider(item, stage, registry, spec.sidecar, spec.plugins.allow)
     guard_id = item.id or f"{item.use}#{index + 1}"
     return Guard(
         id=guard_id,
         name=f"{prefix}.{stage}[{guard_id}]",
-        provider=info.build(item.provider_settings()),
+        provider=provider,
         action=item.action,
         mode=item.mode,
         fail_mode=item.fail_mode,
@@ -79,8 +107,9 @@ def install_guardrails(effective: EffectiveSpec, registry: Registry, bus: HookBu
     """Turn every enabled guard into middleware. Returns how many middleware were added.
 
     Raises:
-        SpecError: For an unknown provider, a stage it doesn't support, a guard
-            that needs the sidecar, or a baseline guard that fails open (R2).
+        SpecError: For an unknown provider, a stage it doesn't support, a
+            ``where: sidecar`` guard without ``sidecar.url``, or a baseline guard
+            that fails open (R2).
     """
     added = 0
     for task, prefix, section in _sections(effective.spec):
@@ -92,7 +121,8 @@ def install_guardrails(effective: EffectiveSpec, registry: Registry, bus: HookBu
             ]
             for group in _groups(banded):
                 guards = [
-                    _guard(item, items.index(item), stage, registry, prefix) for item, _ in group
+                    _guard(item, items.index(item), stage, registry, prefix, effective.spec)
+                    for item, _ in group
                 ]
                 ids = "+".join(g.id for g in guards)
                 label = f"{prefix}.{stage}[{ids}]"

@@ -50,9 +50,10 @@ language. A plugin's templates are named `<namespace>.<template>`
 | `tools pin [SPEC] [--tool NAME]` | Write each manifest's `definition_digest`, so a tool that changes unreviewed is blocked (S2) |
 | `plugin new NAMESPACE [DIR]` | Scaffold a standalone plugin package with a sample guard and tests that run the conformance suite |
 | `plugin list [--format text\|json]` | Installed plugins: namespace, distribution, version, contract range, compatibility |
+| `sidecar [SPEC] [-e ENV] [--host H] [--port P] [--token-env VAR]` | Serve the spec to other languages: runs `harnessd` (needs `harnessweaver-sidecar` and a token, S6) |
 
 Every command that takes `SPEC` defaults to `harness.yaml`, takes
 `--profile-dir` to find `org://` profiles, and makes the spec's directory
 importable, as it is when the app runs from there.
 
-*Planned:* `dev` (a compose file with LiteLLM, the OTel collector, Langfuse and harnessd), `gateway` and `sidecar`.
+*Planned:* `dev` (a compose file with LiteLLM, the OTel collector, Langfuse and harnessd) and `gateway`.

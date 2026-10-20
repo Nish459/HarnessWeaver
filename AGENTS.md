@@ -62,7 +62,7 @@ uv sync --all-packages          # install every workspace package + dev tools in
 | One test | `uv run pytest python/harnessweaver/tests/test_bus.py::test_onion_order -q` |
 | Lint / auto-fix / format | `make lint`, `make fmt` |
 | Type check | `make typecheck` (pyright; strict on `core/` and `spec/`) |
-| Regenerate contract schemas | `make schemas` (then commit `contracts/schemas`); `make schemas-check` reports drift |
+| Regenerate contract schemas | `make schemas` (then commit `contracts/schemas` and `contracts/openapi`); `make schemas-check` reports drift |
 | Conformance fixtures only | `uv run pytest python/harnessweaver/tests/conformance -q` |
 | Plugin conformance (T5) | `make conformance`, or `uv run pytest --harnessweaver-conformance=<namespace>` |
 | Run an example offline | `HARNESSWEAVER_ENV=offline uv run python examples/01_invoice_extraction/run.py` |
@@ -71,6 +71,7 @@ uv sync --all-packages          # install every workspace package + dev tools in
 | Evals, policy tests, replay | `uv run harnessweaver eval run <spec> -e offline`, `uv run harnessweaver policy test <spec>`, `uv run harnessweaver replay <run_id> <spec>` |
 | Grow a spec | `uv run harnessweaver add guard <use> <spec>` (shadow mode), `uv run harnessweaver add tool <module:function> <spec>`, `uv run harnessweaver tools pin <spec>` |
 | Plugins | `uv run harnessweaver plugin list`, `uv run harnessweaver plugin new <namespace> <dir>` (a standalone package) |
+| Sidecar | `HARNESSD_TOKEN=<token> uv run harnessd <spec>` (or `uv run harnessweaver sidecar <spec>`); `docker build -f deploy/harnessd/Dockerfile .` |
 | TypeScript | `pnpm -C typescript install && pnpm -C typescript test && pnpm -C typescript build` |
 | Docs site | `make docs` (`mkdocs build --strict`) |
 

@@ -103,6 +103,7 @@ exclude = ["**/__pycache__", "**/.venv", "**/templates/**"]
 extraPaths = [
     "python/harnessweaver/tests/fixtures",
     "python/plugins/pydantic-ai/tests",
+    "python/harnessweaver-sidecar/tests/desk",
     "examples/01_invoice_extraction",
     "examples/02_support_rag",
     "examples/03_refund_agent",

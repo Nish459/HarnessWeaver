@@ -1,14 +1,17 @@
 """Asking a harness about itself without running anything: a tool call's verdict, a
-task's output schema, and the online samples it kept."""
+policy decision, a task's output schema, and the online samples it kept."""
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
 
 from pydantic import JsonValue
 
+from harnessweaver.core.decisions import PolicyEffect
 from harnessweaver.core.envelope import Clock, Envelope, Labels, Principal
 from harnessweaver.core.evals import OnlineSample
 from harnessweaver.core.messages import ToolCall
+from harnessweaver.core.policy import PolicyDecision, PolicyRequest
 from harnessweaver.core.tools import ToolVerdict
 from harnessweaver.core.trace import RunTrace
 from harnessweaver.harness.build import output_schema
@@ -30,7 +33,7 @@ class _DryRun:
 
 
 class ChecksMixin(WrapMixin):
-    """``authorize``, ``output_schema`` and ``samples``."""
+    """``authorize``, ``decide_policy``, ``output_type``, ``output_schema`` and ``samples``."""
 
     async def authorize(
         self,
@@ -75,6 +78,26 @@ class ChecksMixin(WrapMixin):
         call = ToolCall(id="dry_run", name=tool, arguments=dict(args or {}))
         run = _DryRun(RunTrace(self._clock), envelope)
         return await self._governor.authorize(run, call, description, None, dry_run=True)
+
+    async def decide_policy(self, request: PolicyRequest) -> PolicyDecision:
+        """What the spec's policy engine answers, alone: ``policy.rules`` combined as
+        every engine combines them (ADR-0025), without the governor's other steps.
+
+        ``authorize`` gives the governor's full verdict on a tool call;
+        ``POST /v1/policy/evaluate`` on harnessd is built on this.
+        """
+        if self._policy is None:  # pragma: no cover - every built harness has a policy engine
+            return PolicyDecision(effect=PolicyEffect.ALLOW, reason="no policy engine")
+        return await self._policy.decide(request)
+
+    def output_type(self, task: str) -> type[Any] | None:
+        """The type a task's output is parsed into, or ``None`` when the task returns
+        whatever the model says.
+
+        Raises:
+            NotFound: For a task the spec doesn't define.
+        """
+        return self._task(task).info.output_type
 
     def output_schema(self, task: str) -> dict[str, JsonValue] | None:
         """The JSON Schema of a task's output as run results carry it, or ``None`` when

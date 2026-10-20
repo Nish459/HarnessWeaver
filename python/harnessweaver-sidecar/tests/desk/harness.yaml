@@ -1,0 +1,52 @@
+# A small help desk that harnessd's tests serve: input and output guards, a router,
+# a context source with ACLs, a governed tool that waits for finance over 100 USD,
+# policy rules and an eval suite. The model is scripted, so nothing calls out (R14).
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata: { name: help-desk }
+
+models:
+  provider: scripted
+  rules:
+    - contains: "Refund 250"
+      reply: { tool_calls: [{ name: refund_payment, arguments: { amount_usd: 250 } }] }
+      times: 1
+    - contains: "Refund 20"
+      reply: { tool_calls: [{ name: refund_payment, arguments: { amount_usd: 20 } }] }
+      times: 1
+  replies:
+    - text: "Refunded."
+
+guardrails:
+  input:
+    - { id: pii, use: pii.regex }
+  output:
+    - { id: secrets, use: secrets.scan }
+
+routing:
+  topic:
+    options: [billing, other]
+    cascade:
+      - id: money
+        use: rules
+        rules:
+          - { when: "text.matches('(refund|charge)')", choice: billing }
+    default: other
+
+context:
+  kb: { use: memory, file: data/kb.yaml, require_acl: true }
+
+tools:
+  manifests: ["tools/*.tool.yaml"]
+
+policy:
+  rules:
+    - { id: no-banned-tenants, hook: run.start, when: "tenant == 'banned'", effect: deny }
+    - { id: refund-cap, when: "tool.name == 'refund_payment' && args.amount_usd > 1000", effect: deny }
+
+tasks:
+  refund: { runner: direct, tools: [refund_payment], output: str }
+  triage: { runner: direct, output: "harnessd_desk.models:Ticket" }
+
+evals:
+  refund: [evals/refunds.yaml]

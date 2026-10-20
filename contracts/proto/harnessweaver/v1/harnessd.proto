@@ -1,0 +1,117 @@
+// harnessd, the HarnessWeaver sidecar (DESIGNS No. 24, ADR-0007, ADR-0038).
+//
+// harnessd serves the HTTP/JSON API described by contracts/openapi/harnessd.openapi.json.
+// This file mirrors that API route for route, with the same paths in the
+// google.api.http options, so gRPC can be served later without a second design.
+// A test checks that every route appears in both.
+//
+// Payloads are the JSON contracts named in each comment (contracts/schemas, or
+// the OpenAPI components for the sidecar's own request models), carried as
+// google.protobuf.Struct until gRPC serving gives them typed messages.
+
+syntax = "proto3";
+
+package harnessweaver.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+
+// A JSON request body, with the path parameters its route names.
+message Body {
+  string name = 1;         // a tool or provider name, for routes that take one
+  string stage = 2;        // a guard stage: input, context or output
+  string router = 3;       // a router from the spec's routing section
+  string run_id = 4;
+  string approval_id = 5;
+  google.protobuf.Struct body = 6;
+}
+
+// A lookup that takes only query or path parameters.
+message Lookup {
+  string task = 1;
+  string run_id = 2;
+}
+
+service Health {
+  // {status, harnessd, harnessweaver}. The only route without a bearer token (S6).
+  rpc Check(google.protobuf.Empty) returns (google.protobuf.Struct) {
+    option (google.api.http) = { get: "/v1/health" };
+  }
+}
+
+service Spec {
+  // SpecInfo: the effective spec served.
+  rpc Get(google.protobuf.Empty) returns (google.protobuf.Struct) {
+    option (google.api.http) = { get: "/v1/spec" };
+  }
+  // {hook point: [HookEntry]}, in run order; Lookup.task narrows it to one task.
+  rpc Hooks(Lookup) returns (google.protobuf.Struct) {
+    option (google.api.http) = { get: "/v1/hooks" };
+  }
+}
+
+service Guards {
+  // StageCheck -> RunResult of a one-step session.
+  rpc CheckStage(Body) returns (google.protobuf.Struct) {
+    option (google.api.http) = { post: "/v1/guards/{stage}" body: "body" };
+  }
+  // ProviderCheck -> GuardResult: one provider, for guards declared where: sidecar.
+  rpc CheckProvider(Body) returns (google.protobuf.Struct) {
+    option (google.api.http) = { post: "/v1/guards/providers/{name}:check" body: "body" };
+  }
+}
+
+service Decisions {
+  // DecideRequest -> RunResult whose output is a Decision.
+  rpc Decide(Body) returns (google.protobuf.Struct) {
+    option (google.api.http) = { post: "/v1/decisions/{router}" body: "body" };
+  }
+}
+
+service Policy {
+  // PolicyRequest -> PolicyDecision.
+  rpc Evaluate(Body) returns (google.protobuf.Struct) {
+    option (google.api.http) = { post: "/v1/policy/evaluate" body: "body" };
+  }
+}
+
+service Tools {
+  // AuthorizeRequest -> ToolVerdict, as a dry run.
+  rpc Authorize(Body) returns (google.protobuf.Struct) {
+    option (google.api.http) = { post: "/v1/tools/{name}/authorize" body: "body" };
+  }
+  // SanitizeRequest -> RunResult whose output is the sanitized ToolResult.
+  rpc Sanitize(Body) returns (google.protobuf.Struct) {
+    option (google.api.http) = { post: "/v1/tools/{name}/sanitize" body: "body" };
+  }
+}
+
+service Validation {
+  // ValidateRequest -> RunResult whose output is the checked output.
+  rpc Validate(Body) returns (google.protobuf.Struct) {
+    option (google.api.http) = { post: "/v1/validate" body: "body" };
+  }
+}
+
+service Runs {
+  // RunRequest -> RunResult.
+  rpc Start(Body) returns (google.protobuf.Struct) {
+    option (google.api.http) = { post: "/v1/runs" body: "body" };
+  }
+  // -> RunResult.
+  rpc Get(Lookup) returns (google.protobuf.Struct) {
+    option (google.api.http) = { get: "/v1/runs/{run_id}" };
+  }
+  // ApprovalAnswer -> RunResult.
+  rpc Approve(Body) returns (google.protobuf.Struct) {
+    option (google.api.http) = { post: "/v1/runs/{run_id}/approvals/{approval_id}" body: "body" };
+  }
+}
+
+service Evals {
+  // EvalRunRequest -> SuiteResult.
+  rpc Run(Body) returns (google.protobuf.Struct) {
+    option (google.api.http) = { post: "/v1/evals/run" body: "body" };
+  }
+}

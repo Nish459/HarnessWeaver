@@ -1,0 +1,16 @@
+# refund_payment: moves money, so a refund over 100 USD waits for finance.
+apiVersion: harnessweaver/v1
+kind: Tool
+metadata: { name: refund_payment, version: 1.0.0, owner: payments }
+spec:
+  handler: "harnessd_desk.tools:refund_payment"
+  description: "Refund a payment."
+  input_schema:
+    type: object
+    properties:
+      amount_usd: { type: number, exclusiveMinimum: 0 }
+    required: [amount_usd]
+  side_effect: write_external
+  risk: medium
+  output: { sanitize: [pii_redact] }
+  approval: { when: "args.amount_usd > 100", approver_role: finance }

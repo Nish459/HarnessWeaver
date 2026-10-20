@@ -31,21 +31,9 @@ __all__ = [
     "model_access",
     "output_schema",
     "required_hooks",
-    "unsupported_sections",
 ]
 
 MODEL_LIMITS = ("max_usd", "max_tokens", "max_model_calls")
-
-
-def unsupported_sections(spec: HarnessSpec) -> list[str]:
-    """Spec sections whose modules this release doesn't have yet.
-
-    Loading such a spec fails rather than silently skipping a control (R4).
-    """
-    found: list[str] = []
-    if spec.sidecar.url is not None:
-        found.append("sidecar")
-    return found
 
 
 def import_type(path: str | None, what: str) -> type[Any] | None:

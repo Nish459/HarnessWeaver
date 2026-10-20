@@ -23,7 +23,6 @@ from harnessweaver.adapters import Binding
 from harnessweaver.core.bus import HookBus
 from harnessweaver.core.envelope import Budget, Clock, Principal, SystemClock
 from harnessweaver.core.errors import (
-    SpecError,
     UnreachableHook,
 )
 from harnessweaver.core.evals import EvalDataset, SuiteResult
@@ -38,7 +37,6 @@ from harnessweaver.harness.build import (
     model_access,
     output_schema,
     required_hooks,
-    unsupported_sections,
 )
 from harnessweaver.harness.governance import (
     build_channel,
@@ -121,13 +119,6 @@ class Harness(ReplayMixin):
         of the app's store.
         """
         spec = effective.spec
-        unsupported = unsupported_sections(spec)
-        if unsupported:
-            raise SpecError(
-                f"{spec.metadata.name} uses {', '.join(unsupported)}, which this release of "
-                f"harnessweaver doesn't support yet",
-                sections=list[JsonValue](unsupported),
-            )
         registry = Registry(
             catalog or PluginCatalog.default(), allow=spec.plugins.allow, local=spec.plugins.local
         )

@@ -13,6 +13,7 @@ from harnessweaver_cli.plugins import plugin_app
 from harnessweaver_cli.policy import policy_app
 from harnessweaver_cli.replay import replay
 from harnessweaver_cli.scaffold import init, run_tests
+from harnessweaver_cli.sidecar import sidecar
 from harnessweaver_cli.spec import contracts_app, hooks, spec_app
 from harnessweaver_cli.tools import tools_app
 
@@ -36,6 +37,7 @@ app.command()(replay)
 app.add_typer(add_app, name="add")
 app.add_typer(tools_app, name="tools")
 app.add_typer(plugin_app, name="plugin")
+app.command()(sidecar)
 
 
 def _print_version(value: bool) -> None:

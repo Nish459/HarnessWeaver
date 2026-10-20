@@ -1,0 +1,8 @@
+# A small refund goes through without waiting for anyone.
+suite: golden
+task: refund
+graders: [{ status: completed }]
+cases:
+  - id: small
+    input: "Refund 20 dollars for my order"
+    principal: alice

@@ -5,6 +5,8 @@ The contracts are the source of truth that every HarnessWeaver implementation (P
 ```
 contracts/
 |-- schemas/                 JSON Schemas (draft 2020-12) of every wire contract
+|-- openapi/                 harnessd's HTTP/JSON API, generated and drift-tested
+|-- proto/harnessweaver/v1/  harnessd's services, mirroring the OpenAPI routes for gRPC later
 `-- fixtures/conformance/    language-neutral behavior fixtures, one folder per suite
 ```
 
@@ -40,6 +42,10 @@ make schemas-check    # report drift
 | `recorded-call`, `replay-report` | What a recorded run got from outside (`state.record`), and what replaying it found |
 
 Every schema has `$id` `urn:harnessweaver:v1:<name>`. Within `harnessweaver/v1`, changes are additive only (V2).
+
+## The sidecar's API
+
+`openapi/harnessd.openapi.json` describes every `/v1` route of `harnessd` (DESIGNS No. 24, ADR-0038). It is generated from the routes and the request models in `harnessweaver.core.sidecar`, so `make schemas` writes it and `make schemas-check` reports drift, like the schemas. `proto/harnessweaver/v1/harnessd.proto` mirrors the same routes in its `google.api.http` options for gRPC serving later (ADR-0007); a test fails if a route is in one and not the other.
 
 ## Conformance fixtures
 

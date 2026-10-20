@@ -1,0 +1,8 @@
+# The help desk's articles: one open to everyone, one for Globex only.
+documents:
+  - id: kb-refunds
+    content: Refunds go back to the card you paid with within five days.
+    acl: {}
+  - id: kb-globex
+    content: Globex refunds are handled by its account manager.
+    acl: { tenants: [globex] }

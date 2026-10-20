@@ -1,4 +1,4 @@
-"""Load-time checks: names, plugins, bands, reachability and unsupported sections (R4)."""
+"""Load-time checks: names, plugins, bands and reachability (R4)."""
 
 import json
 from pathlib import Path
@@ -33,12 +33,6 @@ def org_profile(tmp_path: Path, **body: Any) -> str:
     }
     (directory / "acme-baseline.yaml").write_text(json.dumps(document), encoding="ascii")
     return "org://acme-baseline"
-
-
-def test_sections_without_a_module_fail_to_load(build: Builder) -> None:
-    with pytest.raises(SpecError, match="doesn't support yet") as caught:
-        build(spec(models=MODELS, sidecar={"url": "http://127.0.0.1:7070"}))
-    assert "sidecar" in caught.value.details["sections"]  # type: ignore[operator]
 
 
 def test_task_approval_tools_must_exist(build: Builder) -> None:

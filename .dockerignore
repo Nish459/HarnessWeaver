@@ -1,0 +1,8 @@
+# The harnessd image (deploy/harnessd/Dockerfile) needs only the workspace's
+# packages and its lockfile; everything else stays out of the build context.
+**
+!pyproject.toml
+!uv.lock
+!python/
+python/**/tests/
+python/**/__pycache__/
