@@ -1,0 +1,27 @@
+{
+  "name": "example-04-polyglot-typescript",
+  "private": true,
+  "description": "Example 02's support assistant from TypeScript: in-process, and through harnessd.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "start": "node dist/run.js"
+  },
+  "dependencies": {
+    "@ai-sdk/provider": "4.0.22",
+    "@harnessweaver/ai-sdk": "workspace:*",
+    "@harnessweaver/core": "workspace:*",
+    "ai": "7.0.128",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.4",
+    "typescript": "7.0.2",
+    "vitest": "5.0.3"
+  }
+}

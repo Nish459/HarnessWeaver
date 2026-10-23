@@ -18,6 +18,34 @@ importers:
         specifier: 5.0.3
         version: 5.0.3(@types/node@26.6.4)(vite@8.3.4(@types/node@26.6.4)(yaml@2.9.1))
 
+  ../examples/04_polyglot_typescript:
+    dependencies:
+      '@ai-sdk/provider':
+        specifier: 4.0.22
+        version: 4.0.22
+      '@harnessweaver/ai-sdk':
+        specifier: workspace:*
+        version: link:../../typescript/packages/ai-sdk
+      '@harnessweaver/core':
+        specifier: workspace:*
+        version: link:../../typescript/packages/core
+      ai:
+        specifier: 7.0.128
+        version: 7.0.128(zod@4.6.5)
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@types/node':
+        specifier: 26.6.4
+        version: 26.6.4
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: 5.0.3
+        version: 5.0.3(@types/node@26.6.4)(vite@8.3.4(@types/node@26.6.4)(yaml@2.9.1))
+
   packages/ai-sdk:
     dependencies:
       '@harnessweaver/core':

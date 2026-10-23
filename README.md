@@ -67,7 +67,7 @@ uv run harnessweaver test ../my-app     # its tests, offline
 | [Org baseline](examples/_org/README.md) | The profile a platform team publishes: locks, bounds and a required level per risk tier |
 | [02 Support assistant](examples/02_support_rag/README.md) | The Session style for a customer-facing app: routing, ACL-checked context, injection guards, citations, the org baseline's locks |
 | [03 Refund agent](examples/03_refund_agent/README.md) | Run and Wrap styles with a Pydantic AI agent: governed tools, policy, the lethal trifecta, approvals, a red-team eval set, an app's own plugin |
-| 04 *(planned)* | A TypeScript app through the sidecar |
+| [04 One spec, every language](examples/04_polyglot_typescript/README.md) | Example 02's spec from TypeScript (in process, with the Vercel AI SDK) and through harnessd, with the same answers both ways, plus a `curl` walkthrough for any language |
 
 ## Packages
 

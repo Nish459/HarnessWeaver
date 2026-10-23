@@ -3,7 +3,8 @@
 Acme's support assistant answers customers' questions from the help center and
 cites the articles it used. The app owns the flow (route the question, retrieve
 articles, answer) and calls the harness for each step; the spec and Acme's org
-baseline supply every control.
+baseline supply every control. [Example 04](../04_polyglot_typescript/README.md)
+serves this same spec to TypeScript and, through harnessd, to any language.
 
 | | |
 | --- | --- |

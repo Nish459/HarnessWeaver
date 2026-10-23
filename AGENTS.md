@@ -65,7 +65,7 @@ uv sync --all-packages          # install every workspace package + dev tools in
 | Regenerate contract schemas | `make schemas` (then commit `contracts/schemas` and `contracts/openapi`); `make schemas-check` reports drift |
 | Conformance fixtures only | `uv run pytest python/harnessweaver/tests/conformance -q` |
 | Plugin conformance (T5) | `make conformance`, or `uv run pytest --harnessweaver-conformance=<namespace>` |
-| Run an example offline | `HARNESSWEAVER_ENV=offline uv run python examples/01_invoice_extraction/run.py` |
+| Run an example offline | `HARNESSWEAVER_ENV=offline uv run python examples/01_invoice_extraction/run.py`; Example 04 (TypeScript): `HARNESSWEAVER_ENV=offline node examples/04_polyglot_typescript/dist/run.js` after `pnpm -C typescript build` |
 | CLI from source | `uv run harnessweaver --help` |
 | Check a spec | `uv run harnessweaver spec validate <spec> -e offline`, `uv run harnessweaver doctor <spec>`, `uv run harnessweaver hooks <spec>` |
 | Evals, policy tests, replay | `uv run harnessweaver eval run <spec> -e offline`, `uv run harnessweaver policy test <spec>`, `uv run harnessweaver replay <run_id> <spec>` |
@@ -73,7 +73,7 @@ uv sync --all-packages          # install every workspace package + dev tools in
 | Plugins | `uv run harnessweaver plugin list`, `uv run harnessweaver plugin new <namespace> <dir>` (a standalone package) |
 | Sidecar | `HARNESSD_TOKEN=<token> uv run harnessd <spec>` (or `uv run harnessweaver sidecar <spec>`); `docker build -f deploy/harnessd/Dockerfile .` |
 | Gateways and the dev stack | `uv run harnessweaver gateway litellm <spec>`, `uv run harnessweaver gateway mcp <spec>`, `uv run harnessweaver dev <spec> [--up]` |
-| TypeScript (see [typescript/README.md](typescript/README.md)) | `pnpm -C typescript install && pnpm -C typescript test && pnpm -C typescript typecheck && pnpm -C typescript build` |
+| TypeScript (see [typescript/README.md](typescript/README.md)) | `pnpm -C typescript install && pnpm -C typescript test && pnpm -C typescript typecheck && pnpm -C typescript build`; the tests include Example 04, which starts harnessd, so run `uv sync --all-packages` first |
 | Docs site | `make docs` (`mkdocs build --strict`) |
 
 Never `pip install` into the workspace. Add dependencies with `uv add --package <member> <dep>`, and only after an ADR if it's a new third-party dependency (C10). The core package may not gain dependencies at all (R6).

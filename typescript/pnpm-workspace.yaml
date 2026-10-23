@@ -1,2 +1,4 @@
 packages:
   - "packages/*"
+  # Examples that are TypeScript apps, tested with the packages (RULES T6).
+  - "../examples/04_polyglot_typescript"

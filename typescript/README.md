@@ -56,3 +56,5 @@ pnpm -C typescript build
 - The fixture runners live in `packages/core/test/`, one test file per area; `suites.test.ts` fails when a suite folder in `contracts/fixtures/conformance/` has no runner.
 - `packages/core/src/generated/contracts.ts` embeds the JSON Schemas and built-in profiles. After `make schemas` or a profile change, run `pnpm -C typescript/packages/core run sync`; a test fails while it is stale.
 - `@harnessweaver/ai-sdk` type-checks and tests against the core's sources, so neither needs a build first.
+- The workspace also holds [Example 04](../examples/04_polyglot_typescript/README.md), a TypeScript app on Example 02's spec. Its tests start harnessd, so they need the Python workspace installed (`uv sync --all-packages`).
+- pnpm keeps its package store outside the repository; if it lands in the repository (a `.pnpm-store/` folder), pass `--store-dir` to `pnpm install`.

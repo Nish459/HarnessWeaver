@@ -58,6 +58,13 @@ jobs:
           cache-dependency-path: typescript/pnpm-lock.yaml
       - name: Install workspace
         run: pnpm install --frozen-lockfile
+      # Example 04's tests start harnessd, so the Python workspace is installed too.
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          enable-cache: true
+      - name: Install the Python workspace
+        working-directory: .
+        run: uv sync --all-packages --locked
       # The tests read the shared fixtures in contracts/ and the examples (R11, T4).
       - name: Types, tests, build
         run: pnpm typecheck && pnpm test && pnpm build

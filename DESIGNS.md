@@ -1115,6 +1115,8 @@ sequenceDiagram
 - **What differs:** a `Suspend` escalates, because a TypeScript session can't wait for a person; a Retry at `model.after` re-asks a generate call once and blocks a stream, whose words were already sent.
 - *Planned:* OpenTelemetry export, the `semantic` and `llm` routing stages, `http` and `mcp` tool transports, and durable approvals.
 
+Example 04 runs Example 02's spec this way, and its tests require the same answers from the TypeScript app and from harnessd serving that spec.
+
 
 `harnessd` (the `harnessweaver-sidecar` package) serves one effective spec over HTTP/JSON (ADR-0038). It loads the spec as an app does (layers, locks, plugins, tasks), so a client in any language gets exactly the decisions the Python core makes.
 

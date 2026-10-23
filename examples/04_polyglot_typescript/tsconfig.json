@@ -1,0 +1,11 @@
+{
+  "$comment": "Type-checks against the packages' sources, so no build is needed first; the build uses their d.ts.",
+  "extends": "../../typescript/tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@harnessweaver/core": ["../../typescript/packages/core/src/index.ts"],
+      "@harnessweaver/ai-sdk": ["../../typescript/packages/ai-sdk/src/index.ts"]
+    }
+  },
+  "include": ["src", "test"]
+}
