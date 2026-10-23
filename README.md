@@ -77,8 +77,8 @@ uv run harnessweaver test ../my-app     # its tests, offline
 | `harnessweaver-cli` | Developer tooling: the `harnessweaver` command |
 | `harnessweaver-sidecar` | `harnessd`, which serves the core to other languages over HTTP |
 | `harnessweaver-openai`, `-anthropic`, `-pydantic-ai`, `-monty`, `-otel`, `-cel` | First-party Python plugins |
-| `@harnessweaver/core` | TypeScript core |
-| `@harnessweaver/ai-sdk` | First-party TypeScript plugin for the Vercel AI SDK |
+| `@harnessweaver/core` | TypeScript core: the same spec, hook bus, guards, governor and routing, in sessions ([typescript/](typescript/README.md)) |
+| `@harnessweaver/ai-sdk` | `wrapModel` for Vercel AI SDK models |
 
 **Plugins are defined by design, not by name.** Any package that exposes an `hw.Plugin` through the `harnessweaver.plugins` entry point is a plugin, so you can build one in your own repository, publish it under any name, and use it from `harness.yaml` (`use: acme.pii`). See [DESIGNS.md No. 13](DESIGNS.md#13-plugins).
 

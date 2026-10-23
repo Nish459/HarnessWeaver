@@ -1,0 +1,6 @@
+{
+  "$comment": "Type-checks against the core's sources, so no build is needed first; the build uses its d.ts.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "paths": { "@harnessweaver/core": ["../core/src/index.ts"] } },
+  "include": ["src", "test"]
+}

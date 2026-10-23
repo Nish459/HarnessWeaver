@@ -84,4 +84,4 @@ The fields of a case depend on the suite:
 
 Expected values are written by hand from the design, never copied from an implementation's output. When `expect.type` is given for a number, implementations must also return that cel-lite type (`int` or `double`).
 
-A new suite needs a runner in every language. The Python runners live in `python/harnessweaver/tests/conformance/`, and that directory's tests fail if a suite folder has no runner.
+A new suite needs a runner in every language. The Python runners live in `python/harnessweaver/tests/conformance/`, and that directory's tests fail if a suite folder has no runner. The TypeScript runners live in `typescript/packages/core/test/`, where `suites.test.ts` fails the same way. The TypeScript core also embeds the schemas (`pnpm -C typescript/packages/core run sync`), drift-tested like the files here.

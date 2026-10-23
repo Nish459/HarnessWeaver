@@ -720,7 +720,7 @@ The rest of the test kit (`harnessweaver.testing`) is what plugin and app tests 
 
 ### TypeScript plugins
 
-JavaScript has no entry points, so TypeScript plugins are registered explicitly. A package exports `definePlugin({ namespace, contract, providers, middleware })`, and the app passes it in: `load("harness.yaml", { plugins: [acme] })`. Python-only plugins stay usable from TypeScript through the sidecar (`where: sidecar`).
+JavaScript has no entry points, so TypeScript plugins are registered explicitly. A package exports `definePlugin({ namespace, version, contract, providers, middleware })`, built from `defineProvider` and `defineMiddleware`, and the app passes it in: `load("harness.yaml", { plugins: [acme] })`. The same rules apply as in Python: bare names are qualified with the namespace, a name outside it or in a reserved namespace is refused, the contract range is checked (V5), and `plugins.allow` applies (S8). A provider's settings are a JSON Schema whose defaults are filled in. Python-only plugins stay usable from TypeScript through the sidecar (`where: sidecar`).
 
 ### First-party plugins in this repository
 
@@ -732,7 +732,7 @@ JavaScript has no entry points, so TypeScript plugins are registered explicitly.
 | `harnessweaver-monty` | `python/plugins/monty` | `monty` | `monty.sandbox` Sandbox for code-executing tools |
 | `harnessweaver-otel` | `python/plugins/otel` | `otel` | `otel.sdk`: OTel SDK and OTLP exporter setup |
 | `harnessweaver-cel` | `python/plugins/cel` | `cel` | `cel.policy`: full CEL PolicyEngine |
-| `@harnessweaver/ai-sdk` | `typescript/packages/ai-sdk` | `ai_sdk` | `wrapModel` middleware for the Vercel AI SDK |
+| `@harnessweaver/ai-sdk` | `typescript/packages/ai-sdk` | - | `wrapModel` and `harnessMiddleware` for the Vercel AI SDK; an adapter with nothing to register (ADR-0040) |
 
 The core declares extras for convenience (`harnessweaver[openai]`, `harnessweaver[all]`). They only add the package; the spec still decides what is used.
 
@@ -1071,7 +1071,7 @@ flowchart LR
 | Delivery mode | Languages | In-process | Elsewhere |
 | --- | --- | --- | --- |
 | Native SDK, full | Python | Spec loader, hook bus, all modules, all adapters | Gateways only |
-| Native SDK, core | TypeScript | Spec loader, hook bus, budgets, rules routing, schema validation, tool governor, built-in guards | Python-only providers through the sidecar |
+| Native SDK, core | TypeScript | Spec loader, hook bus, budgets and cost, built-in guards, cel-lite policy and validation rules, `rules` and `lexical` routing, tool governor, context, prompts, eval graders; sessions only (ADR-0040) | Python-only providers through the sidecar |
 | Sidecar client | Go, Java, .NET, Ruby, others | A thin HTTP client | `harnessd` |
 | Gateway only | Anything that speaks HTTP | Nothing | LiteLLM Proxy and the MCP gateway, configured from the same spec |
 
@@ -1081,7 +1081,40 @@ flowchart LR
 - The OTel GenAI conventions plus `harness.*` attributes.
 - Language-neutral **conformance fixtures** that every implementation must pass.
 
-### harnessd
+### The TypeScript SDK
+
+`@harnessweaver/core` loads the same `harness.yaml` and passes the same fixtures as Python (ADR-0040). It runs the Session style: the app owns the flow, and its model calls are the AI SDK's, governed through `@harnessweaver/ai-sdk`.
+
+```ts
+const harness = load("harness.yaml");
+const reply = await harness.session({ task: "support", principal: user.id, tenant: user.org }, async (s) => {
+  const items = await s.context("kb").fetch(question);
+  const { text } = await generateText({ model: wrapModel(s, openai("gpt-5")), prompt: ask(question, items) });
+  return s.validate("output", text);
+});
+```
+
+```mermaid
+sequenceDiagram
+    participant App
+    participant S as Session
+    participant W as wrapModel
+    participant M as AI SDK model
+    App->>S: s.guard / s.decide / s.context(...).fetch
+    App->>W: generateText / streamText
+    W->>S: budgets, model.before (may redact)
+    W->>M: doGenerate / doStream with the redacted prompt
+    M-->>W: answer, or deltas
+    W->>S: stream.chunk per delta, then usage, cost and model.after
+    W-->>App: the answer as the hooks left it
+    App->>S: s.validate("output", text)
+```
+
+- **What runs natively:** the spec system (layers, locks, bounds, built-in and org profiles, levels), the hook bus, budgets and cost, the built-in guards, cel-lite policy and validation rules, the `rules` and `lexical` routing stages, the tool governor (steps 1 to 7, and step 9 on results) for tools whose handlers the app passes to `load({ tools })`, the `memory` and `passthrough` context providers, versioned prompts and the eval graders.
+- **What it refuses:** anything the spec asks TypeScript to enforce that it can't fails loading (R4), such as a guard or stage with no TypeScript provider, unless the guard is declared `where: sidecar`.
+- **What differs:** a `Suspend` escalates, because a TypeScript session can't wait for a person; a Retry at `model.after` re-asks a generate call once and blocks a stream, whose words were already sent.
+- *Planned:* OpenTelemetry export, the `semantic` and `llm` routing stages, `http` and `mcp` tool transports, and durable approvals.
+
 
 `harnessd` (the `harnessweaver-sidecar` package) serves one effective spec over HTTP/JSON (ADR-0038). It loads the spec as an app does (layers, locks, plugins, tasks), so a client in any language gets exactly the decisions the Python core makes.
 
@@ -1242,6 +1275,7 @@ Short-form ADRs. Each records the decision, the reason, and its status. An ADR t
 | **0037** | Agent frameworks are governed through one adapter object per framework that sends each of the framework's model requests through `RunContext.generate(provider=...)` and each tool call through `RunContext.call_tool(backend=...)`, rather than through one framework hook per hook point. For Pydantic AI that is `HarnessCapability`: `wrap_run` opens a run when none is active, `before_model_request` wraps the model, `wrap_tool_execute` governs each call, `after_output_process` fires `output.before` (a repair request becomes `ModelRetry`) and `handle_deferred_tool_calls` brings `requires_approval` tools to the harness's approvers. The `pydantic_ai.agent` runner adds `DeferredToolRequests` to the agent's output types, suspends on a deferred call and resumes with `DeferredToolResults`; a wrapped agent escalates instead. During a replay the recording answers an adapter's own model and tool calls (`RunContext.replaying`). The plugin requires `pydantic-ai-slim>=2.57,<3` | Budgets, cost, telemetry, recording and the governor already live in the governed calls, and a framework's separate before and after hooks can't give them one place to run; Pydantic AI's deferred tools are its own way to pause a run, so a resumed run is the framework's own resume, not a copy of it; the harness, not the framework, decides which call a human approved (R3); a replay must never run an app's tool (ADR-0035) | Accepted |
 | **0038** | `harnessd` serves one effective spec over `/v1`, loaded as an app loads it. Checks (`guards/{stage}` for `input`, `context` and `output`, `decisions/{router}`, `tools/{name}/sanitize`, `validate`) each run as a one-step session and answer with its `RunResult`; lookups, runs, approvals, the policy engine, the governor's dry run and evals answer with the harness's own contracts. Request models are contracts in `harnessweaver.core.sidecar`; the OpenAPI document is generated from them and drift-tested, and the proto mirrors its routes. Every route except `health` needs the bearer token, compared in constant time; harnessd refuses to start without one and binds 127.0.0.1. Taxonomy errors map to HTTP statuses with `ErrorInfo` bodies; invalid requests are described by location, never by value. A guard declared `where: sidecar` keeps its place on the bus and posts its provider's check to `guards/providers/{name}:check`. Tool results go through `tools/{name}/sanitize` (step 9, then `tool.after`), not a `tool_result` guard stage | A session is already a run, so `run.start` rules, budgets, traces and stored results cover every check with no new machinery, and one answer shape keeps thin clients small; the app holding the token already decides who it acts for, as in-process code does; a remote provider behind the guard's own fail mode keeps R2; a governed call sanitizes and fires `tool.after` together, so a client can't do one without the other | Accepted |
 | **0039** | `harnessweaver gateway litellm` writes a LiteLLM Proxy config from the spec (gateway models from the aliases and default, `model_group_alias`, retries, a timeout from the longest deadline, message logging off unless content capture is on, the `otel` callback, and a default-on `tool_permission` guardrail that denies by default), and `gateway mcp` writes a neutral `ToolAllowList`. A tool is allowed at a gateway only when its manifest needs no run context; one that can need approval, has egress, is limited to some tenants, has rate limits, is disabled or has a mismatched pin is withheld, with the reason. The provider model behind each gateway model comes from `HARNESSWEAVER_UPSTREAM_<NAME>`. Manifests gain `server` for `transport: mcp`. `harnessweaver dev` writes a Compose stack (LiteLLM, an OTel collector, Langfuse, harnessd) into `.harness/dev/`, with digest-pinned images, ports on 127.0.0.1, harnessd and the collector in LiteLLM's network namespace, and secrets generated once into `.env` | A gateway can't wait for a person, track what a run has read, or tell tenants apart, so allowing such a tool there would skip a control the spec requires (R1, S3); withholding fails closed and says why. Which provider serves a model is the gateway owner's choice, not the app's. One network namespace lets the spec's `localhost` URLs work on the developer's machine and in the containers without a separate overlay. Langfuse's self-hosted v4 needs its six services | Accepted |
+| **0040** | The TypeScript SDK is a native port of the core, held to the shared fixtures and scoped to the Session style. `@harnessweaver/core` loads the same specs and runs what DESIGNS No. 24 lists; it never calls a model itself. `@harnessweaver/ai-sdk` governs AI SDK v7 models with a `LanguageModelV4Middleware`: each call checks the allowed aliases and budgets and fires `model.before`, whose text changes are written back into the prompt (system, user and tool-result text; never the model's own earlier answers), and `model.after`, whose text changes reach the app; a stream fires `stream.chunk` per text delta (`text_so_far` is the text before it) and closes the call on its `finish` part. The model's own errors pass through so the AI SDK's retries still work. A `Suspend` escalates. Plugins register with `definePlugin`. Schemas and built-in profiles are embedded as generated code (`scripts/sync-contracts.mjs`, drift-tested). cel-lite ints are `bigint`, canonical JSON matches Python's (float repr, code-point key order), and string positions and sizes count code points. Packages build with `tsc`, and settings and tool arguments are checked by the ADR-0026 validator subset (plus `propertyNames` and defaults). Dependencies: `yaml` (YAML 1.2 core schema, unique keys, ADR-0017) at runtime; `ai` and `@ai-sdk/provider` as peers of `@harnessweaver/ai-sdk`; `typescript`, `vitest`, `@types/node` and `zod` (the AI SDK's peer) for development | Shared fixtures, not reading one implementation to write another, keep the cores identical (R11). In a TypeScript web app the AI SDK owns the model loop, so governing its model interface covers every call without a second provider layer, and redactions must reach the real request. Waiting for a person needs durable state, which is the sidecar's for now. Embedding the contracts keeps the package usable outside this repository. `bigint` and code-point counting are how JavaScript gives Python's answers. `tsc` and the small validator keep runtime dependencies to one package (C10), instead of tsup, zod or ajv | Accepted |
 
 ## 29. Deviations from the design guide
 

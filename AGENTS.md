@@ -73,7 +73,7 @@ uv sync --all-packages          # install every workspace package + dev tools in
 | Plugins | `uv run harnessweaver plugin list`, `uv run harnessweaver plugin new <namespace> <dir>` (a standalone package) |
 | Sidecar | `HARNESSD_TOKEN=<token> uv run harnessd <spec>` (or `uv run harnessweaver sidecar <spec>`); `docker build -f deploy/harnessd/Dockerfile .` |
 | Gateways and the dev stack | `uv run harnessweaver gateway litellm <spec>`, `uv run harnessweaver gateway mcp <spec>`, `uv run harnessweaver dev <spec> [--up]` |
-| TypeScript | `pnpm -C typescript install && pnpm -C typescript test && pnpm -C typescript build` |
+| TypeScript (see [typescript/README.md](typescript/README.md)) | `pnpm -C typescript install && pnpm -C typescript test && pnpm -C typescript typecheck && pnpm -C typescript build` |
 | Docs site | `make docs` (`mkdocs build --strict`) |
 
 Never `pip install` into the workspace. Add dependencies with `uv add --package <member> <dep>`, and only after an ADR if it's a new third-party dependency (C10). The core package may not gain dependencies at all (R6).
@@ -149,7 +149,7 @@ A plugin is defined by its design, not its name (DESIGNS No. 13, ADR-0015). Firs
 2. Expose one `plugin = hw.Plugin(namespace="<name>", version=..., contract=">=1.0,<2", providers=[...], ...)` and register it once: `[project.entry-points."harnessweaver.plugins"] <name> = "harnessweaver_<name>:plugin"`.
 3. Import nothing heavy and do no I/O at import time (S8). Build only against the public extension surface: `hw.Plugin`, the decorators, `harnessweaver.ports`, contract models, `harnessweaver.testing`.
 4. Pass `pytest --harnessweaver-conformance=<name>` (T5). Add the package to the workspace members and a convenience extra on the core (`harnessweaver[<name>]`).
-5. TypeScript plugins go in `typescript/packages/<name>/` as `@harnessweaver/<name>` and export `definePlugin({...})`.
+5. TypeScript plugins go in `typescript/packages/<name>/` as `@harnessweaver/<name>` and export `definePlugin({...})`. Their tests run against the core's sources (see `packages/ai-sdk`'s `tsconfig.json` and `vitest.config.ts`).
 
 ### Add a CLI command, template or example
 - CLI commands live in `python/harnessweaver-cli`. Test them with Typer's `CliRunner`, and add them to the CLI docs.
