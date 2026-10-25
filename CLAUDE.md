@@ -12,8 +12,8 @@ These add to AGENTS.md and RULES.md (imported above). They don't replace them.
 2. Always load the `ponytail` skill before implementing anything, and follow it.
 3. Write failing tests first (including contract fixtures when behavior is part of a contract), then implement.
 4. While implementing, give every module, package, class, method and function a docstring wherever possible. Comment complex or long logic enough to explain how it works and why (see the conventions in AGENTS.md).
-5. Run `make check` (plus `pnpm -C typescript test` when TypeScript changed) until it's green.
-6. Update the affected docs and `CHANGELOG.md`.
+5. Run `make check` (plus `pnpm -C typescript test` when TypeScript changed, and `make docs` when docs changed) until it's green.
+6. Update the affected docs (the pages under `docs/`, and any README the change touches) and `CHANGELOG.md`.
 7. Summarize what changed and anything not verified, then **ask for approval before committing** (G1). Never commit or push on your own initiative.
 
 ### Environment

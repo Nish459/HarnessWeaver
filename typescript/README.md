@@ -27,11 +27,12 @@ import { generateText } from "ai";
 const harness = load("harness.yaml"); // HARNESSWEAVER_ENV picks the overlay
 
 const reply = await harness.session({ task: "support", principal: user.id, tenant: user.org }, async (s) => {
-  const question = await s.guard("input", text);         // input.before: redacts or blocks
-  const route = await s.decide("intent", { text: question }); // route.decide
-  const items = await s.context("help").fetch(question);   // ACLs, labels, context.after
-  const { text: answer } = await generateText({ model: wrapModel(s, model), prompt: ask(question, items) });
-  return s.validate("output", answer);                     // output.before: guards and rules
+  const question = String(await s.guard("input", text));        // input.before: redacts or blocks
+  const route = await s.decide("intent", { text: question });   // route.decide
+  const items = await s.context("help").fetch(question);        // ACLs, labels, context.after
+  const model = wrapModel(s, gatewayModel, { alias: "fast" });   // budgets, model.before / after
+  const { text: answer } = await generateText({ model, prompt: ask(question, String(route.choice), items) });
+  return s.validate("output", answer);                          // output.before: guards and rules
 });
 ```
 
@@ -40,7 +41,7 @@ A halting outcome throws a `RunInterrupted` error (`RunBlocked`, `RunEscalated`)
 - **Tools** are governed with `s.tool(name, args)`: the manifest, schema, policy, approvals, rate limits and the lethal trifecta (S3), then the result is sanitized. Give the handlers to `load("harness.yaml", { tools: { refund_payment } })`.
 - **Plugins** are passed in, as JavaScript has no entry points: `load(path, { plugins: [definePlugin({ namespace: "acme", version: "1.0.0", providers, middleware })] })`.
 - **The sidecar:** a guard declared `where: sidecar` runs its (Python-only) provider in `harnessd`, and `SidecarClient` calls every other `/v1` route.
-- **Not in TypeScript:** a `Suspend` escalates, since a session can't wait for a person. *Planned:* OpenTelemetry export, the `semantic` and `llm` routing stages, `http` and `mcp` tool transports, and durable approvals. A spec that needs a control TypeScript can't enforce fails to load (R4).
+- **Not in TypeScript:** a `Suspend` escalates, since a session can't wait for a person. *Planned:* OpenTelemetry export, the `semantic` and `llm` routing stages, the `http`, `code` and `mcp` tool transports, and durable approvals. A spec that needs a control TypeScript can't enforce fails to load (R4).
 
 ## Work on it
 

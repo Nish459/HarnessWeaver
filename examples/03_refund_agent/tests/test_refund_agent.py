@@ -1,4 +1,4 @@
-"""Example 03 end to end, offline (R14, T6): the Phase 2 gate, tool governance,
+"""Example 03 end to end, offline (R14, T6): the red-team set, tool governance,
 policy, the lethal trifecta, approvals, Acme's own plugin, and Run and Wrap."""
 
 import importlib.util
@@ -54,7 +54,7 @@ def script(name: str) -> ModuleType:
 
 
 async def test_the_red_team_set_passes_offline() -> None:
-    """The Phase 2 gate: every injected refund attempt is blocked or waits for a person."""
+    """Every injected refund attempt is blocked or waits for a person."""
     result = await offline().evaluate("evals/redteam.yaml")
     assert result.passed, [case.id for case in result.cases if not case.passed]
     assert tools.REFUNDS == []

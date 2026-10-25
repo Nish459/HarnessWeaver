@@ -40,6 +40,8 @@ answer = await client.chat.completions.create(model="gpt-x-mini", messages=[...]
 
 ## Conformance
 
+From this package's directory (at the repository root, `make conformance` checks every first-party plugin):
+
 ```bash
 uv run pytest --harnessweaver-conformance=openai
 ```

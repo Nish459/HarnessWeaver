@@ -74,5 +74,7 @@ plugin, and each fails to load with a `LockViolation` (R1).
 
 Point `models.base_url` at your LiteLLM gateway, set `LITELLM_API_KEY`, and set
 `HARNESSWEAVER_PROFILE_PATH` to where your org's profiles live. Replace the
-`memory` context provider with a vector store plugin; the ACL re-check, the
-injection guard and the citation check stay the same.
+`memory` context provider with a vector store plugin (*planned*; until then,
+retrieve with your own client and pass the items through a `passthrough` source
+with `s.context(name).check(items)`); the ACL re-check, the injection guard and
+the citation check stay the same.

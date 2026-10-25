@@ -1,7 +1,7 @@
 # Common development tasks. `make check` is what CI runs (RULES G5).
 UV ?= uv
 
-.PHONY: sync check ascii lint fmt fmt-check typecheck test conformance cov schemas schemas-check
+.PHONY: sync check ascii lint fmt fmt-check typecheck test conformance cov schemas schemas-check docs docs-serve
 
 sync:
 	$(UV) sync --all-packages
@@ -47,3 +47,11 @@ schemas:
 schemas-check:
 	$(UV) run python -c "$(CONTRACTS_MAIN)" --check contracts/schemas
 	$(UV) run python -m harnessweaver_sidecar.openapi --check contracts/openapi
+
+# The docs site (ADR-0041). --strict turns every warning, such as a broken link or
+# anchor, into an error; the site is written to site/.
+docs:
+	$(UV) run --group docs mkdocs build --strict
+
+docs-serve:
+	$(UV) run --group docs mkdocs serve

@@ -1,4 +1,4 @@
-"""Example 01 end to end, offline (R14, T6): the Phase 1 gate in tests."""
+"""Example 01 end to end, offline (R14, T6): L1 controls with no app-level retry or tracing code."""
 
 import ast
 import importlib.util

@@ -1,0 +1,119 @@
+/*
+ * The HarnessWeaver brand theme for the docs site.
+ *
+ * Material reads its colors from CSS variables. mkdocs.yml sets `primary` and
+ * `accent` to `custom`, so none of Material's built-in palettes competes with the
+ * values below. There are two schemes: `slate` (dark, the default) and `default`
+ * (light). Both use the same deep navy, the same blue for links and the same
+ * purple for hover and focus; the page font, Inter, is set in mkdocs.yml.
+ */
+
+/* Shared by both schemes: the brand gradient's purple and blue stops. */
+:root {
+  --hw-purple: #ac4bff;
+  --hw-blue: #3080ff;
+}
+
+/* Dark (the default): near-black navy pages, navy cards, light text. */
+[data-md-color-scheme="slate"] {
+  --md-hue: 225;
+  --hw-gradient-start: #f3faff;
+
+  --md-primary-fg-color: #010a20;
+  --md-primary-fg-color--light: #5c80bc;
+  --md-primary-fg-color--dark: #000211;
+  --md-primary-bg-color: #f3faff;
+  --md-primary-bg-color--light: rgba(243, 250, 255, 0.7);
+  --md-accent-fg-color: #c07eff;
+  --md-accent-fg-color--transparent: rgba(172, 75, 255, 0.12);
+
+  --md-default-bg-color: #000211;
+  --md-default-fg-color: #f3faff;
+  --md-default-fg-color--light: #8d9fbe;
+  --md-default-fg-color--lighter: rgba(141, 159, 190, 0.45);
+  --md-default-fg-color--lightest: #08152c;
+
+  --md-code-bg-color: #010a20;
+  --md-typeset-a-color: #54a2ff;
+  --md-typeset-table-color: #13244a;
+  --md-admonition-bg-color: #010a20;
+  --md-footer-bg-color: #010a20;
+  --md-footer-bg-color--dark: #000211;
+}
+
+/* Light: pale blue-white pages, white cards, a navy header and footer. */
+[data-md-color-scheme="default"] {
+  --hw-gradient-start: #011d50;
+
+  --md-primary-fg-color: #011d50;
+  --md-primary-fg-color--light: #7a9fdd;
+  --md-primary-fg-color--dark: #020713;
+  --md-primary-bg-color: #f3faff;
+  --md-primary-bg-color--light: rgba(243, 250, 255, 0.7);
+  --md-accent-fg-color: #ac4bff;
+  --md-accent-fg-color--transparent: rgba(172, 75, 255, 0.1);
+
+  --md-default-bg-color: #f3faff;
+  --md-default-fg-color: #020713;
+  --md-default-fg-color--light: #536480;
+  --md-default-fg-color--lighter: rgba(83, 100, 128, 0.45);
+  --md-default-fg-color--lightest: #dfe6eb;
+
+  --md-code-bg-color: #e0edf8;
+  --md-typeset-a-color: #1447e6;
+  --md-typeset-table-color: #dfe6eb;
+  --md-admonition-bg-color: #ffffff;
+  --md-footer-bg-color: #011d50;
+  --md-footer-bg-color--dark: #020713;
+}
+
+/* The dark header and tabs are translucent and blur the page that scrolls under them. */
+[data-md-color-scheme="slate"] .md-header,
+[data-md-color-scheme="slate"] .md-tabs {
+  background-color: rgba(1, 10, 32, 0.8);
+  backdrop-filter: blur(12px);
+}
+
+[data-md-color-scheme="slate"] .md-tabs {
+  border-bottom: 1px solid #08152c;
+}
+
+/* The header logo is larger than Material's default; logo.svg carries its own rounded badge. */
+.md-header__button.md-logo img {
+  height: 1.6rem;
+}
+
+/*
+ * Headings are bold and tight. The page title (h1) is filled with the brand
+ * gradient, from the scheme's text color through purple to blue; `fit-content`
+ * keeps the gradient as wide as the words, not the whole column. A gradient
+ * clipped to text paints every glyph inside the heading, even a transparent one,
+ * so the title's permalink mark would always show; titles drop it (the page's own
+ * address already points at the title).
+ */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.md-typeset h1 {
+  width: fit-content;
+  color: transparent;
+  background-image: linear-gradient(to right, var(--hw-gradient-start), var(--hw-purple), var(--hw-blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.md-typeset h1 .headerlink {
+  display: none;
+}
+
+/* Code blocks, admonitions and tables are rounded cards. */
+.md-typeset pre > code,
+.md-typeset .admonition,
+.md-typeset details,
+.md-typeset .md-typeset__table table:not([class]) {
+  border-radius: 0.5rem;
+}

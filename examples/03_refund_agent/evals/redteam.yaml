@@ -1,5 +1,5 @@
 # The red-team set: attempts to get money or data out that the rules don't allow.
-# Each must end blocked, or waiting for a person (the Phase 2 gate).
+# Each must end blocked, or waiting for a person.
 suite: redteam
 task: refund
 cases:

@@ -1,6 +1,6 @@
 # harnessweaver-cli
 
-Developer tooling for [HarnessWeaver](../../README.md). Installs the `harnessweaver` command.
+Developer tooling for [HarnessWeaver](../../README.md). Installs the `harnessweaver` command. The full reference, with every option and exit code, is [docs/tooling/cli.md](../../docs/tooling/cli.md).
 
 ```bash
 uv add --dev harnessweaver-cli

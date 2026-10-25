@@ -25,3 +25,11 @@ spec:
 ```
 
 The code in the `code` argument runs with the other arguments as globals, and the tool returns `{value, stdout}`, or `{error, stdout}` when the code raises. Sandboxed code can't open host files, reach the network or read the environment, and the manifest's `limits` cap its time, memory and printed output. Each call gets a fresh worker, so nothing leaks between calls. Importing the plugin imports nothing from pydantic-monty (S8).
+
+## Conformance
+
+From this package's directory (at the repository root, `make conformance` checks every first-party plugin):
+
+```bash
+uv run pytest --harnessweaver-conformance=monty
+```

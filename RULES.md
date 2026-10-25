@@ -4,7 +4,7 @@ These are the non-negotiable rules for building HarnessWeaver. They are numbered
 
 - The **invariants (R)** protect the framework's promises to the teams that adopt it. They override every other rule and every feature request.
 - The **coding (C), testing (T), security (S), docs (D), versioning (V) and git (G) rules** keep the codebase consistent.
-- If a rule blocks something that is genuinely needed, write an ADR in [DESIGNS.md](DESIGNS.md#28-architecture-decision-records) proposing the change. Don't work around the rule in code.
+- If a rule blocks something that is genuinely needed, write an ADR proposing the change: a file in [`docs/adr/`](docs/adr/index.md), indexed in [DESIGNS.md No. 28](DESIGNS.md#28-architecture-decision-records). Don't work around the rule in code.
 
 When two design goals conflict, the earlier goal in [DESIGNS.md, Design goals](DESIGNS.md#3-design-goals-and-non-goals) wins.
 
@@ -81,7 +81,7 @@ When two design goals conflict, the earlier goal in [DESIGNS.md, Design goals](D
 | **D1** | A change to public API, spec format, CLI or behavior updates the relevant docs page and `CHANGELOG.md` in the same commit. |
 | **D2** | Diagrams are Mermaid, kept next to the text they explain, so they are reviewed like code. PNGs are only for diagrams that Mermaid can't express. |
 | **D3** | Code in docs is either a tested example (included from `examples/`) or short enough to be checked by eye. Never document an API that doesn't exist yet without marking it *planned*. |
-| **D4** | Any deviation from the design guide (`docs/AI Harness Framework Design and Build Guide.md`) is recorded as an ADR in `DESIGNS.md` with its reason. |
+| **D4** | Any deviation from the design guide (`docs/AI Harness Framework Design and Build Guide.md`) is recorded as an ADR (in `docs/adr/`, indexed in DESIGNS.md No. 28) with its reason, and listed in DESIGNS.md No. 29. |
 | **D5** | Use only characters found on a standard keyboard (printable ASCII) in docs, code, comments, fixtures and commit messages. Refer to numbered sections as `No. 13`, and write `-` for dashes, `->` for arrows and `...` for ellipses. Unicode test data is written as escapes (`\u00e9`). `make check` enforces this; the design guide is the only exception (D4). |
 
 ## Versioning rules

@@ -60,6 +60,7 @@ before the model call.
 | [harness.yaml](harness.yaml) | The task, its typed input and output, the prompt, budgets, prices and business rules |
 | [harness.offline.yaml](harness.offline.yaml) | The offline overlay: an invalid answer, then a valid one, and an answer for the second golden case |
 | [invoices/models.py](invoices/models.py) | `InvoiceDoc`, `LineItem`, `Invoice` |
+| [invoices/samples.py](invoices/samples.py) | The sample invoice text, and the `Invoice` it should become |
 | [prompts/extract_invoice@1.md](prompts/extract_invoice@1.md) | The versioned prompt (`name@version`, ADR-0013) |
 | [evals/golden.yaml](evals/golden.yaml) | Golden cases: `harnessweaver eval run examples/01_invoice_extraction/harness.yaml -e offline` grades them |
 | [run.py](run.py) | The whole app: load, run, print |
@@ -97,6 +98,7 @@ can't be checked fails closed.
 ## Going live
 
 Point `models.base_url` at your LiteLLM gateway, set `LITELLM_API_KEY`, and map
-`fast-chat` and `strong-chat` to real models in the gateway's config. The
-gateway owns retries and fallbacks (R5), so the SDK client is built with
-retries off.
+`fast-chat` and `strong-chat` to real models in the gateway's config
+(`harnessweaver gateway litellm examples/01_invoice_extraction/harness.yaml` writes
+one, with each model read from `HARNESSWEAVER_UPSTREAM_<NAME>`). The gateway owns
+retries and fallbacks (R5), so the SDK client is built with retries off.

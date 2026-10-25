@@ -24,8 +24,11 @@ models:
 | `effort` | the model's default | `low`, `medium`, `high`, `xhigh`, `max` |
 | `fallbacks` | `default` | Server-side refusal fallbacks (beta `server-side-fallback-2026-07-01`); `none` turns them off |
 | `structured_outputs` | `false` | Send output schemas as `output_config.format` (they must meet its rules); otherwise the schema goes in the system prompt |
-| `sampling` | `false` | Forward `temperature`; current models reject sampling parameters |
-| `base_url`, `api_key_env`, `timeout`, `max_retries` | SDK defaults | Client settings. Credentials follow the SDK's own resolution unless `api_key_env` names a variable |
+| `sampling` | `false` | Forward `temperature` (older models only); current models reject sampling parameters |
+| `timeout` | `600s` | Per request |
+| `max_retries` | `2` | SDK retries; set `0` behind a gateway, which then owns retries (R5) |
+| `cost_header` | `x-litellm-response-cost` | A gateway's reported cost, used before `models.prices` |
+| `base_url`, `api_key_env` | SDK defaults | Client settings. Credentials follow the SDK's own resolution unless `api_key_env` names a variable |
 
 Server-side fallbacks are on by default: a request a model declines for policy reasons is re-run on Anthropic's recommended fallback model, and on a model without fallbacks the request simply runs alone. A request that is still declined ends the run `blocked` with code `model_refusal`.
 
@@ -41,6 +44,8 @@ message = await client.messages.create(model="claude-opus-5-5", max_tokens=1024,
 `messages.create` calls are governed: traced, budgeted and guarded (`input.before` on the system prompt and message text, `output.before` on the answer), with redactions written back. Everything else, including `client.beta.messages`, passes through. Streaming through an instrumented client is *planned* and raises for now.
 
 ## Conformance
+
+From this package's directory (at the repository root, `make conformance` checks every first-party plugin):
 
 ```bash
 uv run pytest --harnessweaver-conformance=anthropic

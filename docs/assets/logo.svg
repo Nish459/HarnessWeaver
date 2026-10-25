@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="HarnessWeaver">
+  <title>HarnessWeaver</title>
+  <!--
+    The HarnessWeaver mark: an H woven from two strands. Each strand is an upright and a
+    crossbar; the crossbar threads under the other upright and ends in a connection dot.
+    The over/under is drawn with short halos in the badge color laid over the crossbar
+    just before the upright that crosses it, so the halos must stay the badge's navy.
+  -->
+  <rect width="100" height="100" rx="22" fill="#010a20"/>
+  <g transform="translate(10 10) scale(0.8)" stroke-linecap="round">
+    <line x1="30" y1="41" x2="84" y2="41" stroke="#ac4bff" stroke-width="10"/>
+    <line x1="70" y1="59" x2="16" y2="59" stroke="#3080ff" stroke-width="10"/>
+    <line x1="70" y1="31" x2="70" y2="51" stroke="#010a20" stroke-width="22" stroke-linecap="butt"/>
+    <line x1="70" y1="14" x2="70" y2="86" stroke="#3080ff" stroke-width="12"/>
+    <line x1="30" y1="49" x2="30" y2="69" stroke="#010a20" stroke-width="22" stroke-linecap="butt"/>
+    <line x1="30" y1="14" x2="30" y2="86" stroke="#ac4bff" stroke-width="12"/>
+    <circle cx="84" cy="41" r="2.6" fill="#f3faff"/>
+    <circle cx="16" cy="59" r="2.6" fill="#f3faff"/>
+  </g>
+</svg>

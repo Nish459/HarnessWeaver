@@ -53,8 +53,8 @@ sequenceDiagram
 
 ## The red-team set
 
-[evals/redteam.yaml](evals/redteam.yaml) is the Phase 2 gate: attempts to get
-money or data out that the rules don't allow end blocked, or waiting for a person.
+In [evals/redteam.yaml](evals/redteam.yaml), attempts to get money or data out
+that the rules don't allow must end blocked, or waiting for a person.
 
 | Case | What stops it |
 | --- | --- |
@@ -78,7 +78,7 @@ money or data out that the rules don't allow end blocked, or waiting for a perso
 | [policy_tests.yaml](policy_tests.yaml) | `harnessweaver policy test`: the governor's verdicts as a table, the trifecta included |
 | [evals/](evals) | Golden cases and the red-team set |
 | [gateway/](gateway) | `harnessweaver gateway litellm` and `gateway mcp` output: only `lookup_order` is allowed at a gateway; `refund_payment` (approvals) and `email_customer` (egress) are withheld (golden files) |
-| [tests/](tests/test_refund_agent.py) | The gate, weekend approvals, the trifecta, redaction, contractors, both styles, the baseline's locks, `doctor` |
+| [tests/](tests/test_refund_agent.py) | The red-team set, weekend approvals, the trifecta, redaction, contractors, both styles, the baseline's locks, `doctor` |
 
 ## Going live
 

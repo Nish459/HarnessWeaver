@@ -1,0 +1,191 @@
+# The HarnessWeaver docs site (ADR-0041). Build it with `make docs` (strict: a broken
+# link, anchor or page left out of the navigation fails the build) or browse it with
+# `make docs-serve`.
+site_name: HarnessWeaver
+site_description: >-
+  The composable AI harness framework. Weave your own AI harness: bring your models,
+  choose your plugins, define your execution.
+repo_url: https://github.com/Wise-DreamerZ/HarnessWeaver
+repo_name: Wise-DreamerZ/HarnessWeaver
+edit_uri: edit/main/docs/
+copyright: HarnessWeaver is licensed under Apache-2.0.
+
+docs_dir: docs
+# The design guide is the source document and is never edited (RULES D4); the site
+# links to it on GitHub instead of rendering it.
+exclude_docs: |
+  AI Harness Framework Design and Build Guide.*
+  /assets/roadmap.png
+  .claude/
+
+theme:
+  name: material
+  logo: assets/logo.svg
+  favicon: assets/favicon.png
+  font:
+    text: Inter
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - toc.follow
+  # The brand theme: dark by default, with a light scheme behind the toggle. The
+  # colors, headings and shapes are in docs/stylesheets/brand.css.
+  palette:
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+extra_css:
+  - stylesheets/brand.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  # QUICKSTART.md, CONTRIBUTING.md, SECURITY.md and CHANGELOG.md have one source each,
+  # at the repository root, included here.
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: getting-started/installation.md
+      - Quickstart: getting-started/quickstart.md
+      - Examples: getting-started/examples.md
+  - Concepts:
+      - concepts/index.md
+      - Lifecycle and hook points: concepts/lifecycle.md
+      - The hook bus: concepts/hook-bus.md
+      - Outcomes and errors: concepts/outcomes.md
+      - Envelope, labels and budgets: concepts/envelope.md
+      - Integration styles: concepts/integration-styles.md
+      - Adoption levels: concepts/adoption-levels.md
+  - Spec:
+      - spec/index.md
+      - Layers, locks and bounds: spec/layers.md
+      - Section reference: spec/reference.md
+      - Built-in profiles: spec/profiles.md
+      - Tool manifests: spec/tool-manifests.md
+      - cel-lite expressions: spec/expressions.md
+  - Modules:
+      - modules/index.md
+      - Models: modules/models.md
+      - Routing: modules/routing.md
+      - Context and memory: modules/context.md
+      - Guardrails: modules/guardrails.md
+      - Validation: modules/validation.md
+      - Tools: modules/tools.md
+      - Policy: modules/policy.md
+      - Approvals: modules/approvals.md
+      - State and replay: modules/state.md
+      - Observability: modules/observability.md
+      - Evals: modules/evals.md
+  - Tooling:
+      - tooling/index.md
+      - CLI: tooling/cli.md
+      - Testing: tooling/testing.md
+      - Templates: tooling/templates.md
+      - TypeScript: tooling/typescript.md
+      - harnessd sidecar: tooling/sidecar.md
+      - Gateways and the dev stack: tooling/gateways.md
+  - Extending:
+      - extending/index.md
+      - Plugins: extending/plugins.md
+      - Providers and ports: extending/providers.md
+      - Middleware: extending/middleware.md
+      - Runners, deciders and adapters: extending/runners-and-adapters.md
+      - Conformance: extending/conformance.md
+      - Contracts: extending/contracts.md
+  - Operations:
+      - operations/index.md
+      - Deployment: operations/deployment.md
+      - Configuration: operations/configuration.md
+      - Security: operations/security.md
+      - Versioning: operations/versioning.md
+      - Troubleshooting: operations/troubleshooting.md
+  - Decisions:
+      - adr/index.md
+      - "ADR-0001: Ship as HarnessWeaver": adr/0001-ship-as-harnessweaver.md
+      - "ADR-0002: Support Python 3.12 and later": adr/0002-python-312.md
+      - "ADR-0003: The core's dependencies": adr/0003-core-dependencies.md
+      - "ADR-0004: cel-lite, the built-in expression language": adr/0004-cel-lite.md
+      - "ADR-0005: Contracts are Pydantic models; schemas are generated": adr/0005-contracts-from-pydantic.md
+      - "ADR-0006: One uv workspace of separate packages": adr/0006-workspace-packages.md
+      - "ADR-0007: The sidecar speaks HTTP/JSON first": adr/0007-sidecar-http-first.md
+      - "ADR-0008: Spec guards enforce by default; the CLI scaffolds shadow guards": adr/0008-guard-modes.md
+      - "ADR-0009: Durability starts as state-store checkpoints": adr/0009-durability-checkpoints.md
+      - "ADR-0010: The core uses only the OpenTelemetry API": adr/0010-otel-api-only.md
+      - "ADR-0011: The direct runner's bounded tool loop": adr/0011-bounded-tool-loop.md
+      - "ADR-0012: No built-in price table": adr/0012-no-price-table.md
+      - "ADR-0013: Versioned prompts without a template language": adr/0013-prompts-without-templates.md
+      - "ADR-0014: A middleware's fail_mode is required": adr/0014-required-fail-mode.md
+      - "ADR-0015: Plugins are defined by design, not by name": adr/0015-plugins-by-design.md
+      - "ADR-0016: Dependencies outside the core": adr/0016-non-core-dependencies.md
+      - "ADR-0017: Specs are YAML 1.2 (core schema)": adr/0017-yaml-1-2.md
+      - "ADR-0018: Locks forbid changes, not restatements; bounds accumulate": adr/0018-locks-and-bounds.md
+      - "ADR-0019: One models section": adr/0019-one-models-section.md
+      - "ADR-0020: Halting outcomes raise RunInterrupted errors": adr/0020-halting-errors.md
+      - "ADR-0021: How approved steps resume": adr/0021-resuming-approved-steps.md
+      - "ADR-0022: Provider extensions on messages and responses": adr/0022-provider-extensions.md
+      - "ADR-0023: A validation rule's when describes a violation": adr/0023-validation-rule-when.md
+      - "ADR-0024: Logging through loguru": adr/0024-loguru.md
+      - "ADR-0025: Where the governor runs, and one way to combine policy rules": adr/0025-governor-placement.md
+      - "ADR-0026: A JSON Schema subset validator in the core": adr/0026-json-schema-subset.md
+      - "ADR-0027: Code-executing tools use transport: code": adr/0027-code-transport.md
+      - "ADR-0028: Tools given in code carry manifests; stale pins block calls": adr/0028-manifests-for-code-tools.md
+      - "ADR-0029: Routing cascades and shared text scoring": adr/0029-routing-cascade.md
+      - "ADR-0030: Context governance runs before context.after": adr/0030-context-governance.md
+      - "ADR-0031: A namespaced memory store, not a memory model": adr/0031-namespaced-memory.md
+      - "ADR-0032: The grounded.citations guard": adr/0032-grounded-citations.md
+      - "ADR-0033: Eval datasets and graders": adr/0033-eval-datasets.md
+      - "ADR-0034: Eval baselines, exit codes and online sampling": adr/0034-baselines-and-online-evals.md
+      - "ADR-0035: Recording and replaying runs": adr/0035-record-and-replay.md
+      - "ADR-0036: Governor dry runs and guard firing notes": adr/0036-dry-runs-and-guard-notes.md
+      - "ADR-0037: One adapter object per agent framework": adr/0037-framework-adapters.md
+      - "ADR-0038: harnessd serves one spec over /v1": adr/0038-harnessd.md
+      - "ADR-0039: Gateway configs and the local dev stack": adr/0039-gateways-and-dev-stack.md
+      - "ADR-0040: The TypeScript SDK": adr/0040-typescript-sdk.md
+      - "ADR-0041: The docs site: MkDocs and Material": adr/0041-docs-site.md
+  - Project:
+      - Contributing: project/contributing.md
+      - Security policy: project/security.md
+      - Changelog: project/changelog.md
