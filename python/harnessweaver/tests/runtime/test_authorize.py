@@ -61,6 +61,38 @@ async def test_the_verdict_of_one_call(
         assert verdict.approver_role == "finance"
 
 
+@pytest.mark.parametrize(
+    ("manifest_role", "task_role", "role"),
+    [
+        (None, None, "finance"),  # the spec's approvals.approver_role
+        (None, "support-lead", "support-lead"),  # the task's approvals
+        ("cfo", "support-lead", "cfo"),  # the manifest, the step that asked
+    ],
+)
+async def test_the_approver_role_is_the_one_a_real_run_waits_for(
+    build: Builder,
+    tmp_path: Path,
+    testkit: Any,
+    manifest_role: str | None,
+    task_role: str | None,
+    role: str,
+) -> None:
+    refund_tool(tmp_path, approval={"approver_role": manifest_role} if manifest_role else None)
+    rules = [{"when": "args.amount_usd > 100", "effect": "require_approval"}]
+    document = tool_spec(
+        call("refund_payment", amount_usd=500),
+        tools=["refund_payment"],
+        policy={"rules": rules},
+        approvals={"approver_role": "finance"},
+        task={"approvals": {"approver_role": task_role}},
+    )
+    app = build(document, tools=None)
+    verdict = await app.authorize("refund_payment", {"amount_usd": 500}, task="t")
+    waiting = await app.run("t", "refund order 7")
+    assert waiting.approval is not None
+    assert (verdict.approver_role, waiting.approval.approver_role) == (role, role)
+
+
 async def test_a_dry_run_uses_up_no_rate_limit(
     build: Builder, tmp_path: Path, testkit: Any
 ) -> None:

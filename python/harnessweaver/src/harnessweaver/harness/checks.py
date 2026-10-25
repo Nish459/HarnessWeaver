@@ -49,18 +49,20 @@ class ChecksMixin(WrapMixin):
 
         Steps 1 to 7 run as for a real call (DESIGNS No. 17) on a run with this
         principal, tenant, task and labels, as a dry run: a rate limit isn't used
-        up and nothing is approved or executed. ``harnessweaver policy test`` is
-        built on this.
+        up and nothing is approved or executed. An approval's ``approver_role``
+        falls back to the task's and then the spec's ``approvals.approver_role``, as
+        the request a real run makes would. ``harnessweaver policy test`` is built
+        on this.
 
         Raises:
             NotFound: For a task the spec doesn't define.
         """
-        info = self._task(task).info if task is not None else None
+        entry = self._task(task) if task is not None else None
         envelope = Envelope.new(
             tenant=tenant,
             principal=principal,
             task=task,
-            task_version=info.version if info is not None else None,
+            task_version=entry.info.version if entry is not None else None,
             clock=self._clock,
         )
         if labels is not None:
@@ -77,7 +79,11 @@ class ChecksMixin(WrapMixin):
             return ToolVerdict(decision="allow", step=7, reason="no governor")
         call = ToolCall(id="dry_run", name=tool, arguments=dict(args or {}))
         run = _DryRun(RunTrace(self._clock), envelope)
-        return await self._governor.authorize(run, call, description, None, dry_run=True)
+        verdict = await self._governor.authorize(run, call, description, None, dry_run=True)
+        if verdict.decision != "require_approval":
+            return verdict
+        role = self._approver_role(entry, verdict.approver_role)
+        return verdict.model_copy(update={"approver_role": role})
 
     async def decide_policy(self, request: PolicyRequest) -> PolicyDecision:
         """What the spec's policy engine answers, alone: ``policy.rules`` combined as

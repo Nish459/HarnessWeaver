@@ -20,7 +20,7 @@ from harnessweaver.core.ids import new_id
 from harnessweaver.core.results import RunResult
 from harnessweaver.core.runs import ApprovalDecision, ApprovalRequest, RunStatus
 from harnessweaver.core.state import Checkpoint, Grant, RunRecord
-from harnessweaver.harness.records import ApprovalAnswer, Channel, LiveRun
+from harnessweaver.harness.records import ApprovalAnswer, Channel, LiveRun, TaskEntry
 from harnessweaver.harness.runs import RunMixin
 from harnessweaver.spec.models import TaskApprovals
 
@@ -30,20 +30,23 @@ __all__ = ["ApprovalMixin"]
 class ApprovalMixin(RunMixin):
     """Approvals, resumption and cancellation."""
 
-    def _task_approvals(self, run: LiveRun) -> TaskApprovals:
-        if run.task is not None and run.task.spec.approvals is not None:
-            return run.task.spec.approvals
+    def _task_approvals(self, task: TaskEntry | None) -> TaskApprovals:
+        if task is not None and task.spec.approvals is not None:
+            return task.spec.approvals
         return TaskApprovals()
 
-    def _approver_role(self, run: LiveRun, role: str | None) -> str | None:
+    def _approver_role(self, task: TaskEntry | None, role: str | None) -> str | None:
+        """Who must approve: the role the step that asked named, else the task's
+        ``approvals.approver_role``, else the spec's. ``authorize`` resolves it the
+        same way, so a dry run names the role a real run waits for."""
         return (
             role
-            or self._task_approvals(run).approver_role
+            or self._task_approvals(task).approver_role
             or self._effective.spec.approvals.approver_role
         )
 
     def _approval_timeout(self, run: LiveRun) -> timedelta | None:
-        timeout = self._task_approvals(run).timeout
+        timeout = self._task_approvals(run.task).timeout
         return timeout if timeout is not None else self._effective.spec.approvals.timeout
 
     async def _suspend(self, run: LiveRun) -> RunResult:
@@ -57,7 +60,7 @@ class ApprovalMixin(RunMixin):
             approval_id=new_id("apr"),
             run_id=ctx.run_id,
             reason=pending.reason,
-            approver_role=self._approver_role(run, pending.approver_role),
+            approver_role=self._approver_role(run.task, pending.approver_role),
             call=pending.call,
             tool=pending.tool,
             requested_at=now,
@@ -222,7 +225,7 @@ class ApprovalMixin(RunMixin):
 
     async def _expire(self, run: LiveRun) -> RunResult:
         on_timeout = (
-            self._task_approvals(run).on_timeout or self._effective.spec.approvals.on_timeout
+            self._task_approvals(run.task).on_timeout or self._effective.spec.approvals.on_timeout
         )
         reason = "the approval request expired"
         run.ctx.trace.note("harness.approvals", reason, code="approval_timeout")
