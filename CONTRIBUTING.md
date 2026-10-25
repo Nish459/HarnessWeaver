@@ -21,6 +21,7 @@ pnpm -C typescript install                   # the TypeScript workspace
 | Regenerate contract schemas and the OpenAPI document | `make schemas` (`make schemas-check` reports drift) |
 | TypeScript tests, types and build | `pnpm -C typescript test`, `pnpm -C typescript typecheck`, `pnpm -C typescript build` |
 | The docs site | `make docs` (strict build), `make docs-serve` (browse at http://127.0.0.1:8000) |
+| Build, or build and publish, the packages tagged on HEAD | `make build`, `make release` ([Releasing](#releasing)) |
 | Remove caches and build output (keeps `.venv` and `node_modules`) | `make clean` (`make distclean` also removes `.venv` and `node_modules`) |
 
 Never `pip install` into the workspace; add dependencies with `uv add --package <member> <dependency>`, and only after an ADR if the dependency is new (RULES C10). The core package takes no new dependencies at all (R6).
@@ -86,6 +87,18 @@ Review checklist (also the pull request template):
 - [ ] Tests are offline, cover the change, and include property tests or fixtures where relevant (T1-T4).
 - [ ] Docs and `CHANGELOG.md` are updated (D1), using only keyboard characters (D5).
 - [ ] `make check` is green (G5); the commit is approved by a human (G1).
+
+## Releasing
+
+Every package has its own version (RULES V1), and Git tags say what to release. A release tag is `<package>@<version>`: the package's name on its registry and the version in its `pyproject.toml` or `package.json`, written in SemVer (`1.2.3`, or `1.2.3-rc.1` for a prerelease; build metadata isn't allowed, because npm drops it and PyPI refuses it).
+
+1. Bump the version in the package's manifest, record the release in `CHANGELOG.md`, and merge the change once CI is green.
+2. Tag the merged commit, one tag per package: `git tag harnessweaver@0.2.0`, `git tag @harnessweaver/core@0.2.0`.
+3. Run `make build`. It checks every tag on HEAD and builds the tagged packages into `dist/release/`, publishing nothing. It stops before building if a tag names no package in the repository, isn't SemVer, or doesn't match its manifest's version.
+4. Run `make release`, which does the same from a clean working tree and then publishes: Python packages to PyPI with `uv publish` (a token in `UV_PUBLISH_TOKEN`, or trusted publishing on CI), TypeScript packages to npm with `pnpm publish` (your npm login; a prerelease goes to the `next` dist-tag, so `latest` stays on the last release).
+5. Push the tags: `git push origin harnessweaver@0.2.0 @harnessweaver/core@0.2.0`.
+
+To release one package alone when HEAD has several tags, name it: `make release PACKAGE=harnessweaver-cli`, or `PACKAGE="harnessweaver @harnessweaver/core"` for a few. `make build` takes `PACKAGE` too. A named package still needs its tag on HEAD, and the other tags are left alone.
 
 ## Security issues
 

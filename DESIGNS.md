@@ -1219,6 +1219,8 @@ contracts/  deploy/  examples/  docs/
 
 Providers and adapters declare the contract range they support (`contract=">=1.0,<2"`), and the loader refuses incompatible combinations (V5).
 
+Each package is released on its own, from a Git tag `<package>@<version>` (`harnessweaver@0.2.0`, `@harnessweaver/core@0.2.0`) whose SemVer version must equal the one in the package's manifest. `make release` (`scripts/release.py`) builds and publishes the packages tagged on HEAD, or only those named in `PACKAGE`, to PyPI and npm.
+
 ## 27. Security model
 
 | Threat | Controls |

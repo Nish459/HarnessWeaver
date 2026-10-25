@@ -1,7 +1,7 @@
 # Common development tasks. `make check` is what CI runs (RULES G5).
 UV ?= uv
 
-.PHONY: sync check ascii lint fmt fmt-check typecheck test conformance cov schemas schemas-check docs docs-serve clean distclean
+.PHONY: sync check ascii lint fmt fmt-check typecheck test conformance cov schemas schemas-check docs docs-serve build release clean distclean
 
 sync:
 	$(UV) sync --all-packages
@@ -55,6 +55,18 @@ docs:
 
 docs-serve:
 	$(UV) run --group docs mkdocs serve
+
+# Releases (RULES V1): each tag on HEAD, <package>@<version> such as harnessweaver@0.2.0
+# or @harnessweaver/core@0.2.0, names one package to release, and its pyproject.toml or
+# package.json must have that version. `build` checks the tags and builds the packages
+# into dist/release/; `release` builds them and publishes them to PyPI and npm.
+# PACKAGE="name ..." releases just those packages (each still needs its tag on HEAD).
+PACKAGE ?=
+build:
+	$(UV) run python scripts/release.py build $(PACKAGE)
+
+release:
+	$(UV) run python scripts/release.py publish $(PACKAGE)
 
 # Removes caches and build output: the .gitignore entries for them, anywhere in the
 # tree. Installed dependencies (.venv, node_modules), local run state, secrets and

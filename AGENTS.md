@@ -21,7 +21,7 @@ This file is for AI coding agents (and humans) working **on** the HarnessWeaver 
 |-- README.md  QUICKSTART.md  CONTRIBUTING.md  SECURITY.md  CHANGELOG.md
 |-- AGENTS.md  CLAUDE.md  RULES.md  DESIGNS.md
 |-- pyproject.toml                  # uv workspace root (virtual): members, dev and docs groups, tool config
-|-- Makefile                        # make check | test | lint | fmt | typecheck | conformance | schemas | docs
+|-- Makefile                        # make check | test | lint | fmt | typecheck | conformance | schemas | docs | build | release
 |-- mkdocs.yml                      # the docs site (ADR-0041)
 |-- contracts/                      # SOURCE OF TRUTH shared by every language (R11)
 |   |-- schemas/                    #   generated JSON Schemas, checked in, drift-tested
@@ -48,7 +48,7 @@ This file is for AI coding agents (and humans) working **on** the HarnessWeaver 
 |                                   #   (@harnessweaver/ai-sdk), and examples/04_polyglot_typescript
 |-- examples/                       # _org baseline + 01..04, each runnable offline and tested
 |-- deploy/harnessd/                # sidecar Dockerfile
-|-- scripts/                        # check_ascii.py (RULES D5), docs_hooks.py (the docs site's MkDocs hook)
+|-- scripts/                        # check_ascii.py (RULES D5), docs_hooks.py (the docs site's MkDocs hook), release.py
 |-- .github/                        # CI workflow, pull request template
 |-- docs_src/                       # the code the docs show, run by docs_src/tests (ADR-0042): tutorial/<chapter>/
 |                                   #   is the tutorial's project at the end of each chapter, home/ the home page example
@@ -86,6 +86,7 @@ uv sync --all-packages          # install every workspace package + dev tools in
 | Gateways and the dev stack | `uv run harnessweaver gateway litellm <spec>`, `uv run harnessweaver gateway mcp <spec>`, `uv run harnessweaver dev <spec> [--up]` |
 | TypeScript (see [typescript/README.md](typescript/README.md)) | `pnpm -C typescript install && pnpm -C typescript test && pnpm -C typescript typecheck && pnpm -C typescript build`; the tests include Example 04, which starts harnessd, so run `uv sync --all-packages` first |
 | Docs site | `make docs` (`mkdocs build --strict`) |
+| Release (tags `<package>@<version>` on HEAD, versions matching the manifests) | `make build` checks the tags and builds the tagged packages into `dist/release/`; `make release` also publishes them to PyPI and npm; `PACKAGE=<name>` limits either to the named packages. See CONTRIBUTING.md, *Releasing* |
 | Remove caches and build output | `make clean` (keeps `.venv`, `node_modules`, local run state and `.claude/`; rebuild the TypeScript `dist/` with `pnpm -C typescript build` before Example 04); `make distclean` also removes `.venv` and `node_modules` (reinstall with `make sync` and `pnpm -C typescript install`) |
 
 Never `pip install` into the workspace. Add dependencies with `uv add --package <member> <dep>`, and only after an ADR if it's a new third-party dependency (C10). The core package may not gain dependencies at all (R6).
