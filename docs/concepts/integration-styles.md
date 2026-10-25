@@ -66,12 +66,12 @@ async with harness.session("support", principal=user, tenant=user.org) as s:
 | `s.tool(name, **arguments)` | A governed tool call; returns its output |
 | `s.validate("output", value, output=...)` | Checks a final output you produced yourself (`output.before`), parsed into `output` first if given |
 | `s.prompt(ref, **variables)` | Renders a versioned prompt (`answer@1`) without calling a model |
-| `s.memory` | Key-value entries for this tenant, principal and task ([Context and memory](../modules/context.md#memory)) |
+| `s.memory` | Key-value entries for this tenant, principal and task ([Context and memory](../tutorial/context.md#memory)) |
 | `s.run_id`, `s.envelope`, `s.trace` | The run's id, its current envelope and its trace so far |
 
 - `harness.session(task=None, *, principal, tenant, budget, attributes)` opens one run. With a task, that task's budget, guards and controls apply. When the block ends, `run.end` fires and the run's `RunResult` is kept.
 - A control that stops the run raises a `RunInterrupted` error in your code (`RunBlocked`, `RunEscalated`). A `Suspend` escalates, because your code can't be resumed later.
-- The same function can serve as a task: `runner: { use: session, handler: "support.flow:answer" }` calls `answer(session, input)` inside a harness-driven run, which adds idempotency, approvals that suspend and resume, and evals ([Example 02](../getting-started/examples.md#example-02-support-assistant)).
+- The same function can serve as a task: `runner: { use: session, handler: "support.flow:answer" }` calls `answer(session, input)` inside a harness-driven run, which adds idempotency, approvals that suspend and resume, and evals ([Example 02](../resources/examples.md#example-02-support-assistant)).
 
 ## Run
 
@@ -120,7 +120,7 @@ tasks:
   refund:    { runner: { use: pydantic_ai.agent, agent: "app.agents:refund_agent" }, tools: [refund_payment] }
 ```
 
-Runner details are in the [section reference](../spec/reference.md#tasks). Every runner declares the hook points it `reaches`; loading fails if the baseline needs one it can't (R4).
+Runner details are in the [section reference](../reference/spec.md#tasks). Every runner declares the hook points it `reaches`; loading fails if the baseline needs one it can't (R4).
 
 ## Choosing
 

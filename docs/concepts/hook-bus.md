@@ -138,7 +138,7 @@ middleware:
   - { use: acme.refund_cap, max_usd: 500 }   # every key but id, use, band, hooks, fail_mode, timeout and enabled is a setting
 ```
 
-To change an event, return a modified copy: `hw.Continue(modified=event.model_copy(update={"input": redacted}))`. Middleware never raises to control the run; it returns an outcome. See [Middleware](../extending/middleware.md) for testing and for the spec item's other keys, and [Outcomes and errors](outcomes.md) for what each outcome does.
+To change an event, return a modified copy: `hw.Continue(modified=event.model_copy(update={"input": redacted}))`. Middleware never raises to control the run; it returns an outcome. See [Middleware](../advanced/middleware.md) for testing and for the spec item's other keys, and [Outcomes and errors](outcomes.md) for what each outcome does.
 
 ## Seeing the chains
 

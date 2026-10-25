@@ -1,0 +1,104 @@
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata:
+  name: support-desk
+  owner: support-team
+  risk_tier: internal
+extends: ["profile://extraction", "org://acme-baseline@^1"]
+
+models:
+  provider: openai.chat
+  base_url: http://localhost:4000
+  api_key_env: LITELLM_API_KEY
+  default: fast
+  aliases: { fast: fast-chat, strong: strong-chat }
+  prices:
+    fast-chat: { input_per_mtok: 0.25, output_per_mtok: 2.00 }
+    strong-chat: { input_per_mtok: 3.00, output_per_mtok: 15.00 }
+
+routing:
+  intent:
+    options: [outage, billing, howto]
+    cascade:
+      - id: outage-words
+        use: rules
+        rules:
+          - { when: "text.matches('(down|outage|not loading)')", choice: outage }
+      - id: examples
+        use: lexical
+        threshold: 0.3
+        utterances:
+          billing: [I was charged twice, where is my invoice, how long does a refund take]
+          howto: [how do I export a report, how do I add a user to my team]
+    default: howto
+
+context:
+  help:
+    use: memory
+    file: data/help.yaml
+    max_items: 3
+
+tools:
+  manifests: ["tools/*.tool.yaml"]
+
+policy:
+  rules:
+    - id: refund-cap
+      when: "tool.name == 'refund_payment' && args.amount_usd > 500"
+      effect: deny
+      reason: refunds over $500 go to the finance desk
+    - id: no-contractor-refunds
+      when: "tool.name == 'refund_payment' && 'contractor' in principal.roles"
+      effect: deny
+    - id: big-refunds
+      when: "tool.name == 'refund_payment' && args.amount_usd > 100"
+      effect: require_approval
+      reason: refunds over $100 need a person from finance
+
+approvals:
+  approver_role: finance
+  timeout: 24h
+
+budgets:
+  per_run: { max_usd: 0.50, deadline: 2m }
+
+tasks:
+  triage:
+    runner: direct
+    model: fast
+    prompt: triage@2
+    input: helpdesk.models:Ticket
+    output: helpdesk.models:Triage
+    budget:
+      max_model_calls: 3
+      max_usd: 0.01
+      deadline: 30s
+      overridable: [max_model_calls, max_usd]
+  answer:
+    runner: { use: session, handler: "helpdesk.flows:answer" }
+    output: str
+    budget: { max_model_calls: 2, max_usd: 0.02 }
+    guardrails:
+      output:
+        - { id: cited, use: grounded.citations, action: repair }
+  orders:
+    runner: direct
+    prompt: orders@2
+    output: str
+    tools: [lookup_order, refund_payment]
+    budget: { max_model_calls: 4, max_tool_calls: 3, max_usd: 0.02 }
+
+validation:
+  rules:
+    - id: bugs-are-urgent
+      when: "task.name == 'triage' && output.category == 'bug' && output.priority > 2"
+      message: "a bug is priority 1 or 2"
+    - id: short-summary
+      when: "task.name == 'triage' && size(output.summary) > 120"
+      message: "keep the summary under 120 characters"
+
+guardrails:
+  input:
+    - id: injection
+      use: injection.heuristic
+      mode: log_only

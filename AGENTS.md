@@ -48,10 +48,14 @@ This file is for AI coding agents (and humans) working **on** the HarnessWeaver 
 |                                   #   (@harnessweaver/ai-sdk), and examples/04_polyglot_typescript
 |-- examples/                       # _org baseline + 01..04, each runnable offline and tested
 |-- deploy/harnessd/                # sidecar Dockerfile
-|-- scripts/                        # check_ascii.py (RULES D5)
+|-- scripts/                        # check_ascii.py (RULES D5), docs_hooks.py (the docs site's MkDocs hook)
 |-- .github/                        # CI workflow, pull request template
-`-- docs/                           # the docs site's pages, docs/adr/ (one file per ADR), its theme
-                                    #   (stylesheets/brand.css, assets/logo.svg), the design guide and assets
+|-- docs_src/                       # the code the docs show, run by docs_src/tests (ADR-0042): tutorial/<chapter>/
+|                                   #   is the tutorial's project at the end of each chapter, home/ the home page example
+`-- docs/                           # the docs site, structured like FastAPI's (ADR-0042): tutorial/, advanced/, concepts/,
+                                    #   reference/ (with python/, the generated API), deployment/, how-to/, resources/,
+                                    #   about/, adr/ (one file per ADR); its theme (stylesheets/, javascripts/ with the
+                                    #   vendored termynal, assets/logo.svg), the design guide and assets
 ```
 
 ## Setup and commands
@@ -127,7 +131,7 @@ flowchart LR
 3. Add it to the owning plugin's `hw.Plugin(providers=[...])`. Its name must sit in that plugin's namespace (`acme.pii`); core providers belong to the built-in plugin and use the reserved area namespaces (DESIGNS No. 13).
 4. Add unit tests, and make it pass `--harnessweaver-conformance=<name>` (T5).
 5. If its behavior is part of a contract (built-in guards, cel-lite, the governor), add JSON fixtures and make the TypeScript implementation pass them too (R11, T4).
-6. Document it on the module's docs page (`docs/modules/<module>.md`) and in `CHANGELOG.md` (D1).
+6. Document its settings in `docs/reference/providers.md`, mention it in the tutorial chapter for its module (`docs/tutorial/`), and add it to `CHANGELOG.md` (D1).
 
 ### Add middleware
 1. `@hw.middleware(hooks=[...], band=..., fail_mode="closed"|"open", timeout=...)`. `fail_mode` is required (R2, ADR-0014).
@@ -148,7 +152,7 @@ flowchart LR
 5. Update DESIGNS.md, the docs page and `CHANGELOG.md`.
 
 ### Add a module (new port)
-Platform-level decision. Write an ADR first (a file in `docs/adr/`, a row in DESIGNS.md No. 28 and an entry in `mkdocs.yml`'s `nav`), covering the port, default provider, hook points, config schema, failure modes, telemetry and tests. Then give the module a page under `docs/modules/`.
+Platform-level decision. Write an ADR first (a file in `docs/adr/`, a row in DESIGNS.md No. 28 and an entry in `mkdocs.yml`'s `nav`), covering the port, default provider, hook points, config schema, failure modes, telemetry and tests. Then give the module a tutorial chapter (`docs/tutorial/`, its code tested in `docs_src/tutorial/`), its settings in `docs/reference/providers.md`, and a row in `docs/reference/modules.md`.
 
 ### Add a plugin
 A plugin is defined by its design, not its name (DESIGNS No. 13, ADR-0015). First-party plugins use exactly the contract that third-party plugins use; never give them private access to core internals.
@@ -159,9 +163,9 @@ A plugin is defined by its design, not its name (DESIGNS No. 13, ADR-0015). Firs
 5. TypeScript plugins go in `typescript/packages/<name>/` as `@harnessweaver/<name>` and export `definePlugin({...})`. Their tests run against the core's sources (see `packages/ai-sdk`'s `tsconfig.json` and `vitest.config.ts`).
 
 ### Add a CLI command, template or example
-- CLI commands live in `python/harnessweaver-cli`. Test them with Typer's `CliRunner`, and add them to `docs/tooling/cli.md` and the CLI's README.
+- CLI commands live in `python/harnessweaver-cli`. Test them with Typer's `CliRunner`, and add them to `docs/cli.md` and the CLI's README.
 - Templates must produce a project whose own tests pass (T6).
-- Examples run offline (`HARNESSWEAVER_ENV=offline`). Each has a README with a Mermaid diagram, a spec with an offline overlay (Example 04 reuses Example 02's), code, evals and tests, and is listed in `README.md` and `docs/getting-started/examples.md`.
+- Examples run offline (`HARNESSWEAVER_ENV=offline`). Each has a README with a Mermaid diagram, a spec with an offline overlay (Example 04 reuses Example 02's), code, evals and tests, and is listed in `README.md` and `docs/resources/examples.md`.
 
 ## Testing
 
@@ -176,6 +180,8 @@ A plugin is defined by its design, not its name (DESIGNS No. 13, ADR-0015). Firs
 - Diagrams are Mermaid, next to the text (D2), and use only keyboard characters (D5). Never document an API that doesn't exist without marking it *planned* (D3).
 - `make docs` builds the site strictly: a broken link or anchor, or a page missing from `mkdocs.yml`'s `nav`, fails it. `QUICKSTART.md`, `CONTRIBUTING.md`, `SECURITY.md` and `CHANGELOG.md` are included in the site, so links in them must be absolute URLs.
 - A new ADR is a file `docs/adr/NNNN-slug.md` plus a row in DESIGNS.md No. 28 and an entry in `mkdocs.yml`'s `nav`.
+- The tutorial's code lives in `docs_src/tutorial/<chapter>/` and pages include it with `--8<--` snippets, so it is never copied by hand. Change the code there, run `uv run pytest docs_src/tests`, and paste any changed output into the page: the tests check that each chapter prints what its page shows.
+- The Python API reference (`docs/reference/python/`) is generated from docstrings by mkdocstrings, so a public function's docstring is its documentation.
 - Every public change updates the relevant doc and `CHANGELOG.md` (D1).
 
 ## Commits and pull requests

@@ -1,0 +1,4 @@
+models:
+  provider: scripted
+  replies:
+    - text: "billing, priority 2: charged twice for the Pro plan, wants one refund."

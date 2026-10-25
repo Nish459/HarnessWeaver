@@ -20,4 +20,4 @@ await harness.session({ principal: user.id }, async (s) => {
 });
 ```
 
-`ai` and `@ai-sdk/provider` are peer dependencies. Documentation: [TypeScript](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/tooling/typescript.md#models).
+`ai` and `@ai-sdk/provider` are peer dependencies. Documentation: [TypeScript](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/advanced/typescript.md#models).

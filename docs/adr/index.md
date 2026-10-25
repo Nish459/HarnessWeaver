@@ -3,7 +3,7 @@
 Each architecture decision record (ADR) states a decision HarnessWeaver made, why, and its status. They are the reasoning behind the design in [DESIGNS.md](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/DESIGNS.md), which indexes them in its No. 28, and many of them record where the framework departs from the original [design guide](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/AI%20Harness%20Framework%20Design%20and%20Build%20Guide.md).
 
 - **When an ADR is needed:** for a new module or port, a new dependency (RULES C10), a change to a contract that isn't additive (V2), an exception to a rule, or any decision a future contributor would otherwise have to rediscover.
-- **How it is written:** a short decision and its reason, in a new file `docs/adr/NNNN-slug.md`, with a row in DESIGNS.md No. 28. See [Contributing](../project/contributing.md).
+- **How it is written:** a short decision and its reason, in a new file `docs/adr/NNNN-slug.md`, with a row in DESIGNS.md No. 28. See [Contributing](../resources/contributing.md).
 - **Changing a decision:** a new ADR supersedes the old one, whose status then says so. Accepted ADRs aren't rewritten.
 
 | ADR | Decision | Status |
@@ -49,3 +49,4 @@ Each architecture decision record (ADR) states a decision HarnessWeaver made, wh
 | [ADR-0039](0039-gateways-and-dev-stack.md) | Gateway configs and the local dev stack | Accepted |
 | [ADR-0040](0040-typescript-sdk.md) | The TypeScript SDK | Accepted |
 | [ADR-0041](0041-docs-site.md) | The docs site: MkDocs and Material | Accepted |
+| [ADR-0042](0042-docs-structure.md) | The docs follow FastAPI's structure, with tested tutorial code | Accepted |

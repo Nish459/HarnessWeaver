@@ -1,0 +1,10 @@
+models:
+  provider: scripted
+  rules:
+    - contains: "Question:"
+      reply: { text: "A refund takes up to five business days to reach your card [help-refunds]." }
+  replies:
+    - output:
+        category: billing
+        priority: 2
+        summary: Charged twice for the Pro plan and wants one payment refunded.

@@ -8,7 +8,7 @@ export HARNESSD_TOKEN=...            # required: harnessd never runs without a t
 harnessd harness.yaml -e prod        # binds 127.0.0.1:7070 by default
 ```
 
-`harnessweaver sidecar harness.yaml` does the same from the CLI. The full guide, with request bodies and error statuses, is [docs/tooling/sidecar.md](../../docs/tooling/sidecar.md). Options: `-e/--env` (the overlay, default `$HARNESSWEAVER_ENV`), `--profile-dir`, `--host`, `--port`, `--token-env`.
+`harnessweaver sidecar harness.yaml` does the same from the CLI. The full guide, with request bodies and error statuses, is [docs/advanced/sidecar.md](../../docs/advanced/sidecar.md). Options: `-e/--env` (the overlay, default `$HARNESSWEAVER_ENV`), `--profile-dir`, `--host`, `--port`, `--token-env`.
 
 ## The API
 

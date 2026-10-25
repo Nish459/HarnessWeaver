@@ -1,0 +1,10 @@
+models:
+  provider: scripted
+  rules:
+    - contains: "Question:"
+      reply: { text: "Refunds go back to the card you paid with within five business days." }
+  replies:
+    - output:
+        category: billing
+        priority: 2
+        summary: Charged twice for the Pro plan and wants one payment refunded.

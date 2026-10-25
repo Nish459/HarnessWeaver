@@ -1,0 +1,8 @@
+# HARNESSWEAVER_ENV=prod: the production gateway, and telemetry sent to an
+# OpenTelemetry collector (needs harnessweaver-otel). Content stays out (R9).
+models:
+  base_url: https://llm-gateway.internal.example
+observability:
+  configure_sdk: true
+  exporter: otlp
+  endpoint: http://otel-collector:4318

@@ -1,0 +1,29 @@
+cases:
+  - id: small-refund
+    tool: refund_payment
+    args: { order_id: A-1002, amount_usd: 40 }
+    principal: ann
+    expect: allow
+  - id: over-the-cap
+    tool: refund_payment
+    args: { order_id: A-1001, amount_usd: 900 }
+    principal: ann
+    expect: block
+    code: policy_denied
+  - id: contractor
+    tool: refund_payment
+    args: { order_id: A-1002, amount_usd: 40 }
+    principal: { id: carl, roles: [contractor] }
+    expect: block
+    code: policy_denied
+  - id: bad-order-id
+    tool: lookup_order
+    args: { order_id: "1; DROP TABLE orders" }
+    expect: block
+    step: 2
+  - id: big-refund-needs-finance
+    tool: refund_payment
+    args: { order_id: A-1001, amount_usd: 250 }
+    principal: ann
+    expect: require_approval
+    approver_role: finance

@@ -158,4 +158,4 @@ Every run keeps a `RunTrace`, a framework-neutral record of what happened, on it
 | `failure` | A middleware raised or timed out (its exception type, never its message) |
 | `note` | A framework decision: a guard fired, a budget check, a route chosen, a governor step, a repair |
 
-Notes carry a `code` (`guard_fired`, `budget_exceeded`, `repair`, ...) and `details` with ids, names and numbers, never content (RULES R9, R13). `harnessweaver.testing.render_trace(result)` prints a trace one event per line, and `assert_trace` checks it in tests ([Testing](../tooling/testing.md)).
+Notes carry a `code` (`guard_fired`, `budget_exceeded`, `repair`, ...) and `details` with ids, names and numbers, never content (RULES R9, R13). `harnessweaver.testing.render_trace(result)` prints a trace one event per line, and `assert_trace` checks it in tests ([Testing](../tutorial/testing.md)).

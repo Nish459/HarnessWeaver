@@ -148,7 +148,7 @@ HARNESSWEAVER_ENV=offline uv run --project ../HarnessWeaver python show_trace.py
   10 hook    run.end           harness -> continue
 ```
 
-Read it top to bottom. The PII guard found the e-mail address and redacted it before the model saw anything (events 1 to 3), so the model only received `[EMAIL]`. The budget recorded the call's usage (event 5). The secrets check and your `summary-length` rule passed the output (events 7 and 8). The trace never holds the content itself, only ids, codes and reasons (RULES R9). The same events become OpenTelemetry spans when you turn [observability](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/modules/observability.md) on.
+Read it top to bottom. The PII guard found the e-mail address and redacted it before the model saw anything (events 1 to 3), so the model only received `[EMAIL]`. The budget recorded the call's usage (event 5). The secrets check and your `summary-length` rule passed the output (events 7 and 8). The trace never holds the content itself, only ids, codes and reasons (RULES R9). The same events become OpenTelemetry spans when you turn [observability](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/tutorial/observability.md) on.
 
 ## 7. Test it
 
@@ -216,7 +216,7 @@ models:
   aliases: { fast: your-fast-model }
 ```
 
-Run a gateway (or `uv run harnessweaver dev ../ticket-triage/harness.yaml --up` for a local stack with LiteLLM, an OpenTelemetry collector and Langfuse), map the `fast` alias to a model it serves, set `LITELLM_API_KEY`, and run without `HARNESSWEAVER_ENV=offline`. Any OpenAI-compatible endpoint works the same way, and `provider: anthropic.messages` calls Claude directly. See [Models](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/modules/models.md).
+Run a gateway (or `uv run harnessweaver dev ../ticket-triage/harness.yaml --up` for a local stack with LiteLLM, an OpenTelemetry collector and Langfuse), map the `fast` alias to a model it serves, set `LITELLM_API_KEY`, and run without `HARNESSWEAVER_ENV=offline`. Any OpenAI-compatible endpoint works the same way, and `provider: anthropic.messages` calls Claude directly. See [Models](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/tutorial/models.md).
 
 ## Already have an app?
 
@@ -234,7 +234,8 @@ client = harness.instrument(AsyncOpenAI(base_url=GATEWAY))    # 3
 
 ## Where next
 
+- [Tutorial - User Guide](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/tutorial/index.md): one app built chapter by chapter, with every feature.
 - [Concepts](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/concepts/index.md): hook points, the hook bus, outcomes, the envelope and the integration styles.
-- [The spec](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/spec/index.md): every section of `harness.yaml`, layering, locks and bounds.
-- [Examples](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/getting-started/examples.md): a RAG support assistant, a tool-using agent with approvals, and the same spec from TypeScript and over HTTP.
-- [Extending](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/extending/index.md): your own guards, middleware and plugins.
+- [The spec](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/concepts/spec.md): every section of `harness.yaml`, layering, locks and bounds.
+- [Examples](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/resources/examples.md): a RAG support assistant, a tool-using agent with approvals, and the same spec from TypeScript and over HTTP.
+- [Advanced User Guide](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/advanced/index.md): your own guards, middleware and plugins.

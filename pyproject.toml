@@ -45,6 +45,7 @@ dev = [
 # The docs site (ADR-0041): `make docs` builds it with `mkdocs build --strict`.
 docs = [
     "mkdocs-material>=9.7.7",
+    "mkdocstrings[python]>=1.0.8",
 ]
 
 # --- ruff -------------------------------------------------------------------
@@ -92,6 +93,7 @@ known-first-party = ["harnessweaver", "harnessweaver_*"]
 "scripts/**" = ["T20"]
 "examples/**" = ["T20"]
 "**/templates/**" = ["T20"]
+"docs_src/**" = ["T20"]
 
 # --- pyright ----------------------------------------------------------------
 
@@ -100,7 +102,7 @@ pythonVersion = "3.12"
 typeCheckingMode = "standard"
 venvPath = "."
 venv = ".venv"
-include = ["python", "scripts", "examples"]
+include = ["python", "scripts", "examples", "docs_src"]
 # Templates are copied into new projects, where their own imports resolve.
 exclude = ["**/__pycache__", "**/.venv", "**/templates/**"]
 # The runtime tests load this plugin module through plugins.local; examples import their own code.
@@ -123,7 +125,7 @@ strict = [
 [tool.pytest.ini_options]
 minversion = "9.0"
 # RULES T6: examples are tests. Templates are tested by rendering them (harnessweaver-cli).
-testpaths = ["python", "examples"]
+testpaths = ["python", "examples", "docs_src/tests"]
 norecursedirs = [".*", "*.egg", "build", "dist", "node_modules", "venv", "templates"]
 addopts = ["-ra", "--strict-markers", "--strict-config", "--import-mode=importlib", "-p", "pytester"]
 xfail_strict = true

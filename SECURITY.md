@@ -16,7 +16,7 @@ You will get an acknowledgement, and updates as the report is investigated and f
 
 ## Supported versions
 
-HarnessWeaver is pre-release: 0.1.0 is in preparation. Until it ships, fixes go to the `main` branch only. From then on, the latest two minor versions of each package get security fixes, as described in [Versioning](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/operations/versioning.md).
+HarnessWeaver is pre-release: 0.1.0 is in preparation. Until it ships, fixes go to the `main` branch only. From then on, the latest two minor versions of each package get security fixes, as described in [Versioning](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/deployment/versions.md).
 
 ## Scope
 
@@ -35,4 +35,4 @@ Out of scope: third-party plugins (report to their authors), the models and serv
 
 ## How HarnessWeaver is secured
 
-The threat model, the invariants the framework enforces and hardening advice for deployments are in [Security](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/operations/security.md). Supply-chain measures (RULES S5): dependencies are locked, CI actions are pinned by commit SHA, and container base images are pinned by digest.
+The threat model, the invariants the framework enforces and hardening advice for deployments are in [Security](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/deployment/security.md). Supply-chain measures (RULES S5): dependencies are locked, CI actions are pinned by commit SHA, and container base images are pinned by digest.

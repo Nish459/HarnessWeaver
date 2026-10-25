@@ -1,0 +1,17 @@
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata:
+  name: support-desk
+  owner: support-team
+
+models:
+  provider: openai.chat
+  base_url: http://localhost:4000
+  api_key_env: LITELLM_API_KEY
+  default: fast
+  aliases: { fast: fast-chat }
+
+tasks:
+  triage:
+    runner: direct
+    output: str

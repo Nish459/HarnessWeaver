@@ -1,0 +1,14 @@
+models:
+  provider: scripted
+  rules:
+    - role: tool
+      reply: { text: "Order A-1002 has shipped; it should reach you in a day or two." }
+    - contains: "A-1002"
+      reply: { tool_calls: [{ name: lookup_order, arguments: { order_id: A-1002 } }] }
+    - contains: "Question:"
+      reply: { text: "A refund takes up to five business days to reach your card [help-refunds]." }
+  replies:
+    - output:
+        category: billing
+        priority: 2
+        summary: Charged twice for the Pro plan and wants one payment refunded.

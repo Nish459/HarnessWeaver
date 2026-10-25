@@ -1,0 +1,7 @@
+models:
+  provider: scripted
+  replies:
+    - output:
+        category: billing
+        priority: 2
+        summary: Charged twice for the Pro plan and wants one payment refunded.

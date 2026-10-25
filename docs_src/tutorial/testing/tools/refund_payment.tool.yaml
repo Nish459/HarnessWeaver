@@ -1,0 +1,19 @@
+apiVersion: harnessweaver/v1
+kind: Tool
+metadata: {name: refund_payment, version: 1.0.0, owner: payments-team}
+spec:
+  transport: native
+  handler: "helpdesk.tools:refund_payment"
+  description: Refund part or all of an order's payment to the card it was paid with.
+  input_schema:
+    type: object
+    properties:
+      order_id: {type: string, pattern: "^A-[0-9]{4}$"}
+      amount_usd: {type: number, exclusiveMinimum: 0}
+    required: [order_id, amount_usd]
+  definition_digest: sha256:31b09e13ca0fccfc725da756e5fe107da7a5ac29d22a9aca2391911cc6a7e1ad
+  side_effect: write_external
+  risk: high
+  egress: [payments.example]
+  rate_limit: {per_principal: 5/h}
+  timeout: 10s

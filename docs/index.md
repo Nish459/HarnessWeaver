@@ -1,116 +1,178 @@
 # HarnessWeaver
 
-**The composable AI harness framework.** Weave your own AI harness: bring your models, choose your plugins, define your execution.
+<style>
+.md-content .md-typeset h1 { display: none; }
+</style>
 
-Every AI application needs the same controls around its models: tracing and cost, budgets and deadlines, PII redaction and prompt-injection checks, validated output, governed tool calls, human approvals, routing and evals. Most teams rebuild these inside each app, differently every time.
+<p align="center" class="hw-hero">
+  <img src="assets/logo.svg" alt="HarnessWeaver" width="160">
+</p>
+<p align="center" class="hw-tagline">
+  <em>The composable AI harness framework. Weave your own AI harness: bring your models, choose your plugins, define your execution.</em>
+</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.12%2B-3080ff" alt="Python 3.12+">
+  <img src="https://img.shields.io/badge/typescript-node%2022%2B-3080ff" alt="Node 22+">
+  <img src="https://img.shields.io/badge/license-Apache--2.0-ac4bff" alt="License: Apache-2.0">
+  <img src="https://img.shields.io/badge/status-pre--release-ac4bff" alt="Status: pre-release">
+</p>
 
-HarnessWeaver is a framework for building **your own harness**. You keep the executor you already use (raw SDK calls, Pydantic AI, the Vercel AI SDK, a custom pipeline), describe your controls in one `harness.yaml`, and HarnessWeaver intercepts every model call, tool call and output at **13 fixed hook points**. Your platform team publishes an **org baseline** that every app inherits and no app can switch off.
+---
 
-```mermaid
-flowchart LR
-    app["Your app<br/>(any executor)"] --> hw["HarnessWeaver<br/>13 hook points"]
-    spec["harness.yaml<br/>+ org baseline"] -.-> hw
-    hw --> models["Your models<br/>LiteLLM, OpenAI-compatible, Anthropic"]
-    hw --> tools["Your tools<br/>manifest-governed"]
-    hw --> obs["Traces, cost, evals"]
+**Source Code**: [github.com/Wise-DreamerZ/HarnessWeaver](https://github.com/Wise-DreamerZ/HarnessWeaver)
+
+---
+
+HarnessWeaver is a framework for building **your own AI harness**: the controls every AI application needs around its models, declared in one `harness.yaml` and applied at 13 fixed hook points, whatever executor your app already uses.
+
+The key features are:
+
+- **Declarative**: tracing, cost, budgets, guardrails, typed output, tool governance, policy, approvals, routing, retrieval governance and evals, all in one spec. Your code stays one call.
+- **Non-invasive**: keep the executor you have, whether raw SDK calls, Pydantic AI, the Vercel AI SDK or your own pipeline. Govern an existing client in three lines.
+- **Safe by default**: the org baseline can't be removed by an app, controls fail closed, and no prompt or output reaches a log or a span unredacted.
+- **Composable**: every capability is a module behind a port, with providers you swap, and plugins anyone can write in their own repository.
+- **Polyglot**: one spec serves Python, TypeScript, and any language through the harnessd sidecar.
+- **Testable**: everything runs offline against fakes, with no network and no model spend, and every decision is in a trace your tests can check.
+- **Standards-based**: OpenTelemetry GenAI conventions, JSON Schema contracts, an OpenAPI sidecar, and a CEL subset for rules.
+
+## Requirements
+
+Python 3.12 or later. The core depends only on [Pydantic](https://docs.pydantic.dev/), the [OpenTelemetry API](https://opentelemetry.io/), [PyYAML](https://pyyaml.org/), [anyio](https://anyio.readthedocs.io/) and [loguru](https://loguru.readthedocs.io/). Everything else is a plugin.
+
+## Installation
+
+!!! warning "Not published yet"
+    0.1.0 is in preparation. Until the packages are on PyPI, install from a clone of the repository, as the [Tutorial](tutorial/index.md#install-harnessweaver) shows.
+
+Once published:
+
+```console
+$ uv add "harnessweaver[openai]"
 ```
 
-## What you get
+## Example
 
-| Control | How it works | Read more |
-| --- | --- | --- |
-| Tracing and cost | Every run, model call, tool call and decision is traced (OpenTelemetry GenAI conventions) and costed | [Observability](modules/observability.md) |
-| Budgets and deadlines | Per-run limits on cost, tokens, model calls, tool calls and time, checked before each call | [Envelope, labels and budgets](concepts/envelope.md) |
-| Guardrails | PII, secrets, prompt injection, size, topics, citations and LLM judges on input, retrieved context, tool results, output and streams | [Guardrails](modules/guardrails.md) |
-| Typed output | Pydantic validation with bounded repair, plus business rules | [Validation](modules/validation.md) |
-| Tool governance | No tool runs without a manifest; a nine-step governor checks schema, policy, the lethal trifecta, rate limits and approvals | [Tools](modules/tools.md) |
-| Policy and approvals | Deterministic rules decide; a human approves what they require; runs suspend durably and resume | [Policy](modules/policy.md), [Approvals](modules/approvals.md) |
-| Routing | A cascade of rules, lexical, semantic and LLM stages picks the intent, task or model | [Routing](modules/routing.md) |
-| Retrieval governance | ACLs re-checked on every retrieved item, untrusted labels, size caps | [Context and memory](modules/context.md) |
-| Evals | Golden sets with baselines in CI, shadow-guard reports, online sampling of production runs | [Evals](modules/evals.md) |
-| Org baseline | Locks, bounds and a required adoption level by risk tier, enforced when an app loads | [Layers, locks and bounds](spec/layers.md) |
+### Create it
 
-## A taste
+Create a `harness.yaml`:
 
-The spec declares the controls ([Example 01](getting-started/examples.md#example-01-invoice-extraction), abridged):
-
-```yaml
-apiVersion: harnessweaver/v1
-kind: Harness
-metadata: { name: invoice-extraction, owner: finance-platform, risk_tier: internal }
-extends: ["profile://extraction"]          # PII redaction on input, secrets check on output, one repair
-
-models:
-  provider: openai.chat                    # LiteLLM Proxy, or any OpenAI-compatible endpoint
-  base_url: http://localhost:4000          # the gateway holds the provider keys and owns retries
-  api_key_env: LITELLM_API_KEY
-  default: fast
-  aliases: { fast: fast-chat }
-  prices: { fast-chat: { input_per_mtok: 0.25, output_per_mtok: 2.00 } }
-
-tasks:
-  extract_invoice:
-    runner: direct
-    input: invoices.models:InvoiceDoc
-    output: invoices.models:Invoice        # a Pydantic model; an invalid answer is repaired
-    prompt: extract_invoice@1
-    budget: { max_model_calls: 3, max_usd: 0.02, deadline: 30s }
-
-validation:
-  rules:
-    - { id: positive-total, when: "output.total <= 0", message: "the total must be positive" }
+```yaml title="harness.yaml"
+--8<-- "docs_src/tutorial/first_steps/harness.yaml"
 ```
 
-and the app's code is one call, with no retry loop, error handling around the model or tracing setup:
+And a `main.py`:
 
-```python
-import asyncio
-
-import harnessweaver as hw
-from invoices.models import Invoice, InvoiceDoc
-from invoices.samples import INVOICE_TEXT
-
-
-async def main() -> None:
-    harness = hw.load("harness.yaml")      # profiles, org baseline and env overlay, validated here
-    result = await harness.run("extract_invoice", InvoiceDoc(text=INVOICE_TEXT), principal="ap-clerk", tenant="acme")
-    if result.ok:
-        invoice = Invoice.model_validate(result.output)
-        print(invoice.invoice_number, invoice.total, invoice.currency)
-    print(result.status, result.cost_usd)  # every hook, guard and repair is on result.trace
-
-
-asyncio.run(main())
+```python title="main.py"
+--8<-- "docs_src/tutorial/first_steps/main.py"
 ```
 
-Already have an app? Govern the client it uses, without changing the code that calls it:
+To run without a model gateway, add `harness.offline.yaml`, which swaps the model for a scripted one:
+
+```yaml title="harness.offline.yaml"
+--8<-- "docs_src/tutorial/first_steps/harness.offline.yaml"
+```
+
+### Run it
+
+```console
+$ HARNESSWEAVER_ENV=offline uv run python main.py
+completed
+billing, priority 2: charged twice for the Pro plan, wants one refund.
+```
+
+### Check it
+
+Every run keeps a trace of the hook points it passed and every decision made, with no content in it. Print it with `harnessweaver.testing.render_trace(result)`:
+
+```text
+   0 hook    run.start         harness -> continue
+   1 hook    input.before      harness -> continue
+   2 hook    model.before      harness -> continue
+   3 note    model.after       harness.budget: model usage
+   4 hook    model.after       harness -> continue
+   5 hook    output.before     harness -> continue
+   6 hook    run.end           harness -> continue
+```
+
+## Example upgrade
+
+Now give the task typed output, the `extraction` profile's guards, a business rule and a budget, all in the spec:
+
+```yaml title="harness.yaml" hl_lines="6 18-21 23-27"
+--8<-- "docs_src/home/harness.yaml"
+```
+
+The types are plain Pydantic models:
+
+```python title="helpdesk/models.py"
+--8<-- "docs_src/home/helpdesk/models.py"
+```
+
+The app is still one call:
+
+```python title="main.py"
+--8<-- "docs_src/home/main.py"
+```
+
+```console
+$ HARNESSWEAVER_ENV=offline uv run python main.py
+billing, priority 2: Charged twice for the Pro plan and wants one payment refunded.
+completed
+harness.guard (guard_fired): guardrails.input[extraction-pii] redact
+```
+
+The customer's e-mail address was redacted before the model saw it, and the guard's firing is in the trace.
+
+### Recap
+
+With a few lines of YAML, and no change to how the app calls the harness, the task now has:
+
+- **Typed output**: the answer is parsed into `Triage`, and the category and priority are checked against the type.
+- **Repair**: an answer that doesn't parse, or breaks `bugs-are-urgent`, is sent back to the model with the reason, once, and then escalated to a person.
+- **Guards**: e-mail addresses, phone numbers and card numbers are redacted from the input, and secrets are blocked in the output.
+- **A budget**: at most three model calls, one cent and thirty seconds per run, checked before every call.
+- **A trace**: every guard, rule, repair and budget check, without any content.
+
+And the same spec, extended by your org's baseline, can't have its required controls switched off.
+
+The [Tutorial - User Guide](tutorial/index.md) builds a complete support desk this way, with routing, retrieval, tools, policy, approvals, state, observability, tests and evals.
+
+## Already have an app?
+
+Govern the client it already uses, without changing the code that calls it:
 
 ```python
 client = harness.instrument(AsyncOpenAI(base_url="http://localhost:4000"), tenant="acme")
 reply = await client.chat.completions.create(model="fast-chat", messages=messages)   # traced, costed, budgeted, guarded
 ```
 
-The same spec also serves [TypeScript](tooling/typescript.md) apps, and any language through the [harnessd sidecar](tooling/sidecar.md).
+See [Govern an existing client](how-to/wrap-a-client.md).
 
-## Why a framework, not a harness
+## Not an agent framework
 
-| | A central harness | HarnessWeaver |
-| --- | --- | --- |
-| Who owns control flow | The harness | Your app, with HarnessWeaver intercepting |
-| How controls are applied | Hard-wired in one runtime | Composed per app from plugins, plus an org baseline that can't be removed |
-| Adopting it | Route your app through it | One line for tracing, then grow level by level |
-| Languages | Usually one | Python, TypeScript, and any language through the sidecar |
+HarnessWeaver is **not** an agent framework, a prompt library, a vector database or a model host. It never does the reasoning (RULES R12). It governs the tools that do. [Alternatives and comparisons](about/alternatives.md) explains where it fits.
 
-HarnessWeaver is **not** an agent framework, a prompt library, a vector database or a model host. It never does the reasoning (RULES R12). It governs the tools that do.
+## Dependencies
 
-## Where to start
+The core, `harnessweaver`, depends on:
 
-- **New here?** Follow the [Quickstart](getting-started/quickstart.md): a governed, traced and tested task in fifteen minutes, offline.
-- **Learning the model?** Read [Concepts](concepts/index.md), starting with the [lifecycle and hook points](concepts/lifecycle.md).
-- **Writing a spec?** The [spec overview](spec/index.md), then the [section reference](spec/reference.md).
-- **Platform or security team?** [Layers, locks and bounds](spec/layers.md), [adoption levels](concepts/adoption-levels.md) and [security](operations/security.md).
-- **Not on Python?** [TypeScript](tooling/typescript.md), or any language through the [harnessd sidecar](tooling/sidecar.md).
-- **Building a plugin?** [Extending HarnessWeaver](extending/index.md).
+- `pydantic`: every spec, contract and payload is a Pydantic model.
+- `opentelemetry-api`: spans and metrics, without an SDK unless you add one.
+- `pyyaml`: specs are YAML 1.2.
+- `anyio`: async everywhere.
+- `loguru`: logs, silent until your app enables them.
 
-!!! note "Status"
-    HarnessWeaver is pre-release: 0.1.0 is in preparation and the packages aren't published yet. Install from a clone of the repository ([Installation](getting-started/installation.md)). Anything marked *planned* in these pages doesn't exist yet.
+Optional plugins, installed with extras such as `harnessweaver[openai]`:
+
+- `harnessweaver-openai`: any OpenAI-compatible endpoint (LiteLLM Proxy, OpenAI, vLLM, Ollama).
+- `harnessweaver-anthropic`: Claude, through the Messages API.
+- `harnessweaver-pydantic-ai`: Pydantic AI agents, as a runner or wrapped.
+- `harnessweaver-otel`: OpenTelemetry SDK setup and export.
+- `harnessweaver-cel`: full CEL for policy rules.
+- `harnessweaver-monty`: a sandbox for code-executing tools.
+
+And the tools: `harnessweaver-cli` (the `harnessweaver` command) and `harnessweaver-sidecar` (`harnessd`).
+
+## License
+
+This project is licensed under the terms of the Apache-2.0 license.

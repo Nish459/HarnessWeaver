@@ -1,0 +1,16 @@
+# Every run's first answer breaks the bugs-are-urgent rule, so the harness asks
+# for a repair; the answer to the repair request is valid.
+models:
+  provider: scripted
+  rules:
+    - contains: "not accepted"
+      reply:
+        output:
+          category: bug
+          priority: 1
+          summary: The app crashes at login since this morning's update.
+  replies:
+    - output:
+        category: bug
+        priority: 3
+        summary: The app crashes at login since this morning's update.

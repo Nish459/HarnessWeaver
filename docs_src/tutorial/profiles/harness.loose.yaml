@@ -1,0 +1,4 @@
+# What an app can't do: switch off a guard the org baseline locks.
+guardrails:
+  input:
+    - { id: base-pii, enabled: false }

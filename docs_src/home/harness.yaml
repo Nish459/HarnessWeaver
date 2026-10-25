@@ -1,0 +1,27 @@
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata:
+  name: support-desk
+  owner: support-team
+extends: ["profile://extraction"]
+
+models:
+  provider: openai.chat
+  base_url: http://localhost:4000
+  api_key_env: LITELLM_API_KEY
+  default: fast
+  aliases: { fast: fast-chat }
+
+tasks:
+  triage:
+    runner: direct
+    prompt: triage@2
+    input: helpdesk.models:Ticket
+    output: helpdesk.models:Triage
+    budget: { max_model_calls: 3, max_usd: 0.01, deadline: 30s }
+
+validation:
+  rules:
+    - id: bugs-are-urgent
+      when: "output.category == 'bug' && output.priority > 2"
+      message: "a bug is priority 1 or 2"

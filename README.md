@@ -103,7 +103,7 @@ client = harness.instrument(AsyncOpenAI(base_url="http://localhost:4000"), tenan
 reply = await client.chat.completions.create(model="fast-chat", messages=messages)   # traced, costed, budgeted, guarded
 ```
 
-The same spec also serves [TypeScript](docs/tooling/typescript.md) apps, and any language through the [harnessd sidecar](docs/tooling/sidecar.md).
+The same spec also serves [TypeScript](docs/advanced/typescript.md) apps, and any language through the [harnessd sidecar](docs/advanced/sidecar.md).
 
 ## Why a framework, not a harness
 
@@ -164,12 +164,12 @@ The user documentation is a site built from [`docs/`](docs/index.md) (`make docs
 | Doc | For |
 | --- | --- |
 | [QUICKSTART.md](QUICKSTART.md) | Your first governed task, offline |
-| [Concepts](docs/concepts/index.md) | Hook points, the hook bus, outcomes, the envelope, integration styles, adoption levels |
-| [The spec](docs/spec/index.md) | Every section of `harness.yaml`, layers, locks and bounds, profiles, tool manifests, cel-lite |
-| [Modules](docs/modules/index.md) | Models, routing, context, guardrails, validation, tools, policy, approvals, state, observability, evals |
-| [Tooling](docs/tooling/index.md) | The CLI, the test kit, templates, TypeScript, the harnessd sidecar, gateways |
-| [Extending](docs/extending/index.md) | Plugins, providers, middleware, runners and adapters, conformance, contracts |
-| [Operations](docs/operations/index.md) | Deployment, configuration, security, versioning, troubleshooting |
+| [Tutorial - User Guide](docs/tutorial/index.md) | One app, a support desk, built chapter by chapter with every feature; its code is tested |
+| [Concepts](docs/concepts/index.md) | Hook points, the hook bus, outcomes, the envelope, the spec, integration styles, adoption levels |
+| [Advanced User Guide](docs/advanced/index.md) | Layers and locks in depth, the tool governor, approvals, TypeScript, the harnessd sidecar, writing plugins |
+| [Reference](docs/reference/index.md) | Every spec section, provider setting, profile and manifest field, the Python API, contracts |
+| [CLI](docs/cli.md) | Every `harnessweaver` command |
+| [Deployment](docs/deployment/index.md) and [How To](docs/how-to/index.md) | Installing, configuring, securing and versioning; recipes and troubleshooting |
 | [DESIGNS.md](DESIGNS.md) and [the ADRs](docs/adr/index.md) | Architecture and decisions |
 | [RULES.md](RULES.md) | Engineering rules and invariants |
 | [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) | Contributing, by hand or with AI coding agents |

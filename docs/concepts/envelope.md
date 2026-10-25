@@ -37,7 +37,7 @@ result = await harness.run("support", question, principal=user, tenant="globex")
 | `sources` | Lists where the untrusted and private data came from (context sources, tools, guards) |
 | `data_class` | A data classification the app can set |
 
-These drive the **lethal-trifecta check** (RULES S3): untrusted content (which may carry injected instructions), private data, and a tool that can send data out are each harmless alone and dangerous together. A tool with `egress`, called while both labels are set, needs approval (`tools.trifecta: require_approval`, the default) or is blocked (`block`). See [Tools](../modules/tools.md#the-governor).
+These drive the **lethal-trifecta check** (RULES S3): untrusted content (which may carry injected instructions), private data, and a tool that can send data out are each harmless alone and dangerous together. A tool with `egress`, called while both labels are set, needs approval (`tools.trifecta: require_approval`, the default) or is blocked (`block`). See [Tools](../advanced/governor.md).
 
 Policy rules can read labels too: `when: "labels.untrusted_seen && tool.name == 'send_email'"`.
 

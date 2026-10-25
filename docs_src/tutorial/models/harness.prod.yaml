@@ -1,0 +1,3 @@
+models:
+  base_url: https://llm-gateway.internal.example
+  aliases: { fast: fast-chat-prod }

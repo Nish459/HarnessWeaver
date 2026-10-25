@@ -1,0 +1,26 @@
+models:
+  provider: scripted
+  rules:
+    - { role: tool, contains: "refunded", reply: { text: "Done: the refund is on its way to your card." } }
+    - { role: tool, reply: { text: "Order A-1002 has shipped; it should reach you in a day or two." } }
+    - contains: "Refund $40"
+      reply: { tool_calls: [{ name: refund_payment, arguments: { order_id: A-1002, amount_usd: 40 } }] }
+    - contains: "Refund $250"
+      reply: { tool_calls: [{ name: refund_payment, arguments: { order_id: A-1001, amount_usd: 250 } }] }
+    - contains: "Refund $900"
+      reply: { tool_calls: [{ name: refund_payment, arguments: { order_id: A-1001, amount_usd: 900 } }] }
+    - contains: "A-1002"
+      reply: { tool_calls: [{ name: lookup_order, arguments: { order_id: A-1002 } }] }
+    - contains: "crashes"
+      reply:
+        output:
+          category: bug
+          priority: 1
+          summary: The app crashes at login since this morning's update.
+    - contains: "Question:"
+      reply: { text: "A refund takes up to five business days to reach your card [help-refunds]." }
+  replies:
+    - output:
+        category: billing
+        priority: 2
+        summary: Charged twice for the Pro plan and wants one payment refunded.

@@ -1,0 +1,16 @@
+apiVersion: harnessweaver/v1
+kind: Tool
+metadata: {name: lookup_order, version: 1.0.0, owner: orders-team}
+spec:
+  transport: native
+  handler: "helpdesk.tools:lookup_order"
+  description: Look up an order's status and total by its id.
+  input_schema:
+    type: object
+    properties:
+      order_id: {type: string, pattern: "^A-[0-9]{4}$"}
+    required: [order_id]
+  definition_digest: sha256:13e081247828f80f05a59db148e00a7baeba40e0cb79d28befe87c3fd372c3df
+  side_effect: read
+  risk: low
+  timeout: 5s

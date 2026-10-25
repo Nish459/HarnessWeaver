@@ -27,4 +27,4 @@ const answer = await harness.session({ task: "support", principal: user.id, tena
 
 Node 22 or later, ESM only. Runtime dependency: `yaml`.
 
-Documentation: [TypeScript](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/tooling/typescript.md).
+Documentation: [TypeScript](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/advanced/typescript.md).

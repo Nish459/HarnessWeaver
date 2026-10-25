@@ -70,7 +70,7 @@ harness = hw.load("harness.yaml")
 client = harness.instrument(AsyncOpenAI(base_url=GATEWAY))
 ```
 
-Every call is a traced run with usage and cost. To export the traces, configure OpenTelemetry in the app, or set `observability.configure_sdk: true` with `harnessweaver-otel` ([Observability](../modules/observability.md)).
+Every call is a traced run with usage and cost. To export the traces, configure OpenTelemetry in the app, or set `observability.configure_sdk: true` with `harnessweaver-otel` ([Observability](../tutorial/observability.md)).
 
 ### L1 Guard
 
@@ -102,7 +102,7 @@ policy:
     - { id: refund-cap, when: "tool.name == 'refund_payment' && args.amount_usd > 1000", effect: deny }
 ```
 
-`harnessweaver add tool app.tools:refund_payment` writes a manifest from the function; `harnessweaver tools pin` pins its digest. See [Tools](../modules/tools.md) and [Policy](../modules/policy.md).
+`harnessweaver add tool app.tools:refund_payment` writes a manifest from the function; `harnessweaver tools pin` pins its digest. See [Tools](../tutorial/tools.md) and [Policy](../tutorial/policy.md).
 
 ### L3 Orchestrate
 
@@ -121,7 +121,7 @@ routing:
     default: question
 ```
 
-Runs now get idempotency keys, approvals that suspend and resume, and checkpoints ([Approvals](../modules/approvals.md)).
+Runs now get idempotency keys, approvals that suspend and resume, and checkpoints ([Approvals](../tutorial/approvals.md)).
 
 ### L4 Improve
 
@@ -133,6 +133,6 @@ evals:
   online: { sample_rate: 0.05, graders: [{ status: completed }] }
 ```
 
-`harnessweaver eval run` fails CI when a suite misses its threshold or a passing case regresses ([Evals](../modules/evals.md)).
+`harnessweaver eval run` fails CI when a suite misses its threshold or a passing case regresses ([Evals](../tutorial/evals.md)).
 
-The examples climb the same ladder: [Example 01](../getting-started/examples.md#example-01-invoice-extraction) is L1, Examples 02 and 03 are L4.
+The examples climb the same ladder: [Example 01](../resources/examples.md#example-01-invoice-extraction) is L1, Examples 02 and 03 are L4.

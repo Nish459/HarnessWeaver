@@ -1,0 +1,27 @@
+# Acme's org baseline: every app extends it, and no app can remove what it locks.
+apiVersion: harnessweaver/v1
+kind: Profile
+metadata: { name: acme-baseline, version: 1.0.0, owner: platform-security }
+
+require_level:
+  default: L1
+observability:
+  capture_content: false
+models:
+  allowed_aliases: [fast, strong]
+guardrails:
+  input:
+    - { id: base-pii, use: pii.regex, action: redact }
+  output:
+    - { id: base-secrets, use: secrets.scan, action: block }
+
+locks:
+  - observability.capture_content
+  - models.allowed_aliases
+  - guardrails.input[base-pii]
+  - guardrails.output[base-secrets]
+
+bounds:
+  budgets.per_run.max_usd: { max: 1.00 }
+  budgets.per_run.deadline: { max: 5m }
+  tasks.*.budget.max_usd: { max: 0.10 }

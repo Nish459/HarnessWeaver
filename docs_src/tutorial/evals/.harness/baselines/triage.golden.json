@@ -1,0 +1,9 @@
+{
+  "suite": "golden",
+  "task": "triage",
+  "pass_rate": 1.0,
+  "cases": {
+    "double-charge": true,
+    "crash-on-login": true
+  }
+}

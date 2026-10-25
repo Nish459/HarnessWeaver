@@ -1200,7 +1200,7 @@ flowchart BT
     side -. exports openapi .-> contracts
 ```
 
-The repository is a **uv workspace** (Python) plus a **pnpm workspace** (TypeScript, rooted in `typescript/`, which also holds Example 04), sharing one `contracts/` directory. The docs site is built from `docs/` and `mkdocs.yml`, with its tools in the uv workspace's `docs` dependency group (ADR-0041). The core declares extras that pull in first-party plugins (`harnessweaver[openai]`, `harnessweaver[all]`). Plugins built outside this repository need nothing from it except the public extension surface (No. 13).
+The repository is a **uv workspace** (Python) plus a **pnpm workspace** (TypeScript, rooted in `typescript/`, which also holds Example 04), sharing one `contracts/` directory. The docs site is built from `docs/` and `mkdocs.yml`, with its tools in the uv workspace's `docs` dependency group (ADR-0041); it follows FastAPI's structure, and the code its tutorial shows lives in `docs_src/`, run by the tests (ADR-0042). The core declares extras that pull in first-party plugins (`harnessweaver[openai]`, `harnessweaver[all]`). Plugins built outside this repository need nothing from it except the public extension surface (No. 13).
 
 ```
 python/harnessweaver/                 python/plugins/<name>/   (harnessweaver-<name>)
@@ -1281,6 +1281,7 @@ Each ADR records a decision, the reason for it, and its status, in its own file 
 | [0039](docs/adr/0039-gateways-and-dev-stack.md) | Gateway configs and the local dev stack | Accepted |
 | [0040](docs/adr/0040-typescript-sdk.md) | The TypeScript SDK | Accepted |
 | [0041](docs/adr/0041-docs-site.md) | The docs site: MkDocs and Material | Accepted |
+| [0042](docs/adr/0042-docs-structure.md) | The docs follow FastAPI's structure, with tested tutorial code | Accepted |
 
 ## 29. Deviations from the design guide
 

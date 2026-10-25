@@ -1,0 +1,11 @@
+suite: golden
+task: triage
+graders: [schema_valid, { field_equals: category }, { field_equals: priority }]
+thresholds: { pass_rate: 0.9 }
+cases:
+  - id: double-charge
+    input: { text: "I was charged twice for my Pro plan this month. Please refund one." }
+    expect: { category: billing, priority: 2 }
+  - id: crash-on-login
+    input: { text: "The app crashes every time I log in since this morning's update." }
+    expect: { category: bug, priority: 1 }

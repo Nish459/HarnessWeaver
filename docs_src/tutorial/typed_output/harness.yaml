@@ -1,0 +1,23 @@
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata:
+  name: support-desk
+  owner: support-team
+
+models:
+  provider: openai.chat
+  base_url: http://localhost:4000
+  api_key_env: LITELLM_API_KEY
+  default: fast
+  aliases: { fast: fast-chat, strong: strong-chat }
+  prices:
+    fast-chat: { input_per_mtok: 0.25, output_per_mtok: 2.00 }
+    strong-chat: { input_per_mtok: 3.00, output_per_mtok: 15.00 }
+
+tasks:
+  triage:
+    runner: direct
+    model: fast
+    prompt: triage@2
+    input: helpdesk.models:Ticket
+    output: helpdesk.models:Triage

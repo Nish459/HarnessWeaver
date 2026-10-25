@@ -117,3 +117,43 @@
 .md-typeset .md-typeset__table table:not([class]) {
   border-radius: 0.5rem;
 }
+
+/*
+ * Animated terminal sessions (terminals.js, ADR-0042). termynal.css draws the window;
+ * these rules size it to the content column, use the code font and the brand navy in
+ * both schemes, keep long output lines on one line with a horizontal scroll, and put
+ * the replay link under the window.
+ */
+.hw-terminal {
+  margin: 1em 0;
+}
+
+.hw-terminal [data-termynal] {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 2.4rem 1rem 1rem;
+  border-radius: 0.5rem;
+  background: #010a20;
+  color: #f3faff;
+  font-family: var(--md-code-font-family);
+  font-size: 0.7rem;
+}
+
+.hw-terminal [data-ty] {
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.hw-terminal__replay {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.65rem;
+  text-align: right;
+}
+
+/* The home page's hero: the logo and the tagline. */
+.md-typeset .hw-tagline em {
+  font-size: 1.1em;
+}
+

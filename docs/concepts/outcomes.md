@@ -23,7 +23,7 @@ flowchart LR
 Where each outcome is honored:
 
 - **`Retry`** is honored at `model.after` (the model is asked again, once) and at `output.before` (a repair, up to `validation.max_repairs`). When the retries run out, the run is blocked with code `retry_exhausted`. Anywhere else a `Retry` becomes `Block` with code `retry_not_supported`.
-- **`Suspend`** pauses at `tool.before` and `output.before` in a harness-driven run ([Approvals](../modules/approvals.md)). Anywhere else, and in a standalone session or a TypeScript session, it escalates, because the app's code can't be resumed later.
+- **`Suspend`** pauses at `tool.before` and `output.before` in a harness-driven run ([Approvals](../tutorial/approvals.md)). Anywhere else, and in a standalone session or a TypeScript session, it escalates, because the app's code can't be resumed later.
 - **`Block`** stops the chain: no later middleware on that hook runs.
 
 ## Guard actions
@@ -40,7 +40,7 @@ A guardrail provider proposes an action; the spec's `action` overrides it whenev
 | `block` | `Block` | At the context stage a block drops the item, not the run |
 | `log_only` | `Continue()` plus a "would have fired" trace note | Shadow mode (RULES R8) |
 
-See [Guardrails](../modules/guardrails.md).
+See [Guardrails](../tutorial/guardrails.md).
 
 ## How a run ends
 
@@ -77,7 +77,7 @@ Common block codes:
 | `model_not_allowed` | A model alias outside `models.allowed_aliases` |
 | `model_refusal` | The model declined (`anthropic.messages`) |
 | `guard_blocked` | A guard's `block`; the trace note names the guard (`guardrails.input[pii]`) and its findings |
-| Governor codes | `tool_unknown`, `manifest_required`, `tool_disabled`, `tool_not_enabled`, `digest_mismatch` (step 1), `schema_invalid` (2), `policy_denied` (3), `trifecta` (4), `rate_limited` (5), `judge_blocked` (6), `approval_rejected` (7); see [Tools](../modules/tools.md#the-governor) |
+| Governor codes | `tool_unknown`, `manifest_required`, `tool_disabled`, `tool_not_enabled`, `digest_mismatch` (step 1), `schema_invalid` (2), `policy_denied` (3), `trifecta` (4), `rate_limited` (5), `judge_blocked` (6), `approval_rejected` (7); see [Tools](../advanced/governor.md) |
 
 ## The error taxonomy
 
@@ -99,5 +99,5 @@ Only taxonomy errors cross a public boundary (RULES C5). Each has a stable code 
 
 All are in `harnessweaver.errors` (and `@harnessweaver/core` exports the same names). `errors.classify(exc)` turns any exception into the taxonomy, defaulting to `InternalError`.
 
-- **`SpecError` is a load-time error.** A spec that is invalid, breaks a lock or bound, misses its required level, or names something that isn't installed fails when the harness loads, never in the middle of a run (R4). See [Troubleshooting](../operations/troubleshooting.md) for each one.
+- **`SpecError` is a load-time error.** A spec that is invalid, breaks a lock or bound, misses its required level, or names something that isn't installed fails when the harness loads, never in the middle of a run (R4). See [Troubleshooting](../how-to/troubleshooting.md) for each one.
 - **Messages never hold content.** Error messages and details name fields, rules, codes and ids, never prompts, outputs, tool arguments or variable values (R9).

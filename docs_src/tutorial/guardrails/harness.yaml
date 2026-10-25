@@ -1,0 +1,55 @@
+apiVersion: harnessweaver/v1
+kind: Harness
+metadata:
+  name: support-desk
+  owner: support-team
+
+models:
+  provider: openai.chat
+  base_url: http://localhost:4000
+  api_key_env: LITELLM_API_KEY
+  default: fast
+  aliases: { fast: fast-chat, strong: strong-chat }
+  prices:
+    fast-chat: { input_per_mtok: 0.25, output_per_mtok: 2.00 }
+    strong-chat: { input_per_mtok: 3.00, output_per_mtok: 15.00 }
+
+budgets:
+  per_run: { max_usd: 0.50, deadline: 2m }
+
+tasks:
+  triage:
+    runner: direct
+    model: fast
+    prompt: triage@2
+    input: helpdesk.models:Ticket
+    output: helpdesk.models:Triage
+    budget:
+      max_model_calls: 3
+      max_usd: 0.01
+      deadline: 30s
+      overridable: [max_model_calls, max_usd]
+
+validation:
+  max_repairs: 1
+  on_failure: escalate
+  rules:
+    - id: bugs-are-urgent
+      when: "output.category == 'bug' && output.priority > 2"
+      message: "a bug is priority 1 or 2"
+    - id: short-summary
+      when: "size(output.summary) > 120"
+      message: "keep the summary under 120 characters"
+
+guardrails:
+  input:
+    - id: pii
+      use: pii.regex
+      action: redact
+    - id: injection
+      use: injection.heuristic
+      mode: log_only
+  output:
+    - id: secrets
+      use: secrets.scan
+      action: block

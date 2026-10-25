@@ -1,0 +1,8 @@
+documents:
+  - id: help-refunds
+    content: A refund takes up to five business days to reach the card you paid with.
+  - id: help-invoices
+    content: Every invoice is under Settings, Billing, where you can download it as a PDF.
+  - id: help-globex-sla
+    content: Globex's contract promises a reply from support within four hours.
+    acl: { tenants: [globex] }
