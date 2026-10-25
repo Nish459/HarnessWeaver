@@ -86,6 +86,7 @@ uv sync --all-packages          # install every workspace package + dev tools in
 | Gateways and the dev stack | `uv run harnessweaver gateway litellm <spec>`, `uv run harnessweaver gateway mcp <spec>`, `uv run harnessweaver dev <spec> [--up]` |
 | TypeScript (see [typescript/README.md](typescript/README.md)) | `pnpm -C typescript install && pnpm -C typescript test && pnpm -C typescript typecheck && pnpm -C typescript build`; the tests include Example 04, which starts harnessd, so run `uv sync --all-packages` first |
 | Docs site | `make docs` (`mkdocs build --strict`) |
+| Remove caches and build output | `make clean` (keeps `.venv`, `node_modules`, local run state and `.claude/`; rebuild the TypeScript `dist/` with `pnpm -C typescript build` before Example 04); `make distclean` also removes `.venv` and `node_modules` (reinstall with `make sync` and `pnpm -C typescript install`) |
 
 Never `pip install` into the workspace. Add dependencies with `uv add --package <member> <dep>`, and only after an ADR if it's a new third-party dependency (C10). The core package may not gain dependencies at all (R6).
 

@@ -1,7 +1,7 @@
 # Common development tasks. `make check` is what CI runs (RULES G5).
 UV ?= uv
 
-.PHONY: sync check ascii lint fmt fmt-check typecheck test conformance cov schemas schemas-check docs docs-serve
+.PHONY: sync check ascii lint fmt fmt-check typecheck test conformance cov schemas schemas-check docs docs-serve clean distclean
 
 sync:
 	$(UV) sync --all-packages
@@ -55,3 +55,18 @@ docs:
 
 docs-serve:
 	$(UV) run --group docs mkdocs serve
+
+# Removes caches and build output: the .gitignore entries for them, anywhere in the
+# tree. Installed dependencies (.venv, node_modules), local run state, secrets and
+# .claude/ (which holds agent worktrees) are kept.
+clean:
+	find . \( -name .git -o -name .venv -o -name node_modules -o -name .claude \) -prune -o \
+		\( -name __pycache__ -o -name '*.py[cod]' -o -name '*.egg-info' -o -name build -o -name dist \
+		-o -name .pytest_cache -o -name .ruff_cache -o -name .pyright -o -name .hypothesis \
+		-o -name '.coverage' -o -name '.coverage.*' -o -name htmlcov -o -name '*.tsbuildinfo' -o -name site \) \
+		-prune -exec rm -rf {} +
+
+# clean, plus the installed dependencies. Afterwards run `make sync` and
+# `pnpm -C typescript install` to work again.
+distclean: clean
+	find . \( -name .git -o -name .claude \) -prune -o \( -name .venv -o -name node_modules \) -prune -exec rm -rf {} +

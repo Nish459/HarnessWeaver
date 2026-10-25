@@ -21,6 +21,7 @@ pnpm -C typescript install                   # the TypeScript workspace
 | Regenerate contract schemas and the OpenAPI document | `make schemas` (`make schemas-check` reports drift) |
 | TypeScript tests, types and build | `pnpm -C typescript test`, `pnpm -C typescript typecheck`, `pnpm -C typescript build` |
 | The docs site | `make docs` (strict build), `make docs-serve` (browse at http://127.0.0.1:8000) |
+| Remove caches and build output (keeps `.venv` and `node_modules`) | `make clean` (`make distclean` also removes `.venv` and `node_modules`) |
 
 Never `pip install` into the workspace; add dependencies with `uv add --package <member> <dependency>`, and only after an ADR if the dependency is new (RULES C10). The core package takes no new dependencies at all (R6).
 
