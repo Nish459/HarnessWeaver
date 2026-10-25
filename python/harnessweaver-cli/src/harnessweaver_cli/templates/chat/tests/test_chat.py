@@ -42,3 +42,22 @@ async def test_a_secret_cuts_the_stream() -> None:
     assert result.status is hw.RunStatus.BLOCKED
     assert result.error is not None
     assert result.error.details["hook"] == "stream.chunk"
+
+
+async def test_the_terminal_chat_ends_at_the_end_of_input(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    lines = iter(["Hello there"])
+
+    def typed(prompt: str) -> str:
+        try:
+            return next(lines)
+        except StopIteration:
+            raise EOFError from None  # Ctrl-D, or piped input running out
+
+    monkeypatch.setenv("HARNESSWEAVER_ENV", "offline")
+    monkeypatch.setattr("builtins.input", typed)
+    from app.main import main
+
+    await main()
+    assert "Happy to help." in capsys.readouterr().out

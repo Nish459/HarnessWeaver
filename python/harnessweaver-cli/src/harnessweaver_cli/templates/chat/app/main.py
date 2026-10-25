@@ -8,10 +8,18 @@ import harnessweaver as hw
 SPEC = Path(__file__).resolve().parents[1] / "harness.yaml"
 
 
+def ask() -> str:
+    """One message from the terminal; the end of input (Ctrl-D) ends the chat."""
+    try:
+        return input("you: ").strip()
+    except EOFError:
+        return ""
+
+
 async def main() -> None:
     async with hw.load(SPEC) as harness:  # background runs need an open harness
         # input() blocks, so it runs in a thread and the event loop stays free (C3).
-        while (message := (await asyncio.to_thread(input, "you: ")).strip()) not in ("", "quit"):
+        while (message := await asyncio.to_thread(ask)) not in ("", "quit"):
             run_id = await harness.submit("chat", message, principal="demo")
             print("bot: ", end="", flush=True)
             async for event in harness.stream(run_id):

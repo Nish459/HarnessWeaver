@@ -127,6 +127,7 @@ All notable changes to the HarnessWeaver packages are recorded here. The format 
 
 ### Fixed
 
+- The `chat` template's terminal app ends the chat at the end of input (Ctrl-D, or piped input running out) instead of raising `EOFError`.
 - AGENTS.md named a test that doesn't exist, and gave a plugin-conformance command that, at the repository root, runs the normal tests and no conformance checks (the suite file sits inside the `python` test path); it now names the suite file, as `make conformance` does. The plugin READMEs say to run their command from the package's directory.
 - DESIGNS.md's example spec set `observability.exporter: otlp` without `configure_sdk: true`, which fails loading; its YAML now parses and loads as written. The `anthropic.messages` settings tables now show the provider's own `timeout` (600s), `max_retries` (2) and `cost_header` defaults.
 - The README's and the docs home page's first example is now Example 01's real spec and code, runnable as written, instead of a fragment with undefined names.
