@@ -42,10 +42,12 @@ dev = [
     "ruff>=0.17",
     "pyright>=1.1.414",
 ]
-# The docs site (ADR-0041): `make docs` builds it with `mkdocs build --strict`.
+# The docs site (ADR-0041): `make docs` builds it with `mkdocs build --strict`. The site
+# builds from this group alone (vercel.json); mkdocstrings formats signatures with ruff.
 docs = [
     "mkdocs-material>=9.7.7",
     "mkdocstrings[python]>=1.0.8",
+    "ruff>=0.17",
 ]
 
 # --- ruff -------------------------------------------------------------------

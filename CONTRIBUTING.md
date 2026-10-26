@@ -65,6 +65,7 @@ Hook points, outcomes, actions, the spec format and wire payloads are contracts.
 ## Docs
 
 - User docs live in `docs/` and build with `make docs`, which fails on a broken link, anchor or a page missing from `mkdocs.yml`'s navigation.
+- `vercel.json` deploys the site on Vercel from the GitHub repository: it builds the site from the `docs` dependency group alone (`uv run --locked --only-group docs mkdocs build --strict`) and serves `site/`. Once the Vercel project is connected, every push to `main` updates the production site and every pull request gets a preview deployment.
 - Diagrams are Mermaid, next to the text they explain (D2).
 - Code in docs is a tested example or short enough to check by eye; an API that doesn't exist yet is marked *planned* (D3). The tutorial's code lives in `docs_src/` and is run by `docs_src/tests`.
 - `QUICKSTART.md`, `CONTRIBUTING.md`, `SECURITY.md` and `CHANGELOG.md` are included in the site, so links in them are absolute.

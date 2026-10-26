@@ -114,6 +114,7 @@ All notable changes to the HarnessWeaver packages are recorded here. The format 
 - A test that keeps the core's runtime dependencies to `pydantic`, `opentelemetry-api`, `pyyaml`, `anyio` and `loguru` (RULES R6).
 - `make check` (ruff, ruff format, pyright, pytest), CI on Python 3.12-3.14 with SHA-pinned actions, pre-commit hooks and a pull request template.
 - `make check` also rejects characters that aren't on a standard keyboard (`scripts/check_ascii.py`, RULES D5).
+- `vercel.json` deploys the docs site on Vercel from the GitHub repository, built from the `docs` dependency group alone, which now includes ruff so that mkdocstrings formats signatures as `make docs` does.
 - `make build` and `make release` build, and publish to PyPI and npm, the packages that the Git tags on HEAD name (`scripts/release.py`). A release tag is `<package>@<version>`, and its SemVer version must equal the package's manifest version (RULES V1). `PACKAGE=<name>` releases just the named packages.
 - `make clean` removes caches and build output (`__pycache__`, the pytest, ruff, pyright and Hypothesis caches, coverage data, `build/`, `dist/`, `*.egg-info`, `*.tsbuildinfo` and the docs `site/`), keeping `.venv`, `node_modules`, local run state and `.claude/`. `make distclean` also removes `.venv` and `node_modules`.
 

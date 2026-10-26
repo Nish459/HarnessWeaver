@@ -23,6 +23,7 @@ This file is for AI coding agents (and humans) working **on** the HarnessWeaver 
 |-- pyproject.toml                  # uv workspace root (virtual): members, dev and docs groups, tool config
 |-- Makefile                        # make check | test | lint | fmt | typecheck | conformance | schemas | docs | build | release
 |-- mkdocs.yml                      # the docs site (ADR-0041)
+|-- vercel.json                     # deploys the docs site on Vercel, built from the docs group alone
 |-- contracts/                      # SOURCE OF TRUTH shared by every language (R11)
 |   |-- schemas/                    #   generated JSON Schemas, checked in, drift-tested
 |   |-- openapi/                    #   generated sidecar OpenAPI, drift-tested
