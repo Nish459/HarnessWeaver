@@ -135,6 +135,14 @@ async def test_function_middleware_can_be_called_directly() -> None:
 def test_decorator_misuse() -> None:
     with pytest.raises(ValueError, match="unknown port"):
         hw.provider(port="Nope", name="x")
+    for planned in ("DatasetStore", "ErrorClassifier", "ToolRegistry", "Validator"):
+        # Planned ports aren't ports yet: nothing would ever call their providers.
+        with pytest.raises(ValueError, match="unknown port"):
+            hw.provider(port=planned, name="x")
+    # The harness always builds its own governor, so a spec can't swap out the
+    # checks that enforce the baseline (R1).
+    with pytest.raises(ValueError, match="unknown port"):
+        hw.provider(port="ToolGovernor", name="x")
     with pytest.raises(ValueError, match="latency_class"):
         hw.provider(port="Guardrail", name="x", latency_class="instant")
     with pytest.raises(ValueError, match="R3"):

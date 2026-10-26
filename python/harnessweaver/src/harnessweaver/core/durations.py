@@ -103,10 +103,10 @@ def duration_ms(value: timedelta) -> int:
     """
     if value < timedelta(0):
         raise ValueError("duration must not be negative")
-    micros = (value.days * 86_400 + value.seconds) * 1_000_000 + value.microseconds
-    if micros % 1000:
+    ms, rest = divmod(value, timedelta(milliseconds=1))
+    if rest:
         raise ValueError("duration has sub-millisecond precision")
-    return micros // 1000
+    return ms
 
 
 def format_duration(value: timedelta) -> str:

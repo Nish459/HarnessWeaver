@@ -165,7 +165,7 @@ App developers learn twelve concepts. Everything else is an implementation detai
 | **Envelope** | The immutable context carried through every call: run id, tenant, principal, task, budget, deadline, labels. | HarnessWeaver, filled from the request | `harnessweaver.Envelope` |
 | **Hook point** | A named moment in the lifecycle (`model.before`, `tool.before`, ...). Modules attach behavior here. | HarnessWeaver (fixed, versioned set of 13) | `harnessweaver.HookPoint` |
 | **Middleware** | A function attached to one or more hook points. It can observe, modify, block, retry, escalate or suspend. | Modules, app plugins | `@hw.middleware` |
-| **Port** | A typed interface for one capability: `Decider`, `Guardrail`, `Validator`, `ToolGovernor`, `ModelProvider`, ... | HarnessWeaver | `harnessweaver.core.ports` |
+| **Port** | A typed interface for one capability: `Decider`, `Guardrail`, `PolicyEngine`, `ToolGovernor`, `ModelProvider`, ... | HarnessWeaver | `harnessweaver.core.ports` |
 | **Provider** | A concrete implementation of a port, such as `pii.regex` for `Guardrail`. Contributed by a plugin. | HarnessWeaver, third parties, app teams | `@hw.provider` |
 | **Module** | A bundle that wires one capability end to end: its port, a default provider, the middleware it installs and its config schema. | HarnessWeaver | `harnessweaver.modules.*` |
 | **Runner** | The adapter that executes a task: `direct`, `session`, `workflow`, `pydantic_ai.agent`, or a custom one. Runners don't implement controls; hook points do. | HarnessWeaver, app teams | `@hw.runner` |
@@ -741,14 +741,14 @@ The core declares extras for convenience (`harnessweaver[openai]`, `harnessweave
 
 | Module | Port(s) | Built-in and first-party providers | Planned providers | Hook points |
 | --- | --- | --- | --- | --- |
-| `core` | `Runner`, `ErrorClassifier` | `direct`, `session`, `workflow` | Temporal, DBOS durable runners | `run.*` |
+| `core` | `Runner`; `ErrorClassifier` (planned) | `direct`, `session`, `workflow` | Temporal, DBOS durable runners | `run.*` |
 | `models` | `ModelProvider` | `scripted`; plugins: `openai.chat` (LiteLLM, OpenAI, vLLM, Ollama), `anthropic.messages` | Bedrock, Vertex via LiteLLM | `model.*`, `stream.chunk` |
 | `routing` | `Decider`, `Embedder` | cascade of `rules`, `lexical`, `semantic`, `llm`, custom `@hw.decider` | semantic-router, AnyJev, RouteLLM, GoRules ZEN | `route.decide` |
 | `policy` | `PolicyEngine` | `cel_lite`; plugin: `cel.policy` (full CEL) | Cedar, OPA, OpenFGA | `tool.before`, `run.start` |
-| `tools` | `ToolRegistry`, `ToolGovernor`, `Sandbox` | manifest registry, 9-step governor, native, http and code (sandboxed) transports; plugin: `monty.sandbox` | MCP transport plugin, agentgateway / ContextForge | `tool.*` |
+| `tools` | `ToolBackend`, `ToolGovernor`, `Sandbox` | manifest registry, 9-step governor, native, http and code (sandboxed) transports; plugin: `monty.sandbox` | MCP transport plugin, agentgateway / ContextForge | `tool.*` |
 | `approvals` | `ApprovalChannel` | `memory`, `callback`, `console`, `webhook` | Slack, email, harnessd approval page | `tool.before`, `output.before`, `approval.resolved` |
 | `guardrails` | `Guardrail` | `regex.deny`, `pii.regex`, `secrets.scan`, `injection.heuristic`, `size.limit`, `topic.deny`, `grounded.citations`, `llm.judge` | Presidio, Prompt Guard 2, Llama Guard, LLM Guard, Bedrock, Azure Prompt Shields, Lakera | `input.before`, `context.after`, `tool.after`, `output.before`, `stream.chunk` |
-| `validation` | `Validator` | `pydantic` (+ bounded repair), `rules` (cel-lite), `json_schema` | groundedness scorers | `output.before` |
+| `validation` | `Validator` (planned) | typed output parsing with bounded repair in the runners, cel-lite business rules (`validation.rules`) | groundedness scorers | `output.before` |
 | `context` | `ContextProvider`, `Memory` | `passthrough`, `memory` (in-memory docs with ACL + lexical search), namespaced memory with TTL | pgvector, OpenSearch, Qdrant | `context.after` |
 | `state` | `StateStore` | `memory`, `sqlite` | Postgres, Redis | `run.*`, `approval.resolved` |
 | `observability` | `Telemetry` | OTel API telemetry, in-memory `RunTrace`; plugin: `otel.sdk` (SDK and exporters) | Langfuse, Phoenix, Logfire exporters | all |

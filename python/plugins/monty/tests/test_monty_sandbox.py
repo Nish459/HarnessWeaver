@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import harnessweaver as hw
+from harnessweaver.core.plugins import provider_info
 from harnessweaver.core.registry import PluginCatalog, PluginSource
 from harnessweaver.testing import harness_for_test, scripted, text, tool_call
 from harnessweaver_monty import MontySandbox
@@ -48,6 +49,12 @@ async def test_values_json_cant_hold_are_described() -> None:
     ran = await MontySandbox().run("{1, 2}", {}, LIMITS)
     assert ran.error is None
     assert ran.value == [1, 2]
+
+
+def test_the_sandbox_takes_no_settings() -> None:
+    # Harnesses build sandboxes with no settings, so there is nothing to configure.
+    with pytest.raises(hw.errors.SpecError, match="takes no settings"):
+        provider_info(MontySandbox).build({"grace": "5s"})
 
 
 async def test_a_code_tool_in_a_harness(tmp_path: Path) -> None:

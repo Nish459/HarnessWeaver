@@ -79,10 +79,8 @@ PORTS: Final = frozenset(
     {
         "ApprovalChannel",
         "ContextProvider",
-        "DatasetStore",
         "Decider",
         "Embedder",
-        "ErrorClassifier",
         "Evaluator",
         "Guardrail",
         "Memory",
@@ -91,12 +89,12 @@ PORTS: Final = frozenset(
         "Sandbox",
         "StateStore",
         "Telemetry",
-        "ToolGovernor",
-        "ToolRegistry",
-        "Validator",
     }
 )
-"""The ports a provider can implement (DESIGNS No. 14)."""
+"""The ports a provider can implement (DESIGNS No. 14). A port is listed only when the
+harness looks its providers up by name, so a declared provider never sits unused. A
+planned port joins when that lookup exists; ``ToolGovernor`` never does, because the
+governor enforces the baseline and a spec must not swap it out (R1)."""
 
 LATENCY_CLASSES: Final = ("fast", "medium", "slow")
 """Declared latency classes; the conformance suite checks p95 against them."""

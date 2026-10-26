@@ -7,25 +7,17 @@ environment, and the manifest's ``limits`` cap its time and memory. A tool names
 it with ``sandbox: monty`` (short for ``monty.sandbox``).
 """
 
-from datetime import timedelta
-from typing import Any
+from typing import Any, Final
 
-from pydantic import BaseModel, ConfigDict, JsonValue
+from pydantic import JsonValue
 from pydantic_core import to_jsonable_python
 
 import harnessweaver as hw
-from harnessweaver.core.durations import Duration
 
-__all__ = ["MontySandbox", "MontySandboxConfig"]
+__all__ = ["MontySandbox"]
 
-
-class MontySandboxConfig(BaseModel):
-    """Extra settings for ``monty.sandbox``."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    grace: Duration = timedelta(seconds=2)
-    """How long past a run's time limit the worker may take before it is killed."""
+_GRACE_SECONDS: Final = 2.0
+"""How long past a run's time limit the worker may take before it is killed."""
 
 
 def _last_line(error: BaseException) -> str:
@@ -43,15 +35,11 @@ def _jsonable(value: Any) -> JsonValue:
 @hw.provider(
     port="Sandbox",
     name="monty.sandbox",
-    config=MontySandboxConfig,
     deterministic=False,
     latency_class="slow",
 )
 class MontySandbox:
     """Each run gets a fresh worker process, so no state leaks from one call to the next."""
-
-    def __init__(self, config: MontySandboxConfig | None = None) -> None:
-        self.config = config or MontySandboxConfig()
 
     async def run(
         self, code: str, inputs: dict[str, JsonValue], limits: hw.SandboxLimits
@@ -70,7 +58,7 @@ class MontySandbox:
         pool = AsyncMonty(
             min_processes=1,
             max_processes=1,
-            request_timeout=seconds + self.config.grace.total_seconds(),
+            request_timeout=seconds + _GRACE_SECONDS,
         )
         checkout = {"max_feed_duration_secs": seconds, "max_memory": limits.max_memory_mb << 20}
         try:

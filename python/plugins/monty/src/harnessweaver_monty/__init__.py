@@ -8,7 +8,7 @@ Importing it imports nothing from pydantic-monty (S8).
 from importlib.metadata import version as _version
 
 import harnessweaver as hw
-from harnessweaver_monty.sandbox import MontySandbox, MontySandboxConfig
+from harnessweaver_monty.sandbox import MontySandbox
 
 __version__: str = _version("harnessweaver-monty")
 
@@ -19,4 +19,4 @@ plugin = hw.Plugin(
     description="A sandbox for code-executing tools (monty.sandbox).",
 )
 
-__all__ = ["MontySandbox", "MontySandboxConfig", "__version__", "plugin"]
+__all__ = ["MontySandbox", "__version__", "plugin"]

@@ -177,6 +177,7 @@ async def test_a_failing_online_grader_never_fails_the_run(build: Builder, testk
     [
         ([{"llm_judge": "polite"}], "llm_judge:polite isn't deterministic"),
         ([{"exact": True}], "takes no single setting"),
+        ([{"exact": {"x": 1}}], "exact takes no settings"),
         (["exact", "exact"], "listed twice"),
     ],
 )

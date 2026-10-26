@@ -9,7 +9,7 @@ from harnessweaver.core.guards import GuardAction
 from harnessweaver.core.jsonschema import SchemaError, check_schema, validate
 from harnessweaver.core.plugins import provider
 from harnessweaver.core.runs import RunStatus
-from harnessweaver.modules.evals.graders.base import GraderConfig, NoSettings, nonempty, texts
+from harnessweaver.modules.evals.graders.base import GraderConfig, nonempty, texts
 
 __all__ = [
     "GuardFired",
@@ -21,19 +21,10 @@ __all__ = [
 ]
 
 
-@provider(
-    port="Evaluator",
-    name="schema_valid",
-    config=NoSettings,
-    deterministic=True,
-    latency_class="fast",
-)
+@provider(port="Evaluator", name="schema_valid", deterministic=True, latency_class="fast")
 class SchemaValid:
     """The run completed and its output matches the task's output schema (ADR-0026);
     without a schema, the run completed with an output."""
-
-    def __init__(self, config: NoSettings | None = None) -> None:
-        pass
 
     async def grade(self, sample: EvalSample) -> Grade:
         if sample.status is not RunStatus.COMPLETED:

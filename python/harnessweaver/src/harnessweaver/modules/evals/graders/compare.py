@@ -6,20 +6,15 @@ from pydantic import Field
 
 from harnessweaver.core.evals import EvalSample, Grade
 from harnessweaver.core.plugins import provider
-from harnessweaver.modules.evals.graders.base import GraderConfig, NoSettings
+from harnessweaver.modules.evals.graders.base import GraderConfig
 from harnessweaver.modules.evals.values import MISSING, json_equal, value_at
 
 __all__ = ["Exact", "FieldConfig", "FieldEquals", "NumericClose", "NumericConfig"]
 
 
-@provider(
-    port="Evaluator", name="exact", config=NoSettings, deterministic=True, latency_class="fast"
-)
+@provider(port="Evaluator", name="exact", deterministic=True, latency_class="fast")
 class Exact:
     """The output equals the case's ``expect`` (numbers by value, maps in any order)."""
-
-    def __init__(self, config: NoSettings | None = None) -> None:
-        pass
 
     async def grade(self, sample: EvalSample) -> Grade:
         passed = json_equal(sample.output, sample.expect)

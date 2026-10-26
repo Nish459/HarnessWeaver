@@ -128,6 +128,13 @@ All notable changes to the HarnessWeaver packages are recorded here. The format 
 - Logging goes through loguru (ADR-0024), which becomes the core's fifth dependency (RULES R6). The core and `harnessweaver-otel` are silent until the app opts in with `logger.enable("harnessweaver")` / `logger.enable("harnessweaver_otel")`, and never add sinks. The conformance suite's raw-content check (R9) captures loguru and `logging` output alike.
 - Large modules are now packages of focused modules, each package's `__init__` exporting what other code imports: `harnessweaver.harness` (the `Harness` class is built from mixins for runs, endings, approvals and sessions), `core.context`, `core.plugins`, `core.registry`, `core.telemetry`, `spec.loader`, `spec.merge`, `spec.models`, `modules.guardrails.pipeline`, `modules.guardrails.providers` (one module per built-in guard) and `testing.conformance`; `core.expr` gains `grammar`, `declared` and `operations` modules. The public API (`import harnessweaver as hw`) is unchanged.
 
+### Removed
+
+- `@hw.provider` no longer accepts the planned ports `DatasetStore`, `ErrorClassifier`, `ToolRegistry` and `Validator`: nothing calls providers for them yet, so declaring one is now an `unknown port` error instead of a provider that never runs. DESIGNS.md No. 14 marks them planned.
+- `@hw.provider` no longer accepts `port="ToolGovernor"`. The harness always builds its own governor, which enforces the baseline, so a spec can't select another one (R1) and such a provider never ran. The `ToolGovernor` Protocol stays in `harnessweaver.ports`.
+- `NoSettings` (from `harnessweaver.modules.evals.graders`): the `exact` and `schema_valid` graders declare no config, as other settings-free providers do, and reject settings with `takes no settings`.
+- `MontySandboxConfig` and its `grace` setting from `harnessweaver-monty`: harnesses build sandboxes with no settings, so it could never be set. The 2s grace is now a constant, and `monty.sandbox` takes no settings.
+
 ### Fixed
 
 - The `chat` template's terminal app ends the chat at the end of input (Ctrl-D, or piped input running out) instead of raising `EOFError`.
