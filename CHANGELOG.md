@@ -165,7 +165,7 @@ Model and tool content could get past a runtime control. Each of these now holds
 ### Fixed
 
 - A `workflow` run that suspended again before another step finished lost its finished steps from the checkpoint, so they ran again.
-
+- harnessd read and JSON-parsed a request body of any size before it checked the bearer token, so a peer without the token could grow its memory (RULES S6). The token is now checked in ASGI middleware before any of the body is read. Everything except `GET /v1/health` answers 401 without it, which now includes unknown paths and FastAPI's `/docs`, `/redoc` and `/openapi.json`. Bodies are capped too: `--max-body-bytes` on `harnessd` and `harnessweaver sidecar` (`max_body_bytes` on `create_app`), 10 MiB by default, answers 413 with an `ErrorInfo`, counting the bytes that arrive so chunked uploads count. The OpenAPI document gains the 413.
 - The `chat` template's terminal app ends the chat at the end of input (Ctrl-D, or piped input running out) instead of raising `EOFError`.
 - AGENTS.md named a test that doesn't exist, and gave a plugin-conformance command that, at the repository root, runs the normal tests and no conformance checks (the suite file sits inside the `python` test path); it now names the suite file, as `make conformance` does. The plugin READMEs say to run their command from the package's directory.
 - DESIGNS.md's example spec set `observability.exporter: otlp` without `configure_sdk: true`, which fails loading; its YAML now parses and loads as written. The `anthropic.messages` settings tables now show the provider's own `timeout` (600s), `max_retries` (2) and `cost_header` defaults.

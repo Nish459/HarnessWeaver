@@ -34,10 +34,13 @@ def test_sidecar_runs_harnessd_on_the_spec(tmp_path: Path, monkeypatch: pytest.M
         "apiVersion: harnessweaver/v1\nkind: Harness\nmetadata: { name: served }\n",
         encoding="utf-8",
     )
-    result = runner.invoke(app, ["sidecar", str(spec), "--port", "7171"])
+    result = runner.invoke(
+        app, ["sidecar", str(spec), "--port", "7171", "--max-body-bytes", "2048"]
+    )
     assert result.exit_code == 0, result.output
     assert (served["host"], served["port"]) == ("127.0.0.1", 7171)
     assert served["app"].state.harness.name == "served"
+    assert served["app"].state.max_body_bytes == 2048
 
 
 def test_sidecar_says_how_to_install_harnessd(monkeypatch: pytest.MonkeyPatch) -> None:

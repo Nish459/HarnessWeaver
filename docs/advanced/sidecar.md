@@ -18,6 +18,7 @@ uv run harnessd examples/02_support_rag/harness.yaml -e offline --profile-dir ex
 | `--host` | `127.0.0.1` | Where to listen; keep it local (S6) |
 | `--port` | `7070` | The port |
 | `--token-env` | `HARNESSD_TOKEN` | The environment variable holding the bearer token clients must send |
+| `--max-body-bytes` | `10485760` (10 MiB) | The largest request body harnessd reads; anything over answers 413 |
 
 The spec's directory becomes importable, so task handlers and tool paths next to it resolve.
 
@@ -76,6 +77,7 @@ A taxonomy error that reaches a route answers with its `ErrorInfo` body (`code`,
 | 401 | A missing or wrong token |
 | 403 | `policy_denied` |
 | 404 | `not_found` (an unknown task, run, approval, tool or eval suite) |
+| 413 | `validation_failed`: the body is over `--max-body-bytes` |
 | 422 | `validation_failed`, and requests that don't match the schema |
 | 502 | `provider_error`, `tool_error` |
 
@@ -125,6 +127,8 @@ The image is built from `uv.lock` on digest-pinned bases (RULES S5) and runs as 
 ## Security
 
 - harnessd binds `127.0.0.1` unless told otherwise, refuses to start without a token, and compares tokens in constant time (RULES S6).
+- The token is checked before any of the body is read, so a peer without it can't make harnessd buffer or parse anything. Everything except `GET /v1/health` answers 401 without the token, including unknown paths and FastAPI's `/docs`, `/redoc` and `/openapi.json`; the API's description is the checked-in OpenAPI document.
+- A token holder's body is capped too, by the bytes that arrive, so a chunked upload counts. Raise `--max-body-bytes` if your requests carry large eval datasets or inputs.
 - Treat the token like any credential: generate it per environment, keep it in a secret store, rotate it.
 - Put harnessd next to the app (a sidecar container in the same pod, or the same host), not on a shared network.
 

@@ -25,6 +25,9 @@ def sidecar(
     token_env: Annotated[
         str, typer.Option(help="The variable holding the bearer token clients send.")
     ] = "HARNESSD_TOKEN",
+    max_body_bytes: Annotated[
+        int, typer.Option(help="The largest request body read; anything over answers 413.")
+    ] = 10 * 1024 * 1024,
 ) -> None:
     """Serve the spec to other languages over HTTP: run harnessd (DESIGNS No. 24)."""
     try:
@@ -39,6 +42,7 @@ def sidecar(
             host=host,
             port=port,
             token_env=token_env,
+            max_body_bytes=max_body_bytes,
         )
     except HarnessError as exc:
         raise fail(exc) from None

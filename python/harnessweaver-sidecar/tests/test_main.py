@@ -33,6 +33,12 @@ def test_it_serves_the_spec_on_localhost_with_the_token(
     assert served["app"].state.harness.name == "help-desk"
 
 
+def test_the_body_cap_is_a_flag(served: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HARNESSD_TOKEN", "sk-test-harnessd")
+    harnessd.main([str(DESK / "harness.yaml"), "--max-body-bytes", "2048"])
+    assert served["app"].state.max_body_bytes == 2048
+
+
 def test_it_refuses_to_start_without_a_token(
     served: dict[str, Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:

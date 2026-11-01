@@ -59,6 +59,7 @@ ERRORS: dict[int | str, dict[str, Any]] = {
         (400, "The spec or the request names something invalid"),
         (401, "A valid bearer token is required (S6)"),
         (404, "No such task, run, approval, tool or suite"),
+        (413, "The request body is over harnessd's limit"),
         (422, "The request body doesn't match its schema"),
         (502, "A provider failed"),
     ]

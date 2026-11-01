@@ -75,6 +75,16 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is over harnessd's limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
           "422": {
             "description": "The request body doesn't match its schema",
             "content": {
@@ -179,6 +189,16 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is over harnessd's limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
           "422": {
             "description": "The request body doesn't match its schema",
             "content": {
@@ -250,6 +270,16 @@
           },
           "404": {
             "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is over harnessd's limit",
             "content": {
               "application/json": {
                 "schema": {
@@ -358,6 +388,16 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is over harnessd's limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
           "422": {
             "description": "The request body doesn't match its schema",
             "content": {
@@ -445,6 +485,16 @@
           },
           "404": {
             "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is over harnessd's limit",
             "content": {
               "application/json": {
                 "schema": {
@@ -553,6 +603,16 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is over harnessd's limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
           "422": {
             "description": "The request body doesn't match its schema",
             "content": {
@@ -640,6 +700,16 @@
           },
           "404": {
             "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is over harnessd's limit",
             "content": {
               "application/json": {
                 "schema": {
@@ -743,6 +813,16 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is over harnessd's limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
           "422": {
             "description": "The request body doesn't match its schema",
             "content": {
@@ -814,6 +894,16 @@
           },
           "404": {
             "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is over harnessd's limit",
             "content": {
               "application/json": {
                 "schema": {
@@ -906,6 +996,16 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is over harnessd's limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
           "422": {
             "description": "The request body doesn't match its schema",
             "content": {
@@ -988,6 +1088,16 @@
           },
           "404": {
             "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is over harnessd's limit",
             "content": {
               "application/json": {
                 "schema": {
@@ -1100,6 +1210,16 @@
               }
             }
           },
+          "413": {
+            "description": "The request body is over harnessd's limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
           "422": {
             "description": "The request body doesn't match its schema",
             "content": {
@@ -1171,6 +1291,16 @@
           },
           "404": {
             "description": "No such task, run, approval, tool or suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorInfo"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is over harnessd's limit",
             "content": {
               "application/json": {
                 "schema": {

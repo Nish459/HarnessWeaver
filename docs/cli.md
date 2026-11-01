@@ -227,10 +227,10 @@ Installed plugins: namespace, distribution, version, contract range, and whether
 ## sidecar
 
 ```text
-harnessweaver sidecar [SPEC] [-e ENV] [--profile-dir DIR] [--host 127.0.0.1] [--port 7070] [--token-env HARNESSD_TOKEN]
+harnessweaver sidecar [SPEC] [-e ENV] [--profile-dir DIR] [--host 127.0.0.1] [--port 7070] [--token-env HARNESSD_TOKEN] [--max-body-bytes 10485760]
 ```
 
-Serves the spec to other languages over HTTP: runs harnessd (needs `harnessweaver-sidecar`). It refuses to start without a token in the `--token-env` variable, and binds 127.0.0.1 unless told otherwise (S6). See [harnessd](advanced/sidecar.md).
+Serves the spec to other languages over HTTP: runs harnessd (needs `harnessweaver-sidecar`). It refuses to start without a token in the `--token-env` variable, and binds 127.0.0.1 unless told otherwise (S6). A request body over `--max-body-bytes` answers 413. See [harnessd](advanced/sidecar.md).
 
 ## gateway
 

@@ -9,7 +9,7 @@ import uvicorn
 
 from harnessweaver import Harness, load_spec
 from harnessweaver.core.errors import HarnessError
-from harnessweaver_sidecar.app import create_app
+from harnessweaver_sidecar.app import DEFAULT_MAX_BODY_BYTES, create_app
 
 __all__ = ["load", "main", "serve"]
 
@@ -38,6 +38,7 @@ def serve(
     host: str = "127.0.0.1",
     port: int = DEFAULT_PORT,
     token_env: str = TOKEN_ENV,
+    max_body_bytes: int = DEFAULT_MAX_BODY_BYTES,
 ) -> None:
     """Serve ``spec`` until stopped. It binds to 127.0.0.1 unless told otherwise.
 
@@ -48,7 +49,7 @@ def serve(
     token = os.environ.get(token_env, "")
     if not token:
         raise SystemExit(f"harnessd: set {token_env} to the bearer token clients must send (S6)")
-    app = create_app(load(spec, env, profile_dirs), token=token)
+    app = create_app(load(spec, env, profile_dirs), token=token, max_body_bytes=max_body_bytes)
     uvicorn.run(app, host=host, port=port)
 
 
@@ -61,6 +62,12 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--token-env", default=TOKEN_ENV, help="where the bearer token is")
+    parser.add_argument(
+        "--max-body-bytes",
+        type=int,
+        default=DEFAULT_MAX_BODY_BYTES,
+        help="the largest request body read; anything over answers 413",
+    )
     args = parser.parse_args(argv)
     try:
         serve(
@@ -70,6 +77,7 @@ def main(argv: list[str] | None = None) -> None:
             host=args.host,
             port=args.port,
             token_env=args.token_env,
+            max_body_bytes=args.max_body_bytes,
         )
     except HarnessError as exc:
         parser.exit(1, f"harnessd: {exc.message}\n")
