@@ -35,6 +35,7 @@ export class SchemaError extends Error {
 
 const where = (path: string): string => path || "(root)";
 const isNumber = (value: unknown): value is number => typeof value === "number";
+const own = (object: object, key: string): boolean => Object.hasOwn(object, key); // `in` also finds Object.prototype's names
 
 function typeMatches(name: string, value: unknown): boolean {
   switch (name) {
@@ -49,7 +50,7 @@ function typeMatches(name: string, value: unknown): boolean {
     case "null":
       return value === null;
     case "number":
-      return isNumber(value);
+      return isNumber(value) && Number.isFinite(value); // as in JSON, and as in Python's spec models
     default: // integer: a number with no fractional part
       return isNumber(value) && Number.isInteger(value);
   }
@@ -187,13 +188,13 @@ function checkObject(value: { [key: string]: unknown }, schema: Schema, root: Sc
   const at = where(path);
   const known = isObject(schema.properties) ? schema.properties : {};
   for (const name of Array.isArray(schema.required) ? schema.required : []) {
-    if (typeof name === "string" && !(name in value)) problems.push(`${path ? `${path}.${name}` : name}: is required`);
+    if (typeof name === "string" && !own(value, name)) problems.push(`${path ? `${path}.${name}` : name}: is required`);
   }
   const extra = schema.additionalProperties ?? true;
   for (const [name, item] of Object.entries(value)) {
     const child = path ? `${path}.${name}` : name;
     if (schema.propertyNames !== undefined) check(name, schema.propertyNames, root, child, problems);
-    if (name in known) check(item, known[name], root, child, problems);
+    if (own(known, name)) check(item, known[name], root, child, problems);
     else if (extra === false) problems.push(`${child}: isn't an allowed property`);
     else check(item, extra, root, child, problems);
   }
@@ -278,13 +279,13 @@ export function withDefaults(value: unknown, schema: unknown, root: Schema = sch
   const result: { [key: string]: unknown } = {};
   const properties = isObject(node.properties) ? node.properties : {};
   for (const [name, sub] of Object.entries(properties)) {
-    if (name in value) continue;
+    if (own(value, name)) continue;
     let target = sub;
     if (isObject(target) && !("default" in target) && typeof target.$ref === "string") target = { ...schemaAt(root, target.$ref, ""), ...target };
     if (isObject(target) && "default" in target) result[name] = withDefaults(structuredClone(target.default), sub, root);
   }
   for (const [name, item] of Object.entries(value)) {
-    const sub = name in properties ? properties[name] : node.additionalProperties;
+    const sub = own(properties, name) ? properties[name] : node.additionalProperties;
     result[name] = sub === undefined || typeof sub === "boolean" ? item : withDefaults(item, sub, root);
   }
   return result;

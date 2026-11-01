@@ -74,6 +74,10 @@
     {"name": "a reference outside the document fails the schema itself",
      "schema": {"$ref": "other.json#/money"}, "value": 1, "expect": {"error": "unsupported"}},
     {"name": "an unknown type fails the schema itself",
-     "schema": {"type": "decimal"}, "value": 1, "expect": {"error": "unsupported"}}
+     "schema": {"type": "decimal"}, "value": 1, "expect": {"error": "unsupported"}},
+    {"name": "keys named after Object.prototype members aren't declared properties", "schema": {"type": "object", "properties": {"account": {"type": "string"}}, "additionalProperties": false}, "value": {"account": "a", "constructor": 1, "toString": 2, "hasOwnProperty": 3}, "expect": {"valid": false, "locations": ["constructor", "hasOwnProperty", "toString"]}},
+    {"name": "a __proto__ key isn't a declared property", "schema": {"type": "object", "properties": {"account": {"type": "string"}}, "additionalProperties": false}, "value": {"account": "a", "__proto__": {}}, "expect": {"valid": false, "locations": ["__proto__"]}},
+    {"name": "a required name is not satisfied by Object.prototype", "schema": {"type": "object", "required": ["constructor"]}, "value": {}, "expect": {"valid": false, "locations": ["constructor"]}},
+    {"name": "a declared constructor property is checked by its own schema", "schema": {"type": "object", "properties": {"constructor": {"type": "string"}}}, "value": {"constructor": 1}, "expect": {"valid": false, "locations": ["constructor"]}}
   ]
 }

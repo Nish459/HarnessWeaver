@@ -407,6 +407,285 @@
       "expect": {
         "error": "spec_invalid"
       }
+    },
+    {
+      "name": "null at a path with a maximum removes the limit, so it fails",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "max": 5
+              }
+            },
+            "budgets": {
+              "per_run": {
+                "max_usd": 2
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "max_usd": null
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "bound_violation",
+        "bound": "budgets.per_run.max_usd"
+      }
+    },
+    {
+      "name": "null fails even when the org set no value",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "max": 5
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "max_usd": null
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "bound_violation",
+        "bound": "budgets.per_run.max_usd"
+      }
+    },
+    {
+      "name": "null from an overlay fails too",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "max": 5
+              }
+            },
+            "budgets": {
+              "per_run": {
+                "max_usd": 2
+              }
+            }
+          }
+        },
+        {
+          "name": "overlay",
+          "kind": "overlay",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "max_usd": null
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "bound_violation",
+        "bound": "budgets.per_run.max_usd"
+      }
+    },
+    {
+      "name": "null at a path with only a minimum is fine",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "min": 1
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "max_usd": null
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "budgets": {
+            "per_run": {
+              "max_usd": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "a null the defaults left in place is not a removal",
+      "layers": [
+        {
+          "name": "defaults",
+          "kind": "defaults",
+          "data": {
+            "budgets": {
+              "per_run": {
+                "max_usd": null
+              }
+            }
+          }
+        },
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "max": 5
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "budgets": {
+            "per_run": {
+              "max_usd": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "null on a task budget still leaves the per-run bound in force",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "budgets.per_run.max_usd": {
+                "max": 5
+              }
+            },
+            "budgets": {
+              "per_run": {
+                "max_usd": 2
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "tasks": {
+              "t": {
+                "budget": {
+                  "max_usd": null
+                }
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "budgets": {
+            "per_run": {
+              "max_usd": 2
+            }
+          },
+          "tasks": {
+            "t": {
+              "budget": {
+                "max_usd": null
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "a __proto__ key in a layer fails",
+      "layers": [
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "tasks": {
+              "__proto__": {
+                "budget": {
+                  "max_usd": 1
+                }
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "spec_invalid"
+      }
+    },
+    {
+      "name": "a task named after an Object.prototype member is still bounded",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "bounds": {
+              "tasks.*.budget.max_usd": {
+                "max": 2
+              }
+            }
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "tasks": {
+              "constructor": {
+                "budget": {
+                  "max_usd": 8
+                }
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "bound_violation",
+        "bound": "tasks.*.budget.max_usd"
+      }
     }
   ]
 }

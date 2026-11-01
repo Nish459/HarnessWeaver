@@ -69,8 +69,8 @@ def format_path(path: SpecPath) -> str:
 
 
 def is_prefix(prefix: SpecPath, path: SpecPath) -> bool:
-    """Whether ``prefix`` is ``path`` or one of its ancestors."""
-    return len(prefix) <= len(path) and path[: len(prefix)] == prefix
+    """Whether ``prefix`` is ``path`` or an ancestor of it, with ``*`` and ``[*]`` as wildcards."""
+    return len(prefix) <= len(path) and matches(prefix, path[: len(prefix)])
 
 
 def matches(pattern: SpecPath, path: SpecPath) -> bool:

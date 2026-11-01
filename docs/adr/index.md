@@ -50,3 +50,4 @@ Each architecture decision record (ADR) states a decision HarnessWeaver made, wh
 | [ADR-0040](0040-typescript-sdk.md) | The TypeScript SDK | Accepted |
 | [ADR-0041](0041-docs-site.md) | The docs site: MkDocs and Material | Accepted |
 | [ADR-0042](0042-docs-structure.md) | The docs follow FastAPI's structure, with tested tutorial code | Accepted |
+| [ADR-0043](0043-profile-ownership.md) | Profiles an app's team can write merge after the platform's | Accepted |

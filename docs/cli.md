@@ -103,7 +103,7 @@ Every effective value, the layer it came from, and its locks and bounds. `--path
 harnessweaver spec diff BEFORE AFTER [-e ENV] [--profile-dir DIR] [--exit-code]
 ```
 
-Compares two effective specs as Markdown, for pull request comments: changed values, locks added and removed, and the adoption level. Either side can be a path or `git:<ref>:<path>` (`git:main:harness.yaml`). `--exit-code` exits 1 when they differ.
+Compares two effective specs as Markdown, for pull request comments: changed values, locks and profile layers added and removed, and the adoption level. Either side can be a path or `git:<ref>:<path>` (`git:main:harness.yaml`). A `git:` side is loaded from that ref's own tree, including `.harness/profiles`, file profiles and any `--profile-dir` inside the repository; only directories outside the repository come from the file system. `--exit-code` exits 1 when they differ.
 
 ## doctor
 

@@ -18,8 +18,8 @@ import { RESERVED_NAMESPACES } from "../plugins/names.js";
 import { RUN_POLICY_VARIABLES, TOOL_POLICY_VARIABLES } from "../policy.js";
 import { assess, missingFor, REQUIREMENTS, type LevelReport } from "./levels.js";
 import { checkBounds, describe, mergeLayers, originOf, type Bound, type Layer, type Lock, type Provenance, type RawMap } from "./merge.js";
-import { parsePath } from "./paths.js";
-import { BuiltinProfiles, ProfileDirectories, resolveExtends, type ProfileResolver } from "./sources.js";
+import { formatPath, isPrefix, parsePath, type Segment } from "./paths.js";
+import { BuiltinProfiles, ProfileDirectories, resolveExtends, type ProfileResolver, type ResolvedProfile } from "./sources.js";
 import { loadYamlFile } from "./yaml.js";
 
 export const API_VERSION = "harnessweaver/v1";
@@ -128,6 +128,33 @@ function checkBands(data: RawMap, provenance: ReadonlyMap<string, Provenance>): 
   }
 }
 
+/**
+ * A locked guard that runs on the sidecar is only as fixed as `sidecar.url` (R1). The URL
+ * is a separate value, so without a lock of its own a later layer could point the guard at
+ * a server that allows everything, with the guard's lock intact. An unlocked guard needs no
+ * such lock: a later layer could just switch it off.
+ *
+ * @throws SpecError if an enabled `where: sidecar` guard is locked and the URL isn't.
+ */
+function checkSidecarGuards(data: RawMap, locks: readonly Lock[]): void {
+  if (locks.some((lock) => isPrefix(lock.path, ["sidecar", "url"]))) return;
+  const sections: [Segment[], unknown][] = [[["guardrails"], data.guardrails]];
+  for (const [name, task] of Object.entries(isObject(data.tasks) ? data.tasks : {})) sections.push([["tasks", name, "guardrails"], isObject(task) ? task.guardrails : undefined]);
+  for (const [prefix, section] of sections) {
+    for (const [stage, items] of Object.entries(isObject(section) ? section : {})) {
+      for (const guard of Array.isArray(items) ? items : []) {
+        if (!isObject(guard) || guard.where !== "sidecar" || guard.enabled === false) continue;
+        const path = [...prefix, stage, { id: String(guard.id) }];
+        // A lock on the guard, on something above it or on one of its fields.
+        if (locks.some((lock) => isPrefix(lock.path.slice(0, path.length), path))) {
+          const where = formatPath(path);
+          throw new SpecError(`${where} is locked and runs on the sidecar, so sidecar.url must be locked too, or a later layer could repoint it (R1)`, { path: where });
+        }
+      }
+    }
+  }
+}
+
 /** Plugin profiles count as using the plugin, so `plugins.allow` applies (S8). */
 function checkPluginProfiles(spec: HarnessSpec, layers: readonly Provenance[]): void {
   const allow = isObject(spec.plugins) ? (spec.plugins.allow as string[] | null | undefined) : null;
@@ -150,6 +177,7 @@ export function budgetOf(raw: unknown): Budget {
   const budget: Budget = {};
   for (const field of BUDGET_FIELDS) {
     const item = value[field];
+    if (typeof item === "number" && !Number.isFinite(item)) throw new SpecError(`budget ${field} must be a finite number`, { field });
     budget[field] = item === null || item === undefined ? null : field === "deadline" ? parseDuration(item) : (item as number);
   }
   return budget;
@@ -249,8 +277,11 @@ export function specFromDocuments(app: RawMap, options: FromDocuments = {}): Eff
   const resolvers = options.resolvers ?? [new BuiltinProfiles(), new ProfileDirectories([])];
   const defaults = new BuiltinProfiles().resolve({ text: "profile://defaults", scheme: "profile", name: "defaults", range: null })!;
   const profiles = resolveExtends(appDoc.extends as string[] | undefined ?? [], resolvers, options.directory ?? null).filter((p) => p.layerName !== defaults.layerName);
-  // Built-in profiles go before org profiles, whatever order `extends` lists them in.
-  profiles.sort((a, b) => Number(a.kind !== "profile") - Number(b.kind !== "profile"));
+  // Built-in profiles, then the platform's, then the app's own, whatever order `extends`
+  // lists them in: a layer's locks bind only later layers, so the app's profiles must come
+  // after the locks that are meant to bind them (R1, ADR-0043).
+  const rank = (p: ResolvedProfile): number => (p.kind === "profile" ? 0 : p.appOwned ? 2 : 1);
+  profiles.sort((a, b) => rank(a) - rank(b));
   const layers: Layer[] = [{ name: defaults.layerName, kind: defaults.kind, data: layerBody(checkDocument(defaults.document, "Profile", defaults.layerName)) }];
   for (const profile of profiles) {
     const document = checkDocument(profile.document, "Profile", profile.source ?? profile.layerName);
@@ -267,6 +298,7 @@ export function specFromDocuments(app: RawMap, options: FromDocuments = {}): Eff
   const spec = validateSpec(data, merged.provenance);
   compileRules(spec);
   checkBands(merged.data, merged.provenance);
+  checkSidecarGuards(merged.data, merged.locks);
   checkPluginProfiles(spec, merged.layers);
   const level = assess(spec);
   if (LEVELS_RANK(level.level) < LEVELS_RANK(level.required)) {

@@ -437,6 +437,380 @@
       "expect": {
         "error": "spec_invalid"
       }
+    },
+    {
+      "name": "a [*] lock covers every item of the list",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "pii",
+                  "use": "pii.regex"
+                }
+              ]
+            },
+            "locks": [
+              "guardrails.input[*]"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "pii",
+                  "enabled": false
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "lock_violation",
+        "lock": "guardrails.input[*]"
+      }
+    },
+    {
+      "name": "a [*] lock stops new items in that list too",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "pii",
+                  "use": "pii.regex"
+                }
+              ]
+            },
+            "locks": [
+              "guardrails.input[*]"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "mine",
+                  "use": "pii.regex"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "lock_violation",
+        "lock": "guardrails.input[*]"
+      }
+    },
+    {
+      "name": "a [*] lock leaves other lists alone",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "pii",
+                  "use": "pii.regex"
+                }
+              ]
+            },
+            "locks": [
+              "guardrails.input[*]"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "output": [
+                {
+                  "id": "mine",
+                  "use": "secrets.scan"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "guardrails": {
+            "input": [
+              {
+                "id": "pii",
+                "use": "pii.regex"
+              }
+            ],
+            "output": [
+              {
+                "id": "mine",
+                "use": "secrets.scan"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a [*] lock allows restating an item",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "pii",
+                  "use": "pii.regex"
+                }
+              ]
+            },
+            "locks": [
+              "guardrails.input[*]"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "pii",
+                  "use": "pii.regex"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "guardrails": {
+            "input": [
+              {
+                "id": "pii",
+                "use": "pii.regex"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "a * lock covers every key of the map",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "tasks": {
+              "t": {
+                "budget": {
+                  "max_usd": 0.25
+                }
+              }
+            },
+            "locks": [
+              "tasks.*.budget"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "tasks": {
+              "t": {
+                "budget": {
+                  "max_usd": 999
+                }
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "lock_violation",
+        "lock": "tasks.*.budget"
+      }
+    },
+    {
+      "name": "a * lock covers keys added later",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "tasks": {
+              "t": {
+                "budget": {
+                  "max_usd": 0.25
+                }
+              }
+            },
+            "locks": [
+              "tasks.*.budget"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "tasks": {
+              "new": {
+                "budget": {
+                  "max_usd": 1
+                }
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "lock_violation",
+        "lock": "tasks.*.budget"
+      }
+    },
+    {
+      "name": "a * lock leaves sibling keys alone",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "tasks": {
+              "t": {
+                "budget": {
+                  "max_usd": 0.25
+                }
+              }
+            },
+            "locks": [
+              "tasks.*.budget"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "tasks": {
+              "t": {
+                "prompt": "p"
+              }
+            }
+          }
+        }
+      ],
+      "expect": {
+        "value": {
+          "tasks": {
+            "t": {
+              "budget": {
+                "max_usd": 0.25
+              },
+              "prompt": "p"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "replacing a subtree that holds a wildcard-locked value fails",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "tasks": {
+              "t": {
+                "budget": {
+                  "max_usd": 0.25
+                }
+              }
+            },
+            "locks": [
+              "tasks.*.budget"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "tasks": {
+              "t": 5
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "lock_violation",
+        "lock": "tasks.*.budget"
+      }
+    },
+    {
+      "name": "a layer can't write the merger's temporary id",
+      "layers": [
+        {
+          "name": "org",
+          "kind": "org",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "use": "pii.regex"
+                }
+              ]
+            },
+            "locks": [
+              "guardrails.input[pii.regex#1]"
+            ]
+          }
+        },
+        {
+          "name": "app",
+          "kind": "app",
+          "data": {
+            "guardrails": {
+              "input": [
+                {
+                  "id": "~auto1~",
+                  "enabled": false
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "expect": {
+        "error": "spec_invalid"
+      }
     }
   ]
 }

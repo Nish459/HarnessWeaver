@@ -7,7 +7,7 @@ Almost everything is configured in the spec and its overlays. The environment su
 | Variable | Read by | Meaning |
 | --- | --- | --- |
 | `HARNESSWEAVER_ENV` | the loader, the CLI, harnessd, `@harnessweaver/core` | The overlay to apply: `prod` applies `harness.prod.yaml` next to the spec. A missing overlay file is not an error. `-e`/`--env` and `load(env=...)` override it |
-| `HARNESSWEAVER_PROFILE_PATH` | the loader | Directories searched for `org://` profiles, separated like `PATH` (`:` on Linux and macOS, `;` on Windows). Searched before `.harness/profiles` next to the spec. `--profile-dir` and `profile_dirs=` add more |
+| `HARNESSWEAVER_PROFILE_PATH` | the loader | Directories searched for `org://` profiles, separated like `PATH` (`:` on Linux and macOS, `;` on Windows). Searched before `.harness/profiles` next to the spec, and the first directory holding a name owns it. `--profile-dir` and `profile_dirs=` add more |
 | `HARNESSWEAVER_TEST_MODE` | live providers | `1` makes every live provider refuse to call out: model providers, `http` tools, webhooks, remote guards, the OTLP exporter, `SidecarClient` (R14). Set by `harnessweaver test` |
 | `HARNESSD_TOKEN` | harnessd; clients through `sidecar.token_env` | The bearer token. harnessd refuses to start without it; `--token-env` names another variable |
 | `HARNESSD_IMAGE` | the dev stack's Compose file | The harnessd image (default `harnessd:dev`) |

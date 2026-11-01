@@ -56,7 +56,7 @@ load(path: string, options?: LoadOptions): Harness
 | `plugins` | Plugins the spec may use (`definePlugin`); JavaScript has no entry points, so they are passed in |
 | `tools` | Tool handlers by name: `{ refund_payment: (args, env) => ... }`. Each tool still needs its manifest |
 | `clock` | An injected clock; `new FakeClock()` in tests |
-| `sidecar` | A `SidecarClient` for guards declared `where: sidecar`; defaults to one built from the spec's `sidecar` section |
+| `sidecar` | A `SidecarClient` for guards declared `where: sidecar`; defaults to one built from the spec's `sidecar` section. A lock on `sidecar.url` doesn't bind it: it is app code, which runs with the app's authority |
 
 Loading fails with a `SpecError` subclass for anything the spec asks TypeScript to enforce that it can't: an unknown provider, a guard or routing stage with no TypeScript provider (unless the guard is `where: sidecar`), and every check Python makes (locks, bounds, levels, expressions, unknown keys). `harness.name`, `harness.spec` (the `EffectiveSpec`, including `spec.data`, the merged spec, and `spec.level`) and `harness.hooks(task?)` describe what was loaded.
 

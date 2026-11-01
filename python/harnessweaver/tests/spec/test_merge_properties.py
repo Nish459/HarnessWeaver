@@ -96,3 +96,38 @@ def test_merging_maps_is_associative(
         ).data
 
     assert merge(merge(a, b)["x"], c) == merge(a, merge(b, c)["x"])
+
+
+stages = st.sampled_from(["input", "output"])
+
+
+@given(stages, stages, ids, st.sampled_from(list("abcdefg")))
+def test_a_wildcard_lock_covers_every_item_of_its_list(
+    locked: str, edited: str, base: list[str], item: str
+) -> None:
+    layers = [
+        Layer(
+            "org",
+            LayerKind.ORG,
+            {
+                "guardrails": {locked: [{"id": i, "use": "u"} for i in base]},
+                "locks": [f"guardrails.{locked}[*]"],
+            },
+        ),
+        Layer("app", LayerKind.APP, {"guardrails": {edited: [{"id": item, "use": "v"}]}}),
+    ]
+    if locked == edited:
+        with pytest.raises(LockViolation):
+            merge_layers(layers)
+    else:
+        assert merge_layers(layers).data["guardrails"][edited] == [{"id": item, "use": "v"}]
+
+
+@given(st.floats(0, 100, allow_nan=False))
+def test_null_never_passes_a_maximum(maximum: float) -> None:
+    layers = [
+        Layer("org", LayerKind.ORG, {"bounds": {"budgets.per_run.max_usd": {"max": maximum}}}),
+        Layer("app", LayerKind.APP, {"budgets": {"per_run": {"max_usd": None}}}),
+    ]
+    with pytest.raises(BoundViolation):
+        merge_layers(layers)

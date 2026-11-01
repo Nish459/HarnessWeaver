@@ -236,3 +236,246 @@ def test_diff_shows_value_lock_and_level_changes(project: Path) -> None:
     ]
     assert '| `models.default` | changed | `"fast"` | `"strong"` |' in render_diff(diff)
     assert render_diff(diff_specs(before, before)) == "No changes to the effective spec."
+
+
+# -- who owns a profile: an app can't get ahead of, or replace, its platform's baseline ----------
+
+BASELINE = PROFILE + (
+    "metadata: {{ name: acme-baseline, version: {version} }}\n"
+    "guardrails: {{ input: [ {{ id: base-pii, use: pii.regex, action: redact }} ] }}\n"
+    "locks: [ observability.capture_content, 'guardrails.input[base-pii]' ]\n"
+)
+
+
+def _platform(tmp_path: Path, version: str = "1.1.0") -> Path:
+    directory = tmp_path / "platform"
+    write(directory / "acme-baseline.yaml", BASELINE.format(version=version))
+    return directory
+
+
+def _spec(tmp_path: Path, extends: str, body: str = "") -> Path:
+    return write(
+        tmp_path / "app" / "harness.yaml",
+        HARNESS + f"metadata: {{ name: x }}\nextends: {extends}\n{body}",
+    )
+
+
+def test_an_app_copy_cant_outrank_the_platforms_profile(tmp_path: Path) -> None:
+    platform = _platform(tmp_path)
+    path = _spec(
+        tmp_path, '[ "org://acme-baseline@^1" ]', "observability: { capture_content: true }\n"
+    )
+    write(
+        tmp_path / "app" / ".harness" / "profiles" / "acme-baseline.yaml",
+        PROFILE + "metadata: { name: acme-baseline, version: 1.99.0 }\n",
+    )
+    with pytest.raises(LockViolation):
+        load_spec(path, env="", profile_dirs=[platform])
+
+
+def test_narrowing_the_range_doesnt_fall_through_to_an_app_copy(tmp_path: Path) -> None:
+    platform = _platform(tmp_path)
+    path = _spec(tmp_path, '[ "org://acme-baseline@^1.2" ]')
+    write(
+        tmp_path / "app" / ".harness" / "profiles" / "acme-baseline.yaml",
+        PROFILE + "metadata: { name: acme-baseline, version: 1.99.0 }\n",
+    )
+    with pytest.raises(SpecError, match="can't find profile"):
+        load_spec(path, env="", profile_dirs=[platform])
+
+
+def test_the_highest_version_in_the_owning_directory_wins(tmp_path: Path) -> None:
+    platform = _platform(tmp_path)
+    write(platform / "acme-baseline@1.2.0.yaml", BASELINE.format(version="1.2.0"))
+    path = _spec(tmp_path, '[ "org://acme-baseline@^1" ]')
+    effective = load_spec(path, env="", profile_dirs=[platform])
+    assert effective.layers[1].layer == "org://acme-baseline@1.2.0"
+
+
+@pytest.mark.parametrize(
+    ("reference", "file"),
+    [("./pre.yaml", "pre.yaml"), ("org://pre", ".harness/profiles/pre.yaml")],
+)
+def test_app_profiles_merge_after_the_platforms(tmp_path: Path, reference: str, file: str) -> None:
+    platform = _platform(tmp_path)
+    path = _spec(tmp_path, f'[ "{reference}", "org://acme-baseline@^1" ]')
+    write(
+        tmp_path / "app" / file,
+        PROFILE
+        + "metadata: { name: pre }\n"
+        + "guardrails: { input: [ { id: base-pii, enabled: false } ] }\n",
+    )
+    with pytest.raises(LockViolation, match="base-pii"):
+        load_spec(path, env="", profile_dirs=[platform])
+
+
+def test_a_file_named_by_an_app_profile_is_the_apps_too(tmp_path: Path) -> None:
+    platform = _platform(tmp_path)
+    path = _spec(tmp_path, '[ "./team.yaml", "org://acme-baseline@^1" ]')
+    write(
+        tmp_path / "app" / "team.yaml", PROFILE + "metadata: {name: t}\nextends: [ ./pre.yaml ]\n"
+    )
+    write(tmp_path / "app" / "pre.yaml", PROFILE + "metadata: {name: p}\nmodels: {default: fast}\n")
+    effective = load_spec(path, env="", profile_dirs=[platform])
+    assert [layer.layer for layer in effective.layers[1:]] == [
+        "org://acme-baseline@1.1.0",
+        "./pre.yaml",
+        "./team.yaml",
+        "harness.yaml",
+    ]
+
+
+def test_a_platform_profiles_file_parent_stays_the_platforms(tmp_path: Path) -> None:
+    platform = tmp_path / "platform"
+    write(
+        platform / "acme-baseline.yaml",
+        PROFILE + "metadata: { name: acme-baseline, version: 1.0.0 }\nextends: [ common.yaml ]\n",
+    )
+    write(
+        platform / "common.yaml",
+        PROFILE
+        + "metadata: { name: common }\n"
+        + "guardrails: { input: [ { id: base-pii, use: pii.regex } ] }\n"
+        + "locks: [ 'guardrails.input[base-pii]' ]\n",
+    )
+    path = _spec(tmp_path, '[ "./pre.yaml", "org://acme-baseline@^1" ]')
+    write(
+        tmp_path / "app" / "pre.yaml",
+        PROFILE
+        + "metadata: { name: pre }\n"
+        + "guardrails: { input: [ { id: base-pii, enabled: false } ] }\n",
+    )
+    with pytest.raises(LockViolation, match="base-pii"):
+        load_spec(path, env="", profile_dirs=[platform])
+
+
+def test_the_same_file_named_by_the_app_and_the_platform_is_the_platforms(tmp_path: Path) -> None:
+    platform = tmp_path / "platform"
+    write(
+        platform / "acme-baseline.yaml",
+        PROFILE + "metadata: { name: acme-baseline, version: 1.0.0 }\nextends: [ common.yaml ]\n",
+    )
+    write(
+        platform / "common.yaml",
+        PROFILE
+        + "metadata: { name: common }\n"
+        + "guardrails: { input: [ { id: base-pii, use: pii.regex } ] }\n",
+    )
+    path = _spec(tmp_path, '[ "./pre.yaml", "../platform/common.yaml", "org://acme-baseline@^1" ]')
+    write(tmp_path / "app" / "pre.yaml", PROFILE + "metadata: { name: pre }\n")
+    effective = load_spec(path, env="", profile_dirs=[platform])
+    assert [layer.layer for layer in effective.layers[1:]] == [
+        "common.yaml",
+        "org://acme-baseline@1.0.0",
+        "./pre.yaml",
+        "harness.yaml",
+    ]
+
+
+def test_an_app_file_with_the_same_text_keeps_the_platforms_parent(tmp_path: Path) -> None:
+    platform = tmp_path / "platform"
+    write(
+        platform / "acme-baseline.yaml",
+        PROFILE + "metadata: { name: acme-baseline, version: 1.0.0 }\nextends: [ common.yaml ]\n",
+    )
+    write(
+        platform / "common.yaml",
+        PROFILE
+        + "metadata: { name: common }\n"
+        + "observability: { capture_content: false }\n"
+        + "locks: [ observability.capture_content ]\n",
+    )
+    path = _spec(
+        tmp_path,
+        '[ "common.yaml", "org://acme-baseline@^1" ]',
+        "observability: { capture_content: true }\n",
+    )
+    write(tmp_path / "app" / "common.yaml", PROFILE + "metadata: { name: decoy }\n")
+    with pytest.raises(LockViolation, match="capture_content"):
+        load_spec(path, env="", profile_dirs=[platform])
+
+
+def test_same_reference_text_in_another_directory_is_not_a_cycle(tmp_path: Path) -> None:
+    write(
+        tmp_path / "a" / "x.yaml",
+        PROFILE + "metadata: { name: a }\nextends: [ ../b/x.yaml ]\n",
+    )
+    write(tmp_path / "b" / "x.yaml", PROFILE + "metadata: { name: b }\n")
+    write(
+        tmp_path / "harness.yaml",
+        HARNESS + "metadata: { name: x }\nextends: [ a/x.yaml, b/x.yaml ]\n",
+    )
+    effective = load_spec(tmp_path / "harness.yaml", env="")
+    assert [layer.layer for layer in effective.layers[1:]] == [
+        "../b/x.yaml",
+        "a/x.yaml",
+        "harness.yaml",
+    ]
+
+
+# -- a locked guard that runs on the sidecar is only as fixed as sidecar.url ---------------------
+
+_REMOTE = (
+    "sidecar: {{ url: 'http://127.0.0.1:7070' }}\n"
+    "guardrails: {{ input: [ {{ id: pii, use: acme.pii, where: sidecar{extra} }} ] }}\n"
+    "locks: [ {locks} ]\n"
+)
+
+
+@pytest.mark.parametrize(
+    ("extra", "locks", "fails"),
+    [
+        ("", "'guardrails.input[pii]'", True),
+        ("", "'guardrails.input[*]'", True),
+        ("", "'guardrails.input[pii].enabled'", True),
+        ("", "'guardrails.input[pii]', sidecar.url", False),
+        ("", "'guardrails.input[pii]', sidecar", False),
+        ("", "models", False),  # an unlocked guard could just be switched off
+        (", enabled: false", "'guardrails.input[pii]'", False),
+    ],
+)
+def test_a_locked_sidecar_guard_needs_sidecar_url_locked(
+    tmp_path: Path, extra: str, locks: str, fails: bool
+) -> None:
+    platform = tmp_path / "platform"
+    write(
+        platform / "base.yaml",
+        PROFILE
+        + "metadata: { name: base, version: 1.0.0 }\n"
+        + _REMOTE.format(extra=extra, locks=locks),
+    )
+    path = _spec(tmp_path, '[ "org://base@^1" ]')
+    if fails:
+        with pytest.raises(SpecError, match=r"sidecar\.url"):
+            load_spec(path, env="", profile_dirs=[platform])
+    else:
+        load_spec(path, env="", profile_dirs=[platform])
+
+
+def test_a_locked_task_guard_on_the_sidecar_needs_the_lock_too(tmp_path: Path) -> None:
+    platform = tmp_path / "platform"
+    write(
+        platform / "base.yaml",
+        PROFILE
+        + "metadata: { name: base, version: 1.0.0 }\n"
+        + "sidecar: { url: 'http://127.0.0.1:7070' }\n"
+        + "tasks: { t: { guardrails: { input: [ { id: g, use: acme.pii, where: sidecar } ] } } }\n"
+        + "locks: [ 'tasks.t.guardrails.input[g]' ]\n",
+    )
+    path = _spec(tmp_path, '[ "org://base@^1" ]')
+    with pytest.raises(SpecError, match=r"sidecar\.url"):
+        load_spec(path, env="", profile_dirs=[platform])
+
+
+def test_diff_names_a_substituted_layer(tmp_path: Path) -> None:
+    write(tmp_path / "team.yaml", PROFILE + "metadata: { name: t }\n")
+    write(tmp_path / "other.yaml", PROFILE + "metadata: { name: o }\n")
+    write(tmp_path / "a.yaml", HARNESS + "metadata: { name: x }\nextends: [ ./team.yaml ]\n")
+    write(tmp_path / "b.yaml", HARNESS + "metadata: { name: x }\nextends: [ ./other.yaml ]\n")
+    diff = diff_specs(
+        load_spec(tmp_path / "a.yaml", env=""), load_spec(tmp_path / "b.yaml", env="")
+    )
+    assert not diff.empty
+    assert diff.layers_removed == ("./team.yaml",)
+    assert diff.layers_added == ("./other.yaml",)
+    assert "Layer removed: `./team.yaml`" in render_diff(diff)

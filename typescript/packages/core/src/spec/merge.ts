@@ -2,17 +2,20 @@
  * Layered merging of spec documents, with provenance, locks and bounds (DESIGNS No. 11,
  * fixtures suite `merge`).
  *
- * - Layers merge in order: defaults, built-in profiles, org profiles, the app, an overlay.
+ * - Layers merge in order: defaults, built-in profiles, org profiles, the app's own
+ *   profiles, the app, an overlay.
  * - Scalars and plain lists: the later layer wins. Maps merge key by key.
  * - Keyed lists (guard stages, middleware, routing cascades, rule lists) merge by `id`:
  *   a known id updates its item in place, new items are appended. Items without an id
  *   get `<use>#<n>` after merging (`rule#<n>` in rule lists, `item#<n>` otherwise).
  * - `null` can unset a scalar, but can't remove a map or a keyed list.
- * - A profile's lock covers that path and everything under it for later layers;
+ * - A profile's lock covers that path and everything under it for later layers, and
+ *   `*` and `[*]` in it match any key and any item;
  *   changing a locked value is a LockViolation (R1), restating it is fine (ADR-0018).
  * - Bounds accumulate and are checked on the result: out of bounds is a
  *   BoundViolation, never clamped (R10). Bounds on `budgets.per_run.<field>` also
- *   apply to every task's budget.
+ *   apply to every task's budget. A `null` at a path with a maximum removes the limit,
+ *   so it's a BoundViolation too.
  */
 
 import { formatDuration, parseDuration } from "../durations.js";
@@ -69,6 +72,7 @@ export interface Merged {
 const KEYED_LISTS = ["guardrails.*", "middleware", "routing.*.cascade", "policy.rules", "validation.rules", "tasks.*.guardrails.*"].map(parsePath);
 const PROFILE_ONLY = ["locks", "bounds", "require_level"];
 const AUTO = "~auto";
+const FORBIDDEN_KEY = "__proto__"; // assigning it would set a prototype, not a key
 
 const isKeyed = (path: SpecPath): boolean => KEYED_LISTS.some((pattern) => matches(pattern, path));
 
@@ -76,7 +80,7 @@ const isKeyed = (path: SpecPath): boolean => KEYED_LISTS.some((pattern) => match
 function same(a: unknown, b: unknown): boolean {
   if (isObject(a) && isObject(b)) {
     const keys = Object.keys(a);
-    return keys.length === Object.keys(b).length && keys.every((k) => k in b && same(a[k], b[k]));
+    return keys.length === Object.keys(b).length && keys.every((k) => Object.hasOwn(b, k) && same(a[k], b[k]));
   }
   if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((x, i) => same(x, b[i]));
   return a === b;
@@ -112,7 +116,7 @@ class Merger {
   checkSubtreeLocks(path: SpecPath): void {
     this.checkLocks(path);
     for (const lock of this.locks) {
-      if (isPrefix(path, lock.path)) {
+      if (isPrefix(lock.path.slice(0, path.length), path)) {
         throw new LockViolation(`replacing ${formatPath(path)} would change ${lock.text}, which ${describe(lock.declaredBy)} locked (R1)`, {
           path: formatPath(path),
           lock: lock.text,
@@ -165,7 +169,14 @@ class Merger {
 
   mergeMap(path: Segment[], current: RawMap | undefined, incoming: RawMap, prov: Provenance): RawMap {
     const result: RawMap = { ...(current ?? {}) };
-    for (const [key, value] of Object.entries(incoming)) result[key] = this.mergeValue([...path, key], result[key], value, prov);
+    for (const [key, value] of Object.entries(incoming)) {
+      if (key === FORBIDDEN_KEY) {
+        const where = formatPath([...path, key]);
+        throw new SpecError(`${where}: ${key} can't be a key (in ${describe(prov)})`, { path: where });
+      }
+      // Only the map's own keys: a key named `constructor` has no value here yet.
+      result[key] = this.mergeValue([...path, key], Object.hasOwn(result, key) ? result[key] : undefined, value, prov);
+    }
     return result;
   }
 
@@ -186,6 +197,10 @@ class Merger {
         item = { ...item, id };
       } else if (typeof id !== "string" || !id) {
         throw new SpecError(`ids in ${where} must be non-empty strings`, { path: where });
+      } else if (id.startsWith(AUTO)) {
+        // Only the merger makes these: a layer naming one could reach an id-less item
+        // that a lock can only name by its final id (R1).
+        throw new SpecError(`ids in ${where} can't start with ${AUTO}`, { path: where });
       }
       const itemPath = [...path, { id: id as string }];
       const position = positions.get(id as string);
@@ -311,7 +326,7 @@ function* valuesAt(data: unknown, pattern: SpecPath, path: Segment[] = []): Gene
     return;
   }
   if (!isObject(data)) return;
-  const keys = want === "*" ? Object.keys(data) : want in data ? [want] : [];
+  const keys = want === "*" ? Object.keys(data) : Object.hasOwn(data, want) ? [want] : [];
   for (const key of keys) yield* valuesAt(data[key], pattern, [...path, key]);
 }
 
@@ -335,8 +350,8 @@ export function checkBounds(data: RawMap, bounds: readonly Bound[], provenance: 
         let measured: number;
         try {
           if (bound.durations) measured = parseDuration(value);
-          else if (typeof value === "number") measured = value;
-          else throw new TypeError("not a number");
+          else if (typeof value === "number" && Number.isFinite(value)) measured = value;
+          else throw new TypeError("not a finite number");
         } catch {
           throw new SpecError(`${key}${where} can't be compared with the bound ${bound.text}`, { path: key });
         }
@@ -347,6 +362,29 @@ export function checkBounds(data: RawMap, bounds: readonly Bound[], provenance: 
         if (bound.minimum !== null && bound.minimum > measured) {
           throw new BoundViolation(`${key} = ${show(measured)}${where} is below the minimum ${show(bound.minimum)} that ${describe(bound.declaredBy)} allows (R10)`, { path: key, bound: bound.text });
         }
+      }
+    }
+  }
+}
+
+/**
+ * Refuse a layer's `null` at a path with a maximum: it removes the limit (R10).
+ *
+ * This checks merged layers only. `checkBounds` also sees a run's budget, where an unset
+ * field is normal. A null the framework defaults left in place removes nothing, and a null
+ * on a task budget leaves the per-run limit in force, so neither is refused.
+ *
+ * @throws BoundViolation on the first such value.
+ */
+function checkRemovedLimits(data: RawMap, bounds: readonly Bound[], provenance: ReadonlyMap<string, Provenance>): void {
+  for (const bound of bounds) {
+    if (bound.maximum === null) continue;
+    for (const [path, value] of valuesAt(data, bound.path)) {
+      const key = formatPath(path);
+      const origin = provenance.get(key);
+      if (value === null && origin !== undefined && origin.kind !== "defaults") {
+        const limit = bound.durations ? formatDuration(bound.maximum) : String(bound.maximum);
+        throw new BoundViolation(`${key} = null (set by ${describe(origin)}) removes the maximum ${limit} that ${describe(bound.declaredBy)} allows (R10)`, { path: key, bound: bound.text });
       }
     }
   }
@@ -380,6 +418,7 @@ export function mergeLayers(layers: readonly Layer[]): Merged {
   }
   merger.assignAutoIds();
   checkBounds(merger.data, bounds, merger.provenance);
+  checkRemovedLimits(merger.data, bounds, merger.provenance);
   return { data: merger.data, provenance: merger.provenance, locks: merger.locks, bounds, layers: applied };
 }
 

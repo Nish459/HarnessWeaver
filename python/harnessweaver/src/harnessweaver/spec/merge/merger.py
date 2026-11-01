@@ -7,7 +7,7 @@ from typing import Any, Final
 
 from harnessweaver.core.errors import LockViolation, SpecError
 from harnessweaver.spec._raw import as_list, as_map
-from harnessweaver.spec.merge.bounds import check_bounds, read_bounds
+from harnessweaver.spec.merge.bounds import check_bounds, check_removed_limits, read_bounds
 from harnessweaver.spec.merge.layers import (
     KEYED_LISTS,
     Bound,
@@ -24,6 +24,7 @@ __all__ = ["merge_layers"]
 
 _PROFILE_ONLY: Final = frozenset({"locks", "bounds", "require_level"})
 _AUTO_PREFIX: Final = "~auto"
+_FORBIDDEN_KEY: Final = "__proto__"  # would set a prototype in TypeScript, not a key (R11)
 
 
 def _is_keyed(path: SpecPath) -> bool:
@@ -80,7 +81,7 @@ class _Merger:
         """A replaced subtree must not contain locked values either."""
         self.check_locks(path)
         for lock in self.locks:
-            if is_prefix(path, lock.path):
+            if is_prefix(lock.path[: len(path)], path):
                 raise LockViolation(
                     f"replacing {format_path(path)} would change {lock.text}, which "
                     f"{lock.declared_by.describe()} locked (R1)",
@@ -152,6 +153,9 @@ class _Merger:
             if not isinstance(key, str):
                 where = format_path(path) or "spec"
                 raise SpecError(f"{where} has a non-string key", path=format_path(path))
+            if key == _FORBIDDEN_KEY:
+                where = format_path((*path, key))
+                raise SpecError(f"{where}: {key} can't be a key (in {prov.describe()})", path=where)
             result[key] = self.merge_value((*path, key), result.get(key), value, prov)
         return result
 
@@ -175,6 +179,10 @@ class _Merger:
                 item = {**item, "id": item_id}
             elif not isinstance(item_id, str) or not item_id:
                 raise SpecError(f"ids in {where} must be non-empty strings", path=where)
+            elif item_id.startswith(_AUTO_PREFIX):
+                # Only the merger makes these: a layer naming one could reach an id-less item
+                # that a lock can only name by its final id (R1).
+                raise SpecError(f"ids in {where} can't start with {_AUTO_PREFIX}", path=where)
             item_path = (*path, Item(item_id))
             if item_id in positions:
                 position = positions[item_id]
@@ -277,4 +285,5 @@ def merge_layers(layers: Sequence[Layer]) -> Merged:
     merger.assign_auto_ids()
     merged = Merged(merger.data, merger.provenance, merger.locks, bounds, applied)
     check_bounds(merged.data, bounds, merged.provenance)
+    check_removed_limits(merged.data, bounds, merged.provenance)
     return merged

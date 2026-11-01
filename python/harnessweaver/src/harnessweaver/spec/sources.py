@@ -8,16 +8,22 @@ References:
 * ``org://acme-baseline@^2`` is an org profile, found on the profile search
   path: ``HARNESSWEAVER_PROFILE_PATH`` (os.pathsep-separated), then
   ``.harness/profiles`` next to the app spec. Files are ``<name>.yaml`` or
-  ``<name>@<version>.yaml``; the highest version that matches the range wins.
+  ``<name>@<version>.yaml``. The first directory holding any file for a name owns
+  that name, and the highest version there that matches the range wins.
 * Anything else is a file path, relative to the document that names it.
 
 A profile can extend other profiles; parents come before the profile itself.
+
+A profile is *app-owned* when the app's team can write it: it's in ``.harness/profiles``
+next to the app spec, or it's a file named by the app spec or another app-owned profile.
+Everything else belongs to the platform. The loader merges app-owned profiles after the
+platform's, so the platform's locks bind them (R1, ADR-0043).
 """
 
 import os
 import re
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from importlib import resources
 from pathlib import Path
 from typing import Any, Final, Protocol
@@ -85,6 +91,17 @@ class ResolvedProfile:
     document: dict[str, Any]
     source: str | None
     directory: Path | None  # where its own relative references resolve from
+    app_owned: bool = False  # the app's team can write it, so it merges after the platform's
+
+    @property
+    def identity(self) -> str:
+        """What makes two profiles the same one: the file, for a profile read from a file.
+
+        The name won't do: two files can be named by the same relative text.
+        """
+        if self.directory is not None and self.source is not None:
+            return str(Path(self.source).resolve())
+        return self.layer_name
 
 
 class ProfileResolver(Protocol):
@@ -132,8 +149,10 @@ class BuiltinProfiles:
 class ProfileDirectories:
     """Org profiles (``org://name@range``) and files, from search directories."""
 
-    def __init__(self, directories: Sequence[Path]) -> None:
+    def __init__(self, directories: Sequence[Path], app_directory: Path | None = None) -> None:
+        """Search ``directories`` in order; ``app_directory`` is the one the app's team owns."""
         self.directories = list(directories)
+        self.app_directory = app_directory
 
     @classmethod
     def from_environment(
@@ -143,36 +162,53 @@ class ProfileDirectories:
         directories = list(extra)
         env = os.environ.get(PROFILE_PATH_ENV, "")
         directories.extend(Path(p) for p in env.split(os.pathsep) if p)
-        if app_directory is not None:
-            directories.append(app_directory / ".harness" / "profiles")
-        return cls(directories)
+        if app_directory is None:
+            return cls(directories)
+        app_profiles = app_directory / ".harness" / "profiles"
+        return cls([*directories, app_profiles], app_profiles)
 
     def resolve(self, ref: ProfileRef, relative_to: Path | None) -> ResolvedProfile | None:
         if ref.scheme == "file":
             return self._resolve_file(ref, relative_to)
         if ref.scheme != "org":
             return None
-        candidates: list[tuple[Version | None, Path, dict[str, Any]]] = []
+        # The first directory holding the name owns it. Versions are never compared across
+        # directories, or a later directory could outrank an earlier one with a higher number.
         for directory in self.directories:
-            for path in [
-                directory / f"{ref.name}.yaml",
-                *sorted(directory.glob(f"{ref.name}@*.yaml")),
-            ]:
-                if not path.is_file():
-                    continue
-                document = load_yaml_file(path)
-                if not isinstance(document, dict):
-                    raise SpecError(f"{path} is not a map")
-                version = _version_of(document)  # pyright: ignore[reportUnknownArgumentType]
-                if ref.range is None or (version is not None and ref.range.contains(version)):
-                    candidates.append((version, path, document))  # pyright: ignore[reportUnknownArgumentType]
+            paths = [
+                path
+                for path in [
+                    directory / f"{ref.name}.yaml",
+                    *sorted(directory.glob(f"{ref.name}@*.yaml")),
+                ]
+                if path.is_file()
+            ]
+            if paths:
+                break
+        else:
+            return None
+        candidates: list[tuple[Version | None, Path, dict[str, Any]]] = []
+        for path in paths:
+            document = load_yaml_file(path)
+            if not isinstance(document, dict):
+                raise SpecError(f"{path} is not a map")
+            version = _version_of(document)  # pyright: ignore[reportUnknownArgumentType]
+            if ref.range is None or (version is not None and ref.range.contains(version)):
+                candidates.append((version, path, document))  # pyright: ignore[reportUnknownArgumentType]
         if not candidates:
             return None
         version, path, document = max(
             candidates, key=lambda c: (c[0] is not None, c[0] or Version(0, 0, 0))
         )
         label = f"org://{ref.name}@{version}" if version else f"org://{ref.name}"
-        return ResolvedProfile(label, LayerKind.ORG, document, str(path), path.parent)
+        return ResolvedProfile(
+            label,
+            LayerKind.ORG,
+            document,
+            str(path),
+            path.parent,
+            app_owned=directory == self.app_directory,
+        )
 
     def _resolve_file(self, ref: ProfileRef, relative_to: Path | None) -> ResolvedProfile | None:
         path = Path(ref.name)
@@ -220,13 +256,27 @@ class PluginProfiles:
         return ResolvedProfile(label, LayerKind.ORG, document, source, None)  # pyright: ignore[reportUnknownArgumentType]
 
 
+def _add_profile(resolved: list[ResolvedProfile], profile: ResolvedProfile) -> None:
+    """Add a profile once. A file both the app and the platform name stays the platform's."""
+    for index, known in enumerate(resolved):
+        if known.identity == profile.identity:
+            if known.app_owned and not profile.app_owned:
+                resolved[index] = profile
+            return
+    resolved.append(profile)
+
+
 def resolve_extends(
     extends: Iterable[str],
     resolvers: Sequence[ProfileResolver],
     relative_to: Path | None,
     _stack: tuple[str, ...] = (),
+    _named_by_app: bool = True,
 ) -> list[ResolvedProfile]:
     """Resolve references (and their own ``extends``), parents first, without duplicates.
+
+    ``extends`` is the app spec's list, so the files it names are app-owned, and so are the
+    files an app-owned profile names (ADR-0043).
 
     Raises:
         UnknownProvider: (as SpecError) if a reference can't be found.
@@ -238,8 +288,10 @@ def resolve_extends(
         found = next((r for r in (res.resolve(ref, relative_to) for res in resolvers) if r), None)
         if found is None:
             raise SpecError(f"can't find profile {text!r}; see {PROFILE_PATH_ENV}", reference=text)
-        if found.layer_name in _stack:
-            chain = " -> ".join((*_stack, found.layer_name))
+        if ref.scheme == "file" and _named_by_app:
+            found = replace(found, app_owned=True)
+        if found.identity in _stack:
+            chain = " -> ".join((*_stack, found.identity))
             raise SpecError(f"profiles extend each other in a cycle: {chain}")
         if found.document.get("kind") != "Profile":
             raise SpecError(f"{found.layer_name} must be a document of kind Profile")
@@ -252,10 +304,9 @@ def resolve_extends(
             [str(p) for p in parents],  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
             resolvers,
             found.directory or relative_to,
-            (*_stack, found.layer_name),
+            (*_stack, found.identity),
+            found.app_owned,
         ):
-            if all(parent.layer_name != r.layer_name for r in resolved):
-                resolved.append(parent)
-        if all(found.layer_name != r.layer_name for r in resolved):
-            resolved.append(found)
+            _add_profile(resolved, parent)
+        _add_profile(resolved, found)
     return resolved

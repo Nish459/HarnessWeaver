@@ -452,20 +452,21 @@ Sections that pick a provider with `use:` (guards, routing stages, context sourc
 | Plain list | Replaced by the later layer | `routing.<r>.options` |
 | Keyed list | Merged by `id`. A known id updates that item in place; new items are appended; earlier items keep their position and can't be removed. Later items run *inside* earlier ones | App's injection guard runs inside the baseline's `base-pii` |
 | Item without an `id` | Appended, then given `<use>#<n>` (`rule#<n>` in rule lists, `item#<n>` otherwise), skipping ids already taken | `pii.regex#1` |
-| `null` | Unsets a scalar. Can't remove a map or a keyed list | `models.default: null` |
+| `null` | Unsets a scalar. Can't remove a map or a keyed list, or a value a bound gives a maximum (except one the framework defaults left in place) | `models.default: null` |
 | Type change (map vs. scalar) | Replaces the whole subtree, unless that would change a locked value | Rare; usually a mistake |
 | Locked path | Changing it, or anything under it, is a load error (R1). Restating the same value is allowed (ADR-0018) | `observability.capture_content: true` fails |
 | Locked list item `path[id]` | Changing that item is a load error; other items can still be added | `guardrails.input[base-pii]` |
 | Locked list `path` | The list can't change or grow | `guardrails.input` |
+| Wildcard lock | `*` and `[*]` cover every key or item, including ones added later | `guardrails.input[*]`, `tasks.*.budget` |
 | Bounded number or duration | A value outside the bound is a load error, never a clamp (R10). Bounds from several profiles all apply | `max_usd: 8.00` fails against `max: 5.00` |
 | Task budgets | Also checked against the `budgets.per_run.<field>` bounds | A task can't exceed the org's per-run cap |
 | Per-run override | Only fields listed in the task's `budget.overridable`, only downward, and still within bounds | A caller can lower `max_usd`, never raise it or remove it |
 
 The keyed lists are `guardrails.<stage>`, `middleware`, `routing.<router>.cascade`, `policy.rules`, `validation.rules` and `tasks.<task>.guardrails.<stage>`. Shorthands are expanded before merging: `runner: session` becomes `runner: { use: session }`, and a single `tools.manifests` glob becomes a list. Lock and bound paths use `a.b[id].c`, with `*` matching any map key and `[*]` any item. The `merge` conformance suite pins down every rule above.
 
-A layer's own locks bind only later layers. Only profiles can put middleware in the `baseline` band (S8). Every cel-lite rule is compiled when the spec loads, against the names it may use: `principal`, `tenant`, `task`, `tool`, `args` and `labels` for `policy.rules`, and `output`, `input` and `task` for `validation.rules`. A typo therefore fails at load, not mid-run (R4).
+A layer's own locks bind only later layers, so profiles the app's team can write merge after the platform's, whatever order `extends` lists them in (ADR-0043). The first directory on the search path holding a name owns it. A locked `where: sidecar` guard needs a lock covering `sidecar.url`. Only profiles can put middleware in the `baseline` band (S8). Every cel-lite rule is compiled when the spec loads, against the names it may use: `principal`, `tenant`, `task`, `tool`, `args` and `labels` for `policy.rules`, and `output`, `input` and `task` for `validation.rules`. A typo therefore fails at load, not mid-run (R4).
 
-**Provenance.** Every effective value remembers the layer and file it came from. `harnessweaver spec explain` prints it, with locks and bounds. `harnessweaver spec diff` compares two specs, including locks and the adoption level, and runs in CI on every PR.
+**Provenance.** Every effective value remembers the layer and file it came from. `harnessweaver spec explain` prints it, with locks and bounds. `harnessweaver spec diff` compares two specs, including locks, profile layers and the adoption level, and runs in CI on every PR. A `git:` side is loaded from that ref's own tree.
 
 **Adoption level.** `levels.py` computes the level the effective spec reaches. Levels are cumulative, and each requirement has a stable code (the `levels` conformance suite):
 
@@ -1284,6 +1285,7 @@ Each ADR records a decision, the reason for it, and its status, in its own file 
 | [0040](docs/adr/0040-typescript-sdk.md) | The TypeScript SDK | Accepted |
 | [0041](docs/adr/0041-docs-site.md) | The docs site: MkDocs and Material | Accepted |
 | [0042](docs/adr/0042-docs-structure.md) | The docs follow FastAPI's structure, with tested tutorial code | Accepted |
+| [0043](docs/adr/0043-profile-ownership.md) | Profiles an app's team can write merge after the platform's | Accepted |
 
 ## 29. Deviations from the design guide
 

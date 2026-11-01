@@ -21,7 +21,7 @@ An org baseline is the profile your platform or security team publishes for ever
 | `guardrails.input[base-pii]`, `guardrails.output[base-secrets]` | The baseline's own guards, by id, so apps can still add their own |
 | `tools.require_manifest`, `tools.approval_by_risk` | No tool without a manifest (S2), and high-risk calls need a person |
 
-A lock on a keyed-list item (`path[id]`) forbids changing that item, including `enabled: false`, but lets apps add items after it. [Locks](../advanced/layers.md#locks) lists every form.
+A lock on a keyed-list item (`path[id]`) forbids changing that item, including `enabled: false`, but lets apps add items after it. A wildcard (`guardrails.input[*]`) also stops apps adding items to that list. If a locked guard is declared `where: sidecar`, lock `sidecar.url` too. [Locks](../advanced/layers.md#locks) lists every form.
 
 ## 3. Bound numbers instead of locking them
 
@@ -51,7 +51,7 @@ Write an overlay that tries to break each lock and bound, and expect each to fai
 Put it where every app finds it:
 
 - a directory on `HARNESSWEAVER_PROFILE_PATH` (separated like `PATH`), which apps reference as `org://acme-baseline@^1`;
-- `.harness/profiles/` in a repository directory apps share;
+- `.harness/profiles/` next to the spec, only when the team that owns the app also owns the baseline: a team can edit files in its own repository, so this is no boundary ([Who owns a profile](../advanced/layers.md#who-owns-a-profile));
 - inside a plugin package, as `hw.Plugin(profiles={"baseline": "profiles/baseline.yaml"})`, which apps reference as `profile://acme.baseline@^1` ([Plugins](../advanced/plugins.md#profiles-and-templates)).
 
-Then review every app's changes against it with `harnessweaver spec diff git:main:harness.yaml harness.yaml` in pull requests: it shows changed values, locks and the adoption level.
+Then review every app's changes against it with `harnessweaver spec diff git:main:harness.yaml harness.yaml` in pull requests: it shows changed values, locks, profile layers and the adoption level, and reads `git:` sides with the profiles committed at that ref.

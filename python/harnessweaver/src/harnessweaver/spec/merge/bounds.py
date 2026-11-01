@@ -8,10 +8,10 @@ from typing import Any
 from harnessweaver.core.durations import format_duration, parse_duration
 from harnessweaver.core.errors import BoundViolation, SpecError
 from harnessweaver.spec._raw import as_list, as_map
-from harnessweaver.spec.merge.layers import Bound, Provenance, RawMap, item_id
+from harnessweaver.spec.merge.layers import Bound, LayerKind, Provenance, RawMap, item_id
 from harnessweaver.spec.paths import Item, SpecPath, format_path, parse_path
 
-__all__ = ["check_bounds", "read_bounds"]
+__all__ = ["check_bounds", "check_removed_limits", "read_bounds"]
 
 
 def _parse_limit(value: Any, path: str, prov: Provenance) -> float | timedelta | None:
@@ -95,13 +95,40 @@ def _greater(a: float | timedelta, b: float | timedelta) -> bool:
 def _measure(value: Any, like: float | timedelta) -> float | timedelta:
     if isinstance(like, timedelta):
         return parse_duration(value)
-    if isinstance(value, int | float) and not isinstance(value, bool):
+    if isinstance(value, int | float) and not isinstance(value, bool) and math.isfinite(value):
         return float(value)
-    raise TypeError("not a number")
+    raise TypeError("not a finite number")
 
 
 def _show(limit: float | timedelta) -> str:
     return format_duration(limit) if isinstance(limit, timedelta) else f"{limit:g}"
+
+
+def check_removed_limits(
+    data: RawMap, bounds: Sequence[Bound], provenance: Mapping[str, Provenance]
+) -> None:
+    """Refuse a layer's ``null`` at a path with a maximum: it removes the limit (R10).
+
+    This checks merged layers only. :func:`check_bounds` also sees a run's budget, where an
+    unset field is normal. A null the framework defaults left in place removes nothing, and
+    a null on a task budget leaves the per-run limit in force, so neither is refused.
+
+    Raises:
+        BoundViolation: On the first such value.
+    """
+    for bound in bounds:
+        if bound.maximum is None:
+            continue
+        for path, value in _iter_values(data, bound.path):
+            key = format_path(path)
+            origin = provenance.get(key)
+            if value is None and origin is not None and origin.kind is not LayerKind.DEFAULTS:
+                raise BoundViolation(
+                    f"{key} = null (set by {origin.describe()}) removes the maximum "
+                    f"{_show(bound.maximum)} that {bound.declared_by.describe()} allows (R10)",
+                    path=key,
+                    bound=bound.text,
+                )
 
 
 def check_bounds(

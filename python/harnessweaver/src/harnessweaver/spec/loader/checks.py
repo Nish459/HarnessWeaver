@@ -1,4 +1,4 @@
-"""Load-time checks on the validated spec: rules compile, bands and plugin profiles (R4)."""
+"""Load-time checks on the validated spec: rules, bands, sidecar guards, plugin profiles (R4)."""
 
 from collections.abc import Mapping, Sequence
 from typing import Any, Final
@@ -13,15 +13,19 @@ from harnessweaver.core.plugins import RESERVED_NAMESPACES
 from harnessweaver.core.policy import RUN_POLICY_VARIABLES, TOOL_POLICY_VARIABLES
 from harnessweaver.spec._raw import as_list, as_map
 from harnessweaver.spec.merge import (
+    Lock,
     Provenance,
 )
+from harnessweaver.spec.merge.layers import item_id
 from harnessweaver.spec.models import HarnessSpec
+from harnessweaver.spec.paths import Item, SpecPath, format_path, is_prefix
 
 __all__ = [
     "POLICY_VARIABLES",
     "VALIDATION_VARIABLES",
     "check_bands",
     "check_plugin_profiles",
+    "check_sidecar_guards",
     "compile_rules",
 ]
 
@@ -65,6 +69,40 @@ def check_bands(data: Mapping[str, Any], provenance: Mapping[str, Provenance]) -
                     f"but {who} does (RULES S8)",
                     path=key,
                 )
+
+
+def check_sidecar_guards(data: Mapping[str, Any], locks: Sequence[Lock]) -> None:
+    """A locked guard that runs on the sidecar is only as fixed as ``sidecar.url`` (R1).
+
+    The URL is a separate value, so without a lock of its own a later layer could point
+    the guard at a server that allows everything, with the guard's lock intact. An
+    unlocked guard needs no such lock: a later layer could just switch it off.
+
+    Raises:
+        SpecError: If an enabled ``where: sidecar`` guard is locked and the URL isn't.
+    """
+    if any(is_prefix(lock.path, ("sidecar", "url")) for lock in locks):
+        return
+    sections: list[tuple[SpecPath, Any]] = [(("guardrails",), data.get("guardrails"))]
+    for name, task in (as_map(data.get("tasks")) or {}).items():
+        sections.append(
+            (("tasks", str(name), "guardrails"), (as_map(task) or {}).get("guardrails"))
+        )
+    for prefix, section in sections:
+        for stage, items in (as_map(section) or {}).items():
+            for raw in as_list(items) or []:
+                guard = as_map(raw) or {}
+                if guard.get("where") != "sidecar" or guard.get("enabled") is False:
+                    continue
+                path: SpecPath = (*prefix, str(stage), Item(item_id(guard)))
+                # A lock on the guard, on something above it or on one of its fields.
+                if any(is_prefix(lock.path[: len(path)], path) for lock in locks):
+                    where = format_path(path)
+                    raise SpecError(
+                        f"{where} is locked and runs on the sidecar, so sidecar.url must be "
+                        f"locked too, or a later layer could repoint it (R1)",
+                        path=where,
+                    )
 
 
 def check_plugin_profiles(spec: HarnessSpec, layers: Sequence[Provenance]) -> None:

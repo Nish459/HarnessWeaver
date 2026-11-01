@@ -210,6 +210,18 @@ async def test_a_baseline_guard_must_fail_closed(build: Builder, tmp_path: Path)
         build(spec(models=scripted({"text": "x"}), extends=[ref]))
 
 
+async def test_a_parallel_group_cant_hide_a_baseline_guard_that_fails_open(
+    build: Builder, tmp_path: Path
+) -> None:
+    guards = [
+        {"id": "a", "use": "pii.regex", "parallel": True},
+        {"id": "b", "use": "pii.regex", "parallel": True, "fail_mode": "open"},
+    ]
+    ref = org_profile(tmp_path, guardrails={"input": guards})
+    with pytest.raises(SpecError, match=r"guardrails.input\[b\].*R2"):
+        build(spec(models=scripted({"text": "x"}), extends=[ref]))
+
+
 async def test_parallel_guards_and_member_failures(build: Builder) -> None:
     harness = build(
         spec(

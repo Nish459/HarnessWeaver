@@ -55,13 +55,9 @@ export function formatPath(path: SpecPath): string {
   return text;
 }
 
-function same(a: Segment, b: Segment): boolean {
-  return isItem(a) ? isItem(b) && a.id === b.id : !isItem(b) && a === b;
-}
-
-/** Whether `prefix` is `path` or one of its ancestors. */
+/** Whether `prefix` is `path` or one of its ancestors, with `*` and `[*]` as wildcards. */
 export function isPrefix(prefix: SpecPath, path: SpecPath): boolean {
-  return prefix.length <= path.length && prefix.every((segment, i) => same(segment, path[i]!));
+  return prefix.length <= path.length && matches(prefix, path.slice(0, prefix.length));
 }
 
 /** Whether `path` matches `pattern`, where `*` and `[*]` match one segment. */

@@ -117,6 +117,90 @@ def test_diff_reads_a_spec_from_git(project: Path) -> None:
     assert "models.provider" not in offline.output  # both sides got the overlay
 
 
+_BASELINE = """
+apiVersion: harnessweaver/v1
+kind: Profile
+metadata: { name: acme-baseline, version: 1.0.0 }
+guardrails: { input: [ { id: base-pii, use: pii.regex, action: redact } ] }
+locks: [ "guardrails.input[base-pii]" ]
+"""
+
+
+def _extend_baseline(project: Path) -> None:
+    spec = project / "harness.yaml"
+    spec.write_text(
+        spec.read_text(encoding="utf-8").replace(
+            'extends: ["profile://extraction"]',
+            'extends: ["profile://extraction", "org://acme-baseline@^1"]',
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_diff_reads_the_profiles_committed_with_a_spec(project: Path) -> None:
+    profiles = project / ".harness" / "profiles"
+    profiles.mkdir(parents=True)
+    baseline = profiles / "acme-baseline.yaml"
+    baseline.write_text(_BASELINE, encoding="utf-8")
+    _extend_baseline(project)
+    git("init", "-q")
+    git("add", ".")
+    git("commit", "-q", "-m", "spec")
+    # The spec is untouched: only the profile next to it changes in the working tree.
+    baseline.write_text(
+        _BASELINE.replace('locks: [ "guardrails.input[base-pii]" ]', "").replace(
+            "guardrails: { input: [ { id: base-pii, use: pii.regex, action: redact } ] }", ""
+        ),
+        encoding="utf-8",
+    )
+    result = runner.invoke(
+        app, ["spec", "diff", "git:HEAD:harness.yaml", "harness.yaml", "--exit-code"]
+    )
+    assert result.exit_code == 1, result.output
+    assert "Lock removed: `guardrails.input[base-pii]`" in result.output
+
+
+def test_diff_reads_a_profile_dir_inside_the_repository_at_the_ref(project: Path) -> None:
+    platform = project / "platform"
+    platform.mkdir()
+    baseline = platform / "acme-baseline.yaml"
+    baseline.write_text(_BASELINE, encoding="utf-8")
+    _extend_baseline(project)
+    git("init", "-q")
+    git("add", ".")
+    git("commit", "-q", "-m", "spec")
+    baseline.write_text(_BASELINE.replace('"guardrails.input[base-pii]"', ""), encoding="utf-8")
+    result = runner.invoke(
+        app,
+        ["spec", "diff", "git:HEAD:harness.yaml", "harness.yaml", "--profile-dir", "platform"],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Lock removed: `guardrails.input[base-pii]`" in result.output
+
+
+def test_diff_finds_a_spec_from_a_subdirectory_of_the_repository(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    git("init", "-q")
+    git("add", ".")
+    git("commit", "-q", "-m", "spec")
+    (project / "sub").mkdir()
+    monkeypatch.chdir(project / "sub")
+    result = runner.invoke(
+        app, ["spec", "diff", "git:HEAD:../harness.yaml", "../harness.yaml", "--exit-code"]
+    )
+    assert result.exit_code == 0, result.output
+
+
+def test_a_git_ref_cant_be_read_as_an_option(project: Path) -> None:
+    git("init", "-q")
+    git("add", ".")
+    git("commit", "-q", "-m", "spec")
+    result = runner.invoke(app, ["spec", "diff", "git:--all:harness.yaml", "harness.yaml"])
+    assert result.exit_code == 1
+    assert "from git" in result.output
+
+
 @pytest.mark.parametrize(
     ("source", "message"),
     [("git:HEAD", "must look like git:<ref>:<path>"), ("git:nope:harness.yaml", "from git")],

@@ -39,6 +39,7 @@ These are the framework's promises, enforced in code and tests ([RULES.md](https
 
 ## Hardening a deployment
 
+- **Distribute the baseline yourself.** Use the profile path or a plugin, not the app's repository: a team can edit its own files ([Who owns a profile](../advanced/layers.md#who-owns-a-profile)).
 - **Lock the baseline.** At least `plugins.allow`, `observability.capture_content`, the PII and secrets guards, `tools.require_manifest` and `tools.approval_by_risk`. Bound budgets and deadlines.
 - **Require levels by risk.** `require_level` with `customer_facing: L2` and `takes_actions: L3` (or stricter) keeps risky apps from shipping without tool governance and policy.
 - **Gate egress.** Give every tool with network access an `egress` list; keep `tools.trifecta` at `require_approval`, or `block` where nobody should be asked.

@@ -50,7 +50,7 @@ The platform team's baseline is a `kind: Profile` document. Put it in `.harness/
 - `locks` lists paths that no later layer may change: here, content capture, the allowed aliases, and the two baseline guards.
 - `bounds` lists limits: an app may set its budgets lower, never higher.
 
-The spec names it as `org://acme-baseline@^1`: the name, and an npm-style version range. `^1` accepts any 1.x version, so a new major version of the baseline, which may add locks, never reaches an app unannounced. Profiles are found in `.harness/profiles/` next to the spec and in the directories on `HARNESSWEAVER_PROFILE_PATH`.
+The spec names it as `org://acme-baseline@^1`: the name, and an npm-style version range. `^1` accepts any 1.x version, so a new major version of the baseline, which may add locks, never reaches an app unannounced. Profiles are found in the directories on `HARNESSWEAVER_PROFILE_PATH` and in `.harness/profiles/` next to the spec. A real platform team distributes its baseline on the path, or in a plugin, because a team can edit its own repository ([Who owns a profile](../advanced/layers.md#who-owns-a-profile)).
 
 ## Try to break a lock
 

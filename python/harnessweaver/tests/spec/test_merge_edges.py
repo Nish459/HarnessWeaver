@@ -121,3 +121,20 @@ def test_unknown_builtin_profile() -> None:
 def test_missing_spec_file(tmp_path: Path) -> None:
     with pytest.raises(SpecError, match="can't read"):
         load_spec(tmp_path / "missing.yaml", env="")
+
+
+def test_wildcard_locks_show_in_explain() -> None:
+    merged = merge(
+        ("org", {"guardrails": {"input": [{"id": "g", "use": "x"}]}, "locks": ["guardrails.*[*]"]})
+    )
+    rows = {
+        row.path: row
+        for row in explain_rows(merged.data, merged.provenance, merged.locks, merged.bounds)
+    }
+    assert rows["guardrails.input[g].use"].locked_by is not None
+
+
+def test_a_bound_refuses_a_value_that_isnt_finite() -> None:
+    org = {"bounds": {"budgets.per_run.max_usd": {"max": 5}}}
+    with pytest.raises(SpecError, match="can't be compared"):
+        merge(("org", org), ("app", {"budgets": {"per_run": {"max_usd": float("nan")}}}))

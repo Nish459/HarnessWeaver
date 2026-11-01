@@ -135,6 +135,21 @@ All notable changes to the HarnessWeaver packages are recorded here. The format 
 - `NoSettings` (from `harnessweaver.modules.evals.graders`): the `exact` and `schema_valid` graders declare no config, as other settings-free providers do, and reject settings with `takes no settings`.
 - `MontySandboxConfig` and its `grace` setting from `harnessweaver-monty`: harnesses build sandboxes with no settings, so it could never be set. The 2s grace is now a constant, and `monty.sandbox` takes no settings.
 
+### Security
+
+An app's team could shed org baseline controls with files in its own repository. These all fail loading now, in Python and TypeScript (R1, R2, R10, ADR-0043):
+
+- Wildcard locks (`guardrails.input[*]`, `tasks.*.budget`) were never enforced. They now cover every key or item, including ones added later, and `spec explain` shows them.
+- A profile in the app's `.harness/profiles` with a higher version replaced the platform's baseline of the same name. The first directory on the search path holding a name now owns it, and versions are never compared across directories. **Changed:** a platform that splits versions of one name across directories must keep them together.
+- A profile the app listed before its baseline could put keys into items the baseline then locked. Profiles the app's team can write now merge after the platform's.
+- An app file with the same reference text as a platform profile's parent displaced that parent. Profiles are now told apart by file, for duplicates and cycles, so the same relative text in two directories is no longer called a cycle.
+- `null` at a path with a `max` bound removed the limit and passed the bound. It's now a `BoundViolation`.
+- A baseline guard that fails open passed the R2 check when it sat in a parallel group with a closed one. Each guard is now checked. **Changed:** such a baseline now fails loading.
+- An item with the merger's temporary id (`~autoN~`) could edit a locked item that had no id. Those ids are now reserved.
+- A locked `where: sidecar` guard followed an unlocked `sidecar.url`, so a later layer could repoint it. **Changed:** a baseline that locks such a guard must now lock `sidecar.url` too.
+- `spec diff git:<ref>:<path>` read profiles from the working tree, so a pull request that weakened only a profile showed no difference. A `git:` side is now loaded from that ref's own tree, the ref can't be read as a git option, and the diff lists profile layers added and removed.
+- TypeScript: the JSON Schema validator skipped keys named after `Object.prototype` members (`constructor`, `toString`), in specs and in tool arguments, and NaN passed bounds and budgets. Own keys only are now checked, non-finite numbers are refused, and a `__proto__` key in a spec layer fails in both languages.
+
 ### Fixed
 
 - The `chat` template's terminal app ends the chat at the end of input (Ctrl-D, or piped input running out) instead of raising `EOFError`.

@@ -260,4 +260,5 @@ nav:
           - "ADR-0040: The TypeScript SDK": adr/0040-typescript-sdk.md
           - "ADR-0041: The docs site: MkDocs and Material": adr/0041-docs-site.md
           - "ADR-0042: The docs follow FastAPI's structure, with tested tutorial code": adr/0042-docs-structure.md
+          - "ADR-0043: Profiles an app's team can write merge after the platform's": adr/0043-profile-ownership.md
   - Release Notes: release-notes.md

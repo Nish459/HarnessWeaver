@@ -111,7 +111,7 @@ guardrails:
     - { id: pii, use: presidio.pii, action: redact, where: sidecar }
 ```
 
-Only the provider's check is posted to `{sidecar.url}/v1/guards/providers/{name}:check`, with the token from `sidecar.token_env`; the guard's action, mode, fail mode and timeout stay with the app. A sidecar that can't answer is a provider error, which the guard's fail mode turns into a block or a pass (RULES R2). `plugins.allow` applies to the provider's name on both sides (S8). In test mode the request is refused (R14).
+Only the provider's check is posted to `{sidecar.url}/v1/guards/providers/{name}:check`, with the token from `sidecar.token_env`; the guard's action, mode, fail mode and timeout stay with the app. A sidecar that can't answer is a provider error, which the guard's fail mode turns into a block or a pass (RULES R2). `plugins.allow` applies to the provider's name on both sides (S8). In test mode the request is refused (R14). If a lock covers the guard, a lock must cover `sidecar.url` too, or loading fails ([Locks](layers.md#locks)).
 
 ## The container
 

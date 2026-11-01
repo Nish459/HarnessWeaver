@@ -126,14 +126,21 @@ class SpecDiff:
     changes: tuple[SpecChange, ...]
     locks_added: tuple[str, ...] = ()
     locks_removed: tuple[str, ...] = ()
+    layers_added: tuple[str, ...] = ()
+    layers_removed: tuple[str, ...] = ()
     level_before: str | None = None
     level_after: str | None = None
 
     @property
     def empty(self) -> bool:
-        return not (self.changes or self.locks_added or self.locks_removed) and (
-            self.level_before == self.level_after
+        changed = (
+            self.changes
+            or self.locks_added
+            or self.locks_removed
+            or self.layers_added
+            or self.layers_removed
         )
+        return not changed and self.level_before == self.level_after
 
 
 def diff_data(before: Mapping[str, Any], after: Mapping[str, Any]) -> tuple[SpecChange, ...]:
@@ -163,6 +170,8 @@ def render_diff(diff: SpecDiff) -> str:
     extra: list[str] = []
     extra.extend(f"- Lock added: `{lock}`" for lock in diff.locks_added)
     extra.extend(f"- Lock removed: `{lock}`" for lock in diff.locks_removed)
+    extra.extend(f"- Layer added: `{layer}`" for layer in diff.layers_added)
+    extra.extend(f"- Layer removed: `{layer}`" for layer in diff.layers_removed)
     if diff.level_before != diff.level_after:
         extra.append(f"- Adoption level: {diff.level_before} -> {diff.level_after}")
     return "\n".join([*lines, "", *extra] if extra else lines)

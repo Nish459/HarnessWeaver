@@ -119,6 +119,14 @@ def install_guardrails(effective: EffectiveSpec, registry: Registry, bus: HookBu
                 (item, Band.TASK if task else _band(effective, f"{prefix}.{stage}[{item.id}]"))
                 for item in items
             ]
+            # Each guard, before grouping: a parallel group's own fail mode is closed if any
+            # member's is, while each member still fails its own way (R2).
+            for item, band in banded:
+                if band is Band.BASELINE and item.fail_mode == "open":
+                    raise SpecError(
+                        f"guard {prefix}.{stage}[{item.id}] is in the baseline band but fails "
+                        f"open; baseline guards must fail closed (RULES R2)"
+                    )
             for group in _groups(banded):
                 guards = [
                     _guard(item, items.index(item), stage, registry, prefix, effective.spec)

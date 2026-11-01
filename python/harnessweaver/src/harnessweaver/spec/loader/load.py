@@ -14,7 +14,12 @@ from harnessweaver.core.errors import (
 from harnessweaver.core.registry import PluginCatalog
 from harnessweaver.spec.explain import SpecDiff, diff_data
 from harnessweaver.spec.levels import REQUIREMENTS, assess
-from harnessweaver.spec.loader.checks import check_bands, check_plugin_profiles, compile_rules
+from harnessweaver.spec.loader.checks import (
+    check_bands,
+    check_plugin_profiles,
+    check_sidecar_guards,
+    compile_rules,
+)
 from harnessweaver.spec.loader.documents import check_document, layer_body, validate_spec
 from harnessweaver.spec.loader.effective import EffectiveSpec
 from harnessweaver.spec.merge import (
@@ -70,8 +75,10 @@ def spec_from_documents(
         for p in resolve_extends(app_doc.get("extends", []), resolvers, directory)
         if p.layer_name != defaults.layer_name
     ]
-    # Built-in profiles go before org profiles, whatever order `extends` lists them in.
-    profiles.sort(key=lambda p: 0 if p.kind is LayerKind.PROFILE else 1)
+    # Built-in profiles, then the platform's, then the app's own, whatever order `extends`
+    # lists them in: a layer's locks bind only later layers, so the app's profiles must
+    # come after the locks that are meant to bind them (R1, ADR-0043).
+    profiles.sort(key=lambda p: 0 if p.kind is LayerKind.PROFILE else 2 if p.app_owned else 1)
 
     layers = [
         Layer(
@@ -100,6 +107,7 @@ def spec_from_documents(
     spec = validate_spec(data, merged.provenance)
     compile_rules(spec)
     check_bands(merged.data, merged.provenance)
+    check_sidecar_guards(merged.data, merged.locks)
     check_plugin_profiles(spec, merged.layers)
     level = assess(spec)
     if not level.ok:
@@ -178,10 +186,15 @@ def diff_specs(before: EffectiveSpec, after: EffectiveSpec) -> SpecDiff:
     """What changes between two effective specs (``spec diff``)."""
     old_locks = {lock.text for lock in before.locks}
     new_locks = {lock.text for lock in after.locks}
+    # Profiles only: the app spec's own file name says nothing about what was merged.
+    old_layers = {layer.layer for layer in before.layers if layer.kind.is_profile}
+    new_layers = {layer.layer for layer in after.layers if layer.kind.is_profile}
     return SpecDiff(
         changes=diff_data(before.data, after.data),
         locks_added=tuple(sorted(new_locks - old_locks)),
         locks_removed=tuple(sorted(old_locks - new_locks)),
+        layers_added=tuple(sorted(new_layers - old_layers)),
+        layers_removed=tuple(sorted(old_layers - new_layers)),
         level_before=before.level.level.value,
         level_after=after.level.level.value,
     )

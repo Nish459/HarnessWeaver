@@ -284,6 +284,11 @@ function installGuards(effective: EffectiveSpec, registry: Registry, bus: HookBu
         const last = groups.at(-1);
         if (item.parallel && last && last.at(-1)![0].parallel && last.at(-1)![1] === band) last.push([item, band]);
         else groups.push([[item, band]]);
+        // Each guard, not each group: a parallel group's own fail mode is closed if any
+        // member's is, while each member still fails its own way (R2).
+        if (band === "baseline" && item.fail_mode === "open") {
+          throw new SpecError(`guard ${prefix}.${stage}[${String(item.id)}] is in the baseline band but fails open; baseline guards must fail closed (RULES R2)`);
+        }
       }
       for (const group of groups) {
         const guards = group.map(([item]) => guardOf(item, items.indexOf(item), stage, prefix, registry, sidecar, allow));
