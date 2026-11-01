@@ -48,6 +48,34 @@
       "expect": { "outcome": "continue", "content": { "to": "[EMAIL]", "count": 3, "tags": ["x", "[EMAIL]"] } }
     },
     {
+      "name": "a redaction in an object key is written back",
+      "stage": "input",
+      "guards": [{ "id": "pii", "use": "pii.regex" }],
+      "content": { "alice@example.com": "vip", "to": "bob@example.com", "n": { "c@example.io": { "d": "e@example.io" } } },
+      "expect": { "outcome": "continue", "content": { "[EMAIL]": "vip", "to": "[EMAIL]", "n": { "[EMAIL]": { "d": "[EMAIL]" } } } }
+    },
+    {
+      "name": "a secret in an object key blocks",
+      "stage": "output",
+      "guards": [{ "id": "keys", "use": "secrets.scan", "action": "block" }],
+      "content": { "key AKIAIOSFODNN7EXAMPLE": "note" },
+      "expect": { "outcome": "block", "content": { "key AKIAIOSFODNN7EXAMPLE": "note" } }
+    },
+    {
+      "name": "keys that redact alike stay distinct, so no entry is lost",
+      "stage": "output",
+      "guards": [{ "id": "pii", "use": "pii.regex" }],
+      "content": { "a@example.com": 1, "b@example.com": 2, "c@example.com": 3 },
+      "expect": { "outcome": "continue", "content": { "[EMAIL]": 1, "[EMAIL]#2": 2, "[EMAIL]#3": 3 } }
+    },
+    {
+      "name": "a redacted key doesn't displace an unchanged key of that name",
+      "stage": "tool_result",
+      "guards": [{ "id": "pii", "use": "pii.regex" }],
+      "content": { "a@example.com": 1, "[EMAIL]": 2 },
+      "expect": { "outcome": "continue", "content": { "[EMAIL]#2": 1, "[EMAIL]": 2 } }
+    },
+    {
       "name": "a block stops later guards",
       "stage": "input",
       "guards": [

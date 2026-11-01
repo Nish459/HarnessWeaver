@@ -64,7 +64,7 @@ async with harness.session("support", principal=user, tenant=user.org) as s:
 | `s.context(source).check(items)` | Governs items your code retrieved itself, the same way |
 | `s.generate(prompt=..., messages=..., model=..., output=..., stream=..., temperature=..., max_tokens=..., **variables)` | A governed model call. `prompt` renders a versioned prompt; `output` parses into a type and repairs up to `validation.max_repairs` times; `model` is an alias |
 | `s.tool(name, **arguments)` | A governed tool call; returns its output |
-| `s.validate("output", value, output=...)` | Checks a final output you produced yourself (`output.before`), parsed into `output` first if given |
+| `s.validate("output", value, output=...)` | Checks a final output you produced yourself (`output.before`), parsed into `output` first if given. A task's return value is checked anyway; use this to handle a repair yourself, or in a standalone session |
 | `s.prompt(ref, **variables)` | Renders a versioned prompt (`answer@1`) without calling a model |
 | `s.memory` | Key-value entries for this tenant, principal and task ([Context and memory](../tutorial/context.md#memory)) |
 | `s.run_id`, `s.envelope`, `s.trace` | The run's id, its current envelope and its trace so far |

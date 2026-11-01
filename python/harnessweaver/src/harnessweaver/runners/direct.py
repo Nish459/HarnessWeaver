@@ -13,7 +13,7 @@ it is, and after an approval it continues from exactly that point.
 """
 
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
@@ -88,6 +88,21 @@ class DirectRunner:
             "attempt": 0,
         }
 
+    @staticmethod
+    def _check_offered(ctx: RunContext, offered: Sequence[str], call: ToolCall) -> None:
+        """Refuse a registered tool the task didn't offer: its task-scoped approvals are
+        elsewhere. ``call_tool`` refuses a name that isn't registered (``tool_unknown``).
+
+        Raises:
+            RunBlocked: With code ``tool_not_offered``.
+        """
+        if call.name in offered or ctx.tools.describe(call.name) is None:
+            return
+        reason = f"the model called tool {call.name!r}, which this task doesn't offer"
+        hook = HookPoint.TOOL_BEFORE
+        ctx.trace.note("direct", reason, hook=hook, code="tool_not_offered")
+        raise RunBlocked(reason, hook=hook.value, code="tool_not_offered")
+
     async def execute(
         self, ctx: RunContext, input: Any, resume: Mapping[str, JsonValue] | None
     ) -> Any:
@@ -134,6 +149,7 @@ class DirectRunner:
                 for index in range(state["index"], len(calls)):
                     state["index"] = index
                     save()
+                    self._check_offered(ctx, task.tools, calls[index])
                     result = await ctx.call_tool(calls[index])
                     messages.append(Message.tool(calls[index].id, _tool_content(result)))
                 state["phase"] = "model"

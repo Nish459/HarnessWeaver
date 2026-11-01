@@ -8,6 +8,9 @@
 | `output`      | `output.before` | every string in the candidate output     |
 | `stream`      | `stream.chunk`  | each streamed chunk                      |
 
+A string means values and object keys alike. A redacted key is written back, and keys
+that redact to the same name stay distinct (``[EMAIL]``, ``[EMAIL]#2``).
+
 Semantics (fixtures suite ``guards``):
 
 * Guards run in list order, baseline items first. Each guard is one middleware,
@@ -27,6 +30,7 @@ Semantics (fixtures suite ``guards``):
   own guards -> ``task``.
 """
 
+from harnessweaver.modules.guardrails.pipeline.content import distinct_keys
 from harnessweaver.modules.guardrails.pipeline.guards import (
     LAYER_BANDS,
     STAGE_HOOKS,
@@ -44,6 +48,7 @@ __all__ = [
     "Verdict",
     "check",
     "configured_guards",
+    "distinct_keys",
     "guard_handler",
     "install_guardrails",
 ]

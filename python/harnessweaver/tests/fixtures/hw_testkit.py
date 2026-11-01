@@ -314,6 +314,28 @@ async def full_tour(s: hw.Session, input: Any) -> Any:
     return {"route": route.choice, "refund": refund, "text": text}
 
 
+async def returns_a_key(s: hw.Session, input: Any) -> Any:
+    """Returns what a tool could have returned, unchecked (AWS's documented example key)."""
+    return "key AKIAIOSFODNN7EXAMPLE"
+
+
+async def fetches_a_key(s: hw.Session, inputs: dict[str, Any]) -> Any:
+    return "AKIAIOSFODNN7EXAMPLE"
+
+
+async def reports_the_key(s: hw.Session, inputs: dict[str, Any]) -> Any:
+    return f"key {inputs['fetch']}"
+
+
+async def validates_its_answer(s: hw.Session, input: Any) -> Any:
+    return await s.validate("output", input)
+
+
+async def changes_after_validating(s: hw.Session, input: Any) -> Any:
+    await s.validate("output", input)
+    return f"{input} key AKIAIOSFODNN7EXAMPLE"
+
+
 @hw.runner(
     "partial", reaches=["run.start", "input.before", "model.before", "model.after", "run.end"]
 )

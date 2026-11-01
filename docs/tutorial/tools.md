@@ -44,7 +44,7 @@ Point the spec at the manifests, and add the `orders` task:
 --8<-- "docs_src/tutorial/tools/prompts/orders@1.md"
 ```
 
-The `direct` runner offers the task's `tools` to the model and runs a **bounded** loop: each call the model asks for is governed and executed, and its result goes back to the model, up to `max_steps` model calls (8 by default). There is no planning and no open-ended agent loop ([ADR-0011](../adr/0011-bounded-tool-loop.md)). `max_tool_calls` in the budget caps the calls too.
+The `direct` runner offers the task's `tools` to the model and runs a **bounded** loop: each call the model asks for is governed and executed, and its result goes back to the model, up to `max_steps` model calls (8 by default). A registered tool the task doesn't offer is refused and the run blocks with code `tool_not_offered`. There is no planning and no open-ended agent loop ([ADR-0011](../adr/0011-bounded-tool-loop.md)). `max_tool_calls` in the budget caps the calls too.
 
 ## Run it
 

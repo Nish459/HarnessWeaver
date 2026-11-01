@@ -69,7 +69,7 @@ spec:
 | Field | Type | Default | Meaning |
 | --- | --- | --- | --- |
 | `max_bytes` | integer > 0 | `tools.max_output_bytes` | Cut the result to this many UTF-8 bytes (a JSON result becomes its compact JSON text first) |
-| `sanitize` | list of `pii_redact`, `strip_instructions` | `[]` | Sanitizers, run in that order |
+| `sanitize` | list of `pii_redact`, `strip_instructions` | `[]` | Sanitizers, run in that order on values and object keys. Keys that sanitize to one name stay distinct (`[EMAIL]`, `[EMAIL]#2`) |
 | `label` | `untrusted` or `trusted` | `untrusted` | Whether the result marks the run as having seen untrusted content |
 
 ## Transports

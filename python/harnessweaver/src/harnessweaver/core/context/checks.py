@@ -19,6 +19,7 @@ from harnessweaver.core.hooks import (
 )
 from harnessweaver.core.outcomes import (
     OutcomeKind,
+    Retry,
     Suspend,
 )
 from harnessweaver.core.policy import PolicyRequest
@@ -160,7 +161,13 @@ class StepChecks(RunContextBase):
                 digest,
             )
         self.halt_on(result, allow_retry=True)
+        if not isinstance(result.outcome, Retry):
+            self._accepted_output = output_digest(result.event.output)
         return result
+
+    def output_accepted(self, output: JsonValue) -> bool:
+        """Whether ``output.before`` last accepted exactly this value in this run."""
+        return self._accepted_output == output_digest(output)
 
     async def approval_resolved(self, request: ApprovalRequest, decision: ApprovalDecision) -> None:
         """Fire ``approval.resolved``; a halting outcome ends the run."""

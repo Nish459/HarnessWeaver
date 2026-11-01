@@ -77,6 +77,7 @@ Common block codes:
 | `model_not_allowed` | A model alias outside `models.allowed_aliases` |
 | `model_refusal` | The model declined (`anthropic.messages`) |
 | `guard_blocked` | A guard's `block`; the trace note names the guard (`guardrails.input[pii]`) and its findings |
+| `tool_not_offered` | The model of a `direct` task called a registered tool the task doesn't offer |
 | Governor codes | `tool_unknown`, `manifest_required`, `tool_disabled`, `tool_not_enabled`, `digest_mismatch` (step 1), `schema_invalid` (2), `policy_denied` (3), `trifecta` (4), `rate_limited` (5), `judge_blocked` (6), `approval_rejected` (7); see [Tools](../advanced/governor.md) |
 
 ## The error taxonomy

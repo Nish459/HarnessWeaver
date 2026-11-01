@@ -37,7 +37,7 @@ Steps 1 to 7 run **inside** the governed tool call, after the `tool.before` midd
 | 6. Judge | `tools.judge`, a guardrail that sees `{tool, args}`: `block` blocks; `require_approval` or `escalate` asks a human; a judge that fails asks a human rather than letting the call through | `judge_blocked` |
 | 7. Approval | A call that needs approval suspends ([Approvals](../tutorial/approvals.md)), unless it carries an approval already given for this tool and these arguments. Edited arguments go through every step again; an approval never overrides a deny | `approval_rejected` |
 | 8. Execute | Runs the tool through its transport, with its `timeout` and idempotency key | a `ToolError` when the tool fails |
-| 9. Output | The manifest's sanitizers (`pii_redact`, then `strip_instructions`), a cut to `max_bytes` UTF-8 bytes (a JSON result becomes its compact JSON text), and the `untrusted` label unless the manifest says `label: trusted` | - |
+| 9. Output | The manifest's sanitizers (`pii_redact`, then `strip_instructions`) on values and object keys, a cut to `max_bytes` UTF-8 bytes (a JSON result becomes its compact JSON text), and the `untrusted` label unless the manifest says `label: trusted` | - |
 
 The run's `max_tool_calls` budget is checked before `tool.before`. A tool that raises gives the model only its error's type, since the message may hold content (R9).
 

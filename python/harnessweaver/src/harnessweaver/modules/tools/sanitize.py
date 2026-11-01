@@ -14,7 +14,7 @@ from pydantic import JsonValue
 from harnessweaver.core.envelope import Envelope
 from harnessweaver.core.manifests import OutputPolicy
 from harnessweaver.core.tools import ToolResult
-from harnessweaver.modules.guardrails import INJECTION_PATTERNS, PiiRegex
+from harnessweaver.modules.guardrails import INJECTION_PATTERNS, PiiRegex, distinct_keys
 
 __all__ = ["REMOVED", "sanitize"]
 
@@ -33,7 +33,11 @@ async def _strings(value: JsonValue, change: Callable[[str], Awaitable[str]]) ->
     if isinstance(value, list):
         return [await _strings(item, change) for item in value]
     if isinstance(value, dict):
-        return {key: await _strings(item, change) for key, item in value.items()}
+        keys = list(value)
+        names = distinct_keys(keys, [await change(key) for key in keys])
+        return {
+            name: await _strings(value[key], change) for name, key in zip(names, keys, strict=True)
+        }
     return value
 
 

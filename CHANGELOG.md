@@ -150,6 +150,13 @@ An app's team could shed org baseline controls with files in its own repository.
 - `spec diff git:<ref>:<path>` read profiles from the working tree, so a pull request that weakened only a profile showed no difference. A `git:` side is now loaded from that ref's own tree, the ref can't be read as a git option, and the diff lists profile layers added and removed.
 - TypeScript: the JSON Schema validator skipped keys named after `Object.prototype` members (`constructor`, `toString`), in specs and in tool arguments, and NaN passed bounds and budgets. Own keys only are now checked, non-finite numbers are refused, and a `__proto__` key in a spec layer fails in both languages.
 
+Model and tool content could get past a runtime control. Each of these now holds (S2, R1, R4, R11):
+
+- A value a `session` or `workflow` handler, or a custom runner, returned skipped `output.before`, so output guards and validation rules didn't apply to it, not even a locked baseline guard. The harness now fires `output.before` on every task's final output, unless the run just accepted exactly that value (`s.generate`, `s.validate`, the `direct` runner). **Changed:** a handler that returns unchecked content a guard objects to now ends blocked, or follows `validation.on_failure` for a repair, since nothing is left to repair it. Runner conformance no longer counts `output.before` as a hook the runner fires itself.
+- The `direct` runner ran any registered tool the model named, skipping the approvals of the task that does offer it. A registered tool the task's `tools` don't list now blocks the run with code `tool_not_offered`, before `tool.before`.
+- Guards never saw JSON object keys, and `pii_redact` and `strip_instructions` skipped them, so an object keyed by e-mail address reached the model and a secret in a key passed `secrets.scan`. Keys are now checked and redacted like values, in Python and TypeScript. Keys that redact to one name stay distinct (`[EMAIL]`, `[EMAIL]#2`), so no entry is lost. **Changed:** a guard also sees field names, so one that flags a field name of a typed output sends it to repair.
+- A Pydantic AI agent's tool with a harness manifest was offered to the model with the agent's own definition, so a third-party toolset could change what a reviewed tool told the model. `HarnessCapability` now offers the manifest's description and schema. The agent's own handler still runs, and a same-named tool isn't proved to behave as reviewed: review or prefix a toolset's tool names, and close the schema to refuse undeclared arguments.
+
 ### Fixed
 
 - The `chat` template's terminal app ends the chat at the end of input (Ctrl-D, or piped input running out) instead of raising `EOFError`.

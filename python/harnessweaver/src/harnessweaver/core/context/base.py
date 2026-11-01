@@ -111,6 +111,8 @@ class RunContextBase:
         self.pending: PendingApproval | None = None
         self.resume_point: dict[str, JsonValue] = {}
         self.output: JsonValue = None
+        self._accepted_output: str | None = None
+        """Digest of the value ``output.before`` last accepted, so it isn't checked twice."""
 
     # --- envelope ---------------------------------------------------------------------------
 

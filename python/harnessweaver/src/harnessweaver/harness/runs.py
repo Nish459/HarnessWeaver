@@ -9,7 +9,7 @@ from loguru import logger
 from pydantic import BaseModel, JsonValue, ValidationError
 
 from harnessweaver.core.budgets import BudgetMeter
-from harnessweaver.core.context import TaskInfo
+from harnessweaver.core.context import RunContext, TaskInfo
 from harnessweaver.core.envelope import Budget, Envelope, Principal
 from harnessweaver.core.errors import (
     DeadlineExceeded,
@@ -36,7 +36,7 @@ from harnessweaver.harness.records import (
     LiveRun,
     TaskEntry,
 )
-from harnessweaver.runners._output import to_json
+from harnessweaver.runners._output import check_output, give_up, to_json
 
 __all__ = ["RunMixin"]
 
@@ -281,7 +281,26 @@ class RunMixin(EndingMixin, ABC):
                     )
         value = self._typed_input(task, run.input)
         output = await task.runner.execute(ctx, value, checkpoint.resume if checkpoint else None)
-        return to_json(output)
+        return await self._checked_output(ctx, output)
+
+    @staticmethod
+    async def _checked_output(ctx: RunContext, output: Any) -> JsonValue:
+        """The final output, past ``output.before`` whichever runner made it (R1, R4).
+
+        A runner may have checked this very value already (direct, ``s.generate``,
+        ``s.validate``), so only a value the run hasn't accepted fires the hook. There is
+        nobody left to repair it here, so a ``Retry`` ends the run as ``on_failure`` says.
+        A ``Suspend`` re-runs the runner after the approval, and an identical output then
+        matches the grant.
+        """
+        final = to_json(output)
+        if ctx.output_accepted(final):
+            return final
+        output_type = ctx.task.output_type if ctx.task is not None else None
+        checked, problem = await check_output(ctx, output, output_type, 0)
+        if problem is not None:
+            give_up(ctx, problem, 0)
+        return to_json(checked)
 
     @staticmethod
     def _typed_input(task: TaskEntry, value: JsonValue) -> Any:

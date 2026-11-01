@@ -7,6 +7,7 @@ from harnessweaver.modules.guardrails.pipeline import (
     Verdict,
     check,
     configured_guards,
+    distinct_keys,
     guard_handler,
     install_guardrails,
 )
@@ -42,6 +43,7 @@ __all__ = [
     "Verdict",
     "check",
     "configured_guards",
+    "distinct_keys",
     "guard_handler",
     "install_guardrails",
 ]

@@ -49,7 +49,7 @@ tasks:
 | `resumable` | Whether it can continue from a checkpoint after an approval (with `resume` holding the saved state) |
 | `sample` | Settings for the conformance suite |
 
-`execute(ctx, input, resume)` returns the task's output. `Session.for_run(ctx)` gives a session view of the run, so a runner can use `generate`, `tool`, `decide`, `context` and `prompt` like app code. The conformance suite runs every runner to a final state and checks it fires only hooks it declares. Runners don't plan or remember; open-ended agent behavior belongs in adapters for agent frameworks (R12).
+`execute(ctx, input, resume)` returns the task's output, and the harness fires `output.before` on it unless the run just accepted exactly that value, so a runner can't skip an output guard. There is nobody left to repair it at that point, so a `Retry` ends the run as `validation.on_failure` says; a runner that can repair checks the value itself first. `Session.for_run(ctx)` gives a session view of the run, so a runner can use `generate`, `tool`, `decide`, `context` and `prompt` like app code. The conformance suite runs every runner to a final state and checks it fires only hooks it declares (`output.before` may always fire). Runners don't plan or remember; open-ended agent behavior belongs in adapters for agent frameworks (R12).
 
 ## Deciders
 

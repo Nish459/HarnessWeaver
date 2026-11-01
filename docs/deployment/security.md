@@ -7,7 +7,7 @@ HarnessWeaver's job is to keep AI applications inside the lines their owners dra
 | Threat | Controls |
 | --- | --- |
 | Prompt injection through retrieved content or tool output | `untrusted` labels on context and tool results, `injection.heuristic` on input and context, the lethal-trifecta check, approvals for egress |
-| A tool's definition swapped after review ("rug pull") | `definition_digest` pinning, checked at governor step 1 on every call |
+| A tool's definition swapped after review ("rug pull") | `definition_digest` pinning, checked at governor step 1 on every call. A Pydantic AI agent's tool is offered to the model with its manifest's definition, not the agent's |
 | Data exfiltration | `egress` lists in manifests, the trifecta check, approval for risky tools, gateway allow-lists |
 | PII leaking to logs or vendors | `pii.regex` redaction (or a stronger provider), `capture_content: false` locked by the baseline, the R9 conformance check |
 | Privilege escalation through an LLM decision | Deterministic policy only (R3); judges and classifiers may only tighten |

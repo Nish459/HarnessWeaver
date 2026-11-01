@@ -96,6 +96,27 @@ async def test_suspend_where_it_isnt_supported_escalates(build: Builder) -> None
     assert result.status is hw.RunStatus.ESCALATED
 
 
+async def test_a_tool_the_task_didnt_offer_is_blocked(build: Builder, testkit: Any) -> None:
+    """Two tasks share the registered tools: the model in one calls the other's tool."""
+    refund = {"id": "c1", "name": "refund", "arguments": {"amount": 5}}
+    harness = build(
+        spec(
+            models=scripted({"tool_calls": [refund]}, after_tool={"text": "done"}),
+            tasks={
+                "triage": task(tools=["lookup"]),
+                "refunds": task(tools=["refund"], approvals={"tools": ["refund"]}),
+            },
+        )
+    )
+    result = await harness.run("triage", "q")
+    assert result.status is hw.RunStatus.BLOCKED
+    assert result.error is not None
+    assert result.error.details["code"] == "tool_not_offered"
+    assert testkit.RECORDER.tool_calls == []
+    assert "tool.before" not in hooks_fired(result)
+    assert any(e.code == "tool_not_offered" for e in result.trace)  # R13
+
+
 async def test_unknown_and_failing_tools(build: Builder, testkit: Any) -> None:
     unknown = {"id": "c1", "name": "nope", "arguments": {}}
     harness = build(spec(models=scripted({"tool_calls": [unknown]}), tasks={"t": task()}))

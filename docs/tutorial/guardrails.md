@@ -80,7 +80,7 @@ added guardrails.input[injection-heuristic] (injection.heuristic) in shadow mode
 ## How the guards run
 
 - **One middleware per guard.** Guards run in list order, redactions chain from one guard to the next, and the most severe action wins.
-- **Structured content.** Every string in a structured input or output (a JSON object, a list) is checked, and redactions are written back in place.
+- **Structured content.** Every string in a structured input or output (a JSON object, a list) is checked, object keys included, and redactions are written back in place. Keys that redact to one name stay distinct (`[EMAIL]`, `[EMAIL]#2`), so no entry is lost. Field names of a typed output are checked too: a guard that flags one sends the output to repair, so word `topic.deny` and `regex.deny` patterns with your field names in mind.
 - **Bands.** A guard's band comes from the layer that declared it: org profiles give `baseline`, built-in profiles `platform`, your spec `app`, and a task's own guards `task`. Inbound hooks run the baseline first. [The hook bus](../concepts/hook-bus.md) explains the order.
 - **Parallel groups.** Consecutive guards with `parallel: true` in the same band run concurrently.
 - **Failure.** A guard that raises or runs past its `timeout` blocks when `fail_mode: closed` (the default), and is skipped, with a note, when `open`. Baseline guards must fail closed (RULES R2).

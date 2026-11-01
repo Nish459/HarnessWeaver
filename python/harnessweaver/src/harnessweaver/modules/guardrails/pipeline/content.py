@@ -13,9 +13,28 @@ from harnessweaver.core.hooks import (
 )
 from harnessweaver.modules.guardrails.pipeline.guards import Stage
 
-__all__ = ["content_of"]
+__all__ = ["content_of", "distinct_keys"]
 
-type Path = tuple[str | int, ...]
+type Path = tuple[str | int | tuple[str], ...]
+"""Where a text sits. ``(key,)`` is the object key itself; ``key`` is the value under it."""
+
+
+def distinct_keys(keys: Sequence[str], changed: Sequence[str]) -> list[str]:
+    """One object's keys after a change, still distinct so that no entry is lost.
+
+    Objects keyed by e-mail address all redact to one name, so a changed key that is
+    taken gets a number (``[EMAIL]#2``). Keys that didn't change keep their names.
+    """
+    taken = {key for key, new in zip(keys, changed, strict=True) if key == new}
+    names: list[str] = []
+    for key, new in zip(keys, changed, strict=True):
+        name, count = new, 1
+        while key != new and name in taken:
+            count += 1
+            name = f"{new}#{count}"
+        taken.add(name)
+        names.append(name)
+    return names
 
 
 def _leaves(value: JsonValue, path: Path = ()) -> list[tuple[Path, str]]:
@@ -24,7 +43,11 @@ def _leaves(value: JsonValue, path: Path = ()) -> list[tuple[Path, str]]:
     if isinstance(value, list):
         return [leaf for i, item in enumerate(value) for leaf in _leaves(item, (*path, i))]
     if isinstance(value, dict):
-        return [leaf for key, item in value.items() for leaf in _leaves(item, (*path, key))]
+        return [
+            leaf
+            for key, item in value.items()
+            for leaf in [((*path, (key,)), key), *_leaves(item, (*path, key))]
+        ]
     return []
 
 
@@ -34,7 +57,12 @@ def _replace(value: JsonValue, changes: dict[Path, str], path: Path = ()) -> Jso
     if isinstance(value, list):
         return [_replace(item, changes, (*path, i)) for i, item in enumerate(value)]
     if isinstance(value, dict):
-        return {key: _replace(item, changes, (*path, key)) for key, item in value.items()}
+        keys = list(value)
+        names = distinct_keys(keys, [changes.get((*path, (key,)), key) for key in keys])
+        return {
+            name: _replace(value[key], changes, (*path, key))
+            for name, key in zip(names, keys, strict=True)
+        }
     return value
 
 

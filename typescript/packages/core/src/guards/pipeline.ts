@@ -17,7 +17,7 @@ import type { ContextEvent, HookEvent, HookPoint } from "../hooks.js";
 import type { JsonValue } from "../json.js";
 import type { FailMode, Handler } from "../middleware.js";
 import type { Outcome } from "../outcomes.js";
-import type { Guardrail } from "./common.js";
+import { distinctKeys, type Guardrail } from "./common.js";
 
 export type Stage = "input" | "context" | "tool_result" | "output" | "stream";
 
@@ -153,12 +153,15 @@ export function shadowOutcome(label: string, verdict: Verdict): Outcome {
 
 // --- reading the strings a stage checks, and putting them back -------------------------
 
-type Path = (string | number)[];
+/** Where a text sits. `[key]` is the object key itself; `key` is the value under it. */
+type Path = (string | number | [string])[];
 
 function leaves(value: JsonValue | undefined, path: Path = []): [Path, string][] {
   if (typeof value === "string") return [[path, value]];
   if (Array.isArray(value)) return value.flatMap((item, i) => leaves(item, [...path, i]));
-  if (value !== null && typeof value === "object") return Object.entries(value).flatMap(([key, item]) => leaves(item, [...path, key]));
+  if (value !== null && typeof value === "object") {
+    return Object.entries(value).flatMap(([key, item]): [Path, string][] => [[[...path, [key]], key], ...leaves(item, [...path, key])]);
+  }
   return [];
 }
 
@@ -167,7 +170,10 @@ function replaced(value: JsonValue | undefined, changes: Map<string, string>, pa
   if (changes.has(key)) return changes.get(key);
   if (Array.isArray(value)) return value.map((item, i) => replaced(item, changes, [...path, i]) as JsonValue);
   if (value !== null && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([k, item]) => [k, replaced(item, changes, [...path, k]) as JsonValue]));
+    const entries = Object.entries(value);
+    const keys = entries.map(([k]) => k);
+    const names = distinctKeys(keys, keys.map((k) => changes.get(JSON.stringify([...path, [k]])) ?? k));
+    return Object.fromEntries(entries.map(([k, item], i) => [names[i], replaced(item, changes, [...path, k]) as JsonValue]));
   }
   return value;
 }

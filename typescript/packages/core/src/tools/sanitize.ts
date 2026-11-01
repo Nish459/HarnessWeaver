@@ -6,6 +6,7 @@
  */
 
 import type { ToolResult } from "../contracts.js";
+import { distinctKeys } from "../guards/common.js";
 import { INJECTION_PATTERNS, PiiRegex } from "../guards/providers.js";
 import type { JsonValue } from "../json.js";
 import type { OutputPolicy } from "./manifests.js";
@@ -22,8 +23,10 @@ async function strings(value: JsonValue | undefined, change: (text: string) => P
   if (typeof value === "string") return change(value);
   if (Array.isArray(value)) return Promise.all(value.map(async (item) => (await strings(item, change)) as JsonValue));
   if (value !== null && typeof value === "object") {
-    const entries = await Promise.all(Object.entries(value).map(async ([k, item]) => [k, await strings(item, change)] as const));
-    return Object.fromEntries(entries) as JsonValue;
+    const keys = Object.keys(value);
+    const names = distinctKeys(keys, await Promise.all(keys.map(change)));
+    const items = await Promise.all(Object.values(value).map((item) => strings(item, change)));
+    return Object.fromEntries(items.map((item, i) => [names[i], item])) as JsonValue;
   }
   return value;
 }

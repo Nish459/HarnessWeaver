@@ -8,6 +8,22 @@ export interface Guardrail {
   check(content: string, env: Envelope): Promise<GuardResult> | GuardResult;
 }
 
+/**
+ * One object's keys after a change, still distinct so that no entry is lost. Objects keyed
+ * by e-mail address all redact to one name, so a changed key that is taken gets a number
+ * (`[EMAIL]#2`). Keys that didn't change keep their names.
+ */
+export function distinctKeys(keys: readonly string[], changed: readonly string[]): string[] {
+  const taken = new Set(keys.filter((key, i) => key === changed[i]));
+  return keys.map((key, i) => {
+    const wanted = changed[i] ?? key;
+    let name = wanted;
+    for (let count = 2; key !== wanted && taken.has(name); count += 1) name = `${wanted}#${count}`;
+    taken.add(name);
+    return name;
+  });
+}
+
 export const ALLOW: GuardResult = { action: "allow", content: null, reason: null, findings: [], score: null };
 
 export interface Hit {

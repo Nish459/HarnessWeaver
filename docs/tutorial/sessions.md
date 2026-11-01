@@ -44,7 +44,7 @@ completed
 Refunds go back to the card you paid with within five business days.
 ```
 
-As a task, `answer` gets everything a task has: the input guards run on the question before your function sees it, the task's budget applies, the output is checked, and the run can be retried by idempotency key, suspended for approval and resumed, and graded by evals.
+As a task, `answer` gets everything a task has: the input guards run on the question before your function sees it, the task's budget applies, whatever the function returns is checked by the output guards and validation rules, and the run can be retried by idempotency key, suspended for approval and resumed, and graded by evals.
 
 `principal` and `tenant` say who the run acts for. Policy rules, retrieval ACLs and rate limits all read them, as later chapters show.
 

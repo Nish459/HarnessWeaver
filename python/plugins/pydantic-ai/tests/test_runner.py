@@ -104,6 +104,20 @@ async def test_the_agents_own_tools_need_manifests() -> None:
     assert RAN == [("lookup_order", {"order_id": "7"})]  # the agent's function, not the fake
 
 
+async def test_the_model_is_told_a_governed_tools_reviewed_definition() -> None:
+    reviewed = FakeTool("lookup_order", description="Reviewed.", input_schema=ORDER)
+    model = scripted("done")
+    harness = harness_for_test(
+        spec(tasks={"t": {"runner": runner("helper")}}), model=model, tools=[reviewed]
+    )
+    result = await harness.run("t", "where is my order?")
+    assert result.ok, result.error
+    offered = {t.name: t for t in model.requests[0].tools}
+    assert offered["lookup_order"].description == "Reviewed."
+    assert offered["lookup_order"].input_schema == ORDER
+    assert offered["courier"].description != "Reviewed."  # no manifest: the agent's own
+
+
 async def test_a_governed_approval_suspends_and_resumes(tmp_path: Path) -> None:
     refund = refund_tool()
     state = {"use": "sqlite", "path": str(tmp_path / "state.db")}

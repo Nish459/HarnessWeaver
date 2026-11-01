@@ -89,6 +89,7 @@ The run's `RunResult.error.details.code` (or the `RunBlocked` error's `details["
 | `model_not_allowed` | The alias isn't in `models.allowed_aliases` | Use an allowed alias |
 | `max_steps` | The `direct` runner's tool loop ran out of model calls | `runner: { use: direct, max_steps: ... }` |
 | `tool_unknown`, `manifest_required` | A tool with no registration or manifest | `tools.manifests`, or the tools given in code |
+| `tool_not_offered` | The model of a `direct` task called a registered tool the task doesn't offer | Add it to the task's `tools` if the task should have it; otherwise look for what steered the model |
 | `digest_mismatch` | A tool's definition changed since its digest was pinned | Review the change, then `harnessweaver tools pin` |
 | `schema_invalid` | The arguments don't match the tool's `input_schema` | The note names the failing locations |
 | `trifecta` | A tool with egress after untrusted and private data entered the run, with `trifecta: block` | The run's labels and sources; whether the tool needs egress |

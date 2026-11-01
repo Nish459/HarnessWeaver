@@ -7,6 +7,8 @@ How Pydantic AI's hooks map onto the hook points:
   on the prompt, then ``run.error`` or ``run.end``.
 * ``before_model_request``: the model is wrapped, so each request is one governed
   call with ``model.before`` and ``model.after``.
+* ``prepare_tools``: a tool with a manifest is offered with the manifest's reviewed
+  description and schema (S2).
 * ``wrap_tool_execute``: ``tool.before``, the governor, the agent's tool, then
   ``tool.after``.
 * ``after_output_process``: ``output.before``; a repair request becomes ``ModelRetry``.
@@ -199,6 +201,28 @@ class HarnessCapability(AbstractCapability[Any]):
         return replace(request_context, model=GovernedModel(model, run))
 
     # --- tool calls -------------------------------------------------------------------------
+
+    async def prepare_tools(
+        self, ctx: AgentContext[Any], tool_defs: list[ToolDefinition]
+    ) -> list[ToolDefinition]:
+        """Tell the model a governed tool's reviewed definition, not the agent's (S2).
+
+        The digest pins the manifest's definition, so this is what makes it the one
+        the model sees, even when a third-party toolset changes its own. Comparing the
+        two instead would block ordinary function tools, whose generated schemas differ.
+        """
+        tools = self._current().tools
+        prepared: list[ToolDefinition] = []
+        for definition in tool_defs:
+            found = tools.describe(definition.name)
+            if found is not None and found.manifest is not None:
+                definition = replace(
+                    definition,
+                    description=found.spec.description,
+                    parameters_json_schema=dict(found.spec.input_schema),
+                )
+            prepared.append(definition)
+        return prepared
 
     async def wrap_tool_execute(
         self,

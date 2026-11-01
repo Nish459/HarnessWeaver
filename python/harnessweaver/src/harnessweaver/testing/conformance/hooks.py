@@ -59,7 +59,8 @@ async def check_runner(subject: Subject) -> None:
     result = await harness.run("conformance", "hello")
     expect(result.status.is_terminal or result.status is RunStatus.AWAITING_APPROVAL, result.status)
     fired = {HookPoint(h) for h in hooks_fired(result)}
-    undeclared = fired - item.reaches
+    # The harness itself fires output.before on a final output a runner didn't check.
+    undeclared = fired - item.reaches - {HookPoint.OUTPUT_BEFORE}
     expect(
         not undeclared,
         f"runner {subject.name} fired undeclared hooks {sorted(h.value for h in undeclared)}",

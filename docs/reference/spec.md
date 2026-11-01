@@ -250,7 +250,7 @@ A map of task name to task.
 | `output` | import path, or `str` | none | The type the output is parsed into (`str` for plain text). Required for L1 |
 | `prompt` | `name@version` | none | The versioned prompt (`direct` sends it as the system message; `pydantic_ai.agent` uses it as instructions) |
 | `model` | alias | `models.default` | The model alias for this task |
-| `tools` | list of tool names | `[]` | The tools offered to the model (`direct`, `pydantic_ai.agent`) |
+| `tools` | list of tool names | `[]` | The tools offered to the model (`direct`, `pydantic_ai.agent`). `direct` blocks a call to any other registered tool (`tool_not_offered`) |
 | `budget` | budget | none | Tightens `budgets.per_run`, plus `overridable` (below) |
 | `approvals` | task approvals | none | Approval settings for this task (below) |
 | `guardrails` | guardrails | none | Guards for this task only, in the `task` band, same shape as the `guardrails` section |
