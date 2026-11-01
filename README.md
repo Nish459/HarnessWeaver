@@ -6,13 +6,13 @@
 
 *Weave your own AI harness. Bring your models. Choose your plugins. Define your execution.*
 
-`Python 3.12+`, `TypeScript`, `Apache-2.0`, **pre-release**
+`Python 3.12+`, `TypeScript`, `Apache-2.0`, **pre-1.0**
 
 </div>
 
 ---
 
-> **Status: pre-release.** 0.1.0 is in preparation and the packages aren't published yet: install from a clone ([QUICKSTART.md](QUICKSTART.md)). Anything marked *planned* in these docs doesn't exist yet.
+> **Status: early.** The packages are on PyPI and npm, each with its own version, and the public API may still change before 1.0. Anything marked *planned* in these docs doesn't exist yet.
 
 ## What is HarnessWeaver?
 
@@ -174,7 +174,7 @@ The user documentation is a site built from [`docs/`](docs/index.md) (`make docs
 | [RULES.md](RULES.md) | Engineering rules and invariants |
 | [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) | Contributing, by hand or with AI coding agents |
 | [SECURITY.md](SECURITY.md) | Reporting a vulnerability |
-| [CHANGELOG.md](CHANGELOG.md) | What changed |
+| [CHANGELOG.md](CHANGELOG.md) | What changed: an index of each package's changelog, and repository-wide changes |
 | [Design guide](docs/AI%20Harness%20Framework%20Design%20and%20Build%20Guide.md) | The original design source |
 
 ## License

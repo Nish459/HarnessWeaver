@@ -1,0 +1,1 @@
+--8<-- "python/plugins/openai/CHANGELOG.md"

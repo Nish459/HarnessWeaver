@@ -7,7 +7,7 @@ uv run harnessweaver init ../ticket-triage                   # the extraction te
 uv run harnessweaver init ../help-desk -t rag --name help-desk
 ```
 
-`init` copies the template and puts the project name in it; there is no template language. It never overwrites a file unless you pass `--force`. Then, from the clone (until the packages are published):
+`init` copies the template and puts the project name in it; there is no template language. It never overwrites a file unless you pass `--force`. Then, from any project or clone with the CLI installed:
 
 ```bash
 uv run harnessweaver spec validate ../help-desk/harness.yaml -e offline

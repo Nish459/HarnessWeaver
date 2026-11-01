@@ -1,0 +1,1 @@
+--8<-- "python/plugins/pydantic-ai/CHANGELOG.md"

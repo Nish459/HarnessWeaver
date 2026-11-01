@@ -1,61 +1,49 @@
 # Changelog
 
-All notable changes to the HarnessWeaver packages are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and every package uses [Semantic Versioning](https://semver.org/) independently (RULES V1).
+Each package keeps its own changelog, with a section for every version:
+
+| Package | Changelog | First published version |
+| --- | --- | --- |
+| `harnessweaver` | [python/harnessweaver](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/harnessweaver/CHANGELOG.md) | 0.17.1 |
+| `harnessweaver-cli` | [python/harnessweaver-cli](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/harnessweaver-cli/CHANGELOG.md) | 0.7.1 |
+| `harnessweaver-sidecar` | [python/harnessweaver-sidecar](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/harnessweaver-sidecar/CHANGELOG.md) | 0.2.1 |
+| `harnessweaver-openai` | [python/plugins/openai](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/plugins/openai/CHANGELOG.md) | 0.1.2 |
+| `harnessweaver-anthropic` | [python/plugins/anthropic](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/plugins/anthropic/CHANGELOG.md) | 0.1.2 |
+| `harnessweaver-otel` | [python/plugins/otel](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/plugins/otel/CHANGELOG.md) | 0.2.1 |
+| `harnessweaver-pydantic-ai` | [python/plugins/pydantic-ai](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/plugins/pydantic-ai/CHANGELOG.md) | 0.1.2 |
+| `harnessweaver-monty` | [python/plugins/monty](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/plugins/monty/CHANGELOG.md) | 0.2.1 |
+| `harnessweaver-cel` | [python/plugins/cel](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/plugins/cel/CHANGELOG.md) | 0.1.1 |
+| `@harnessweaver/core` | [typescript/packages/core](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/typescript/packages/core/CHANGELOG.md) | 0.4.1 |
+| `@harnessweaver/ai-sdk` | [typescript/packages/ai-sdk](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/typescript/packages/ai-sdk/CHANGELOG.md) | 0.1.1 |
+
+Below are the changes that belong to the repository rather than to one package: the examples, the docs site, CI and the release tooling. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## 2026-11-01
+
 ### Added
 
-- Contracts and core primitives in `harnessweaver` (public API in `harnessweaver/__init__.py`):
-  - `Envelope`, `Principal`, `Labels`, `Budget`, and the injectable `Clock` (`SystemClock`, `FakeClock`).
-  - The 13 `HookPoint`s with their direction, the middleware `Band`s, `execution_order`, and a typed event payload per hook point (`HookEvent`).
-  - The outcomes `Continue`, `Retry`, `Escalate`, `Suspend` and `Block`, with severity and `most_severe`.
-  - `Decision` / `DecisionRequest` for routing, `PolicyEffect` and `tighten` (R3), `GuardResult` and its seven `GuardAction`s.
-  - Neutral model and tool contracts: `Message`, `ToolCall`, `ToolSpec`, `ModelRequest`, `ModelResponse`, `Usage`, `StreamChunk`, `ToolInfo`, `ToolResult`, `ContextItem`, `Acl`, `ApprovalRequest`, `ApprovalDecision`, `RunStatus`.
-  - The error taxonomy in `harnessweaver.errors`, with stable codes and `ErrorInfo`.
-  - The `Duration` type (`"250ms"`, `"20s"`, `"1h30m"`) and SemVer versions and npm-style ranges.
-  - cel-lite, the built-in CEL-subset expression language (ADR-0004).
-- The spec system in `harnessweaver.spec` (`load_spec`, `EffectiveSpec`, `HarnessSpec`, `ProfileSpec`, `Level`):
-  - YAML 1.2 (core schema) loading with duplicate-key errors (ADR-0017).
-  - Layering of the built-in `defaults` profile, built-in profiles (`profile://rag`), org profiles (`org://acme-baseline@^2`, highest matching version from `HARNESSWEAVER_PROFILE_PATH` or `.harness/profiles`), file profiles, the app spec and an environment overlay (`harness.<env>.yaml`, selected by `HARNESSWEAVER_ENV`).
-  - Keyed-list merging by `id` with generated ids, locks (R1, ADR-0018), bounds that never clamp (R10), and provenance for every value.
-  - Per-run budget overrides that may only lower overridable fields (`EffectiveSpec.run_budget`).
-  - Adoption levels L0-L4 with requirement codes, enforced against the org's `require_level` (`LevelTooLow`).
-  - cel-lite policy and validation rules compiled at load against their allowed names.
-  - `spec explain` and `spec diff` building blocks (`render_explain`, `diff_specs`, `render_diff`).
-  - Built-in profiles: `defaults`, `extraction`, `rag`, `agent`, `workflow`, `chat`.
-- The runtime (DESIGNS No. 7, No. 8, No. 15, No. 18):
-  - `Harness` (`hw.load` / `Harness.load`, `from_spec`), with `run`, `submit`, `stream`, `result`, `approve`, `resume`, `cancel`, `session`, `explain` and `hooks`. Loading resolves every name through the plugin registry, installs the spec's `middleware:`, builds each task's runner and fails if a runner can't reach a hook the baseline or the budgets need (R4).
-  - The hook bus: bands, onion order, payload chaining, `Block` short-circuits, fail modes and timeouts, baseline middleware must fail closed (R2), and every outcome traced (R13) in a `RunTrace`.
-  - `RunContext` with governed operations for every integration style: model calls (alias resolution, `allowed_aliases`, streaming with `stream.chunk`), tool calls, routing, context, input and output checks, budgets (ADR-0012), deadlines and data labels (S3).
-  - Built-in runners `direct` (bounded tool loop, typed output with bounded repair), `session` and `workflow` (step DAG, parallel steps, evaluator-optimizer loops), and standalone `Session`s.
-  - Approvals: `Suspend` at `tool.before` and `output.before`, checkpoints, approve / edit / reject, expiry, grants matched by call or output, resume after a crash, and cancellation (ADR-0021). Idempotency keys.
-  - State stores `memory` and `sqlite` (ADR-0009), versioned prompts by `name@version` (ADR-0013), and the port Protocols in `harnessweaver.ports`.
-- The plugin contract (DESIGNS No. 13, ADR-0015): `Plugin`, the `@provider`, `@middleware`, `@decider`, `@runner` and `@adapter` decorators, `RESERVED_NAMESPACES` and `CONTRACT_VERSION`. Discovery reads entry-point metadata without importing anything (S8); plugins load only when the spec references their namespace, from the `harnessweaver.plugins` entry points or `plugins.local`; `plugins.allow`, namespace conflicts and contract ranges (V5) are checked at load; plugins can ship profiles (`profile://acme.baseline@^1`). The core's own runners and state stores are its built-in plugin.
-- L0/L1 modules (DESIGNS No. 16, No. 20, No. 22):
-  - Guardrails: the spec's guards become middleware per stage (`input`, `context`, `tool_result`, `output`, `stream`) with action overrides, `log_only` shadow mode (R8), parallel groups, bands from the declaring layer, and the built-in guards `regex.deny`, `pii.regex`, `secrets.scan`, `injection.heuristic`, `size.limit`, `topic.deny` and `llm.judge`.
-  - Validation: cel-lite business rules (`validation.rules`) as `output.before` middleware that asks for repairs (ADR-0023).
-  - The offline `scripted` model provider (`ScriptedModel`): replies in order, rule matchers, streaming, failures.
-  - Telemetry through the OpenTelemetry API: `harness.run`, `chat {model}`, `execute_tool {tool}`, `harness.guard`, `harness.decision` and `harness.approval` spans, GenAI token-usage and duration metrics and a `harness.cost` counter, names pinned to semantic conventions 1.42.0, and `capture_content` with post-redaction content only (R9).
-- Wrap style: `harness.instrument(client)` finds an adapter from the client's type and governs its model calls, as their own small runs or inside a run or session (DESIGNS No. 15).
-- `Harness.wrap(agent, task=...)`: wrap style for agent frameworks, with the adapter found from the agent's type as `instrument()` finds one (DESIGNS No. 15, ADR-0037).
-- Adapters govern what their framework runs itself: `RunContext.call_tool(call, backend=...)` runs a framework's own tool through `tool.before`, the governor and `tool.after`, and `RunContext.approval_needed(call, reason)` brings an approval the framework asks for to the harness's approvers. During a replay the recording answers an adapter's own model and tool calls too (`RunContext.replaying`, ADR-0035).
-- `harnessweaver-pydantic-ai`: the `pydantic_ai.agent` runner (the spec's models or the agent's own, the task's prompt and tools, `deps`, repairs as `ModelRetry`, approvals that suspend and resume through Pydantic AI's deferred tools, including tools marked `requires_approval=True`) and the `wrap()` adapter for Pydantic AI agents, both governing through `HarnessCapability` (ADR-0037). `make conformance` covers it.
-- `harnessweaver add guard` adds a guard in shadow mode (`mode: log_only`, R8), and `harnessweaver add tool` writes a tool manifest from a function's signature and Google-style docstring and adds its directory to `tools.manifests`. Both edit `harness.yaml` with its comments kept (ruamel.yaml, ADR-0016), and a guard whose edit doesn't load is taken back out.
-- `harnessweaver tools pin` writes each manifest's `definition_digest` (S2); `--tool` pins one.
-- `harnessweaver plugin new <namespace>` scaffolds a standalone plugin package (entry point, `hw.Plugin`, a sample `<namespace>.banned_words` guard, and tests whose `pytest` run includes the conformance suite), and `harnessweaver plugin list` shows installed plugins with their versions, contract ranges and compatibility.
-- Project templates `rag`, `agent` (a Pydantic AI agent with governed tools and a red-team eval set), `workflow` and `chat`, each passing its own tests offline (T6).
-- Example 02, `examples/02_support_rag`: a customer-facing support assistant in the Session style with routing, ACL-checked context, injection guards on questions and retrieved articles, citations, a `run.start` policy, and tests that Acme's baseline locks hold.
-- Example 03, `examples/03_refund_agent`: a refund agent in the Run style (the `pydantic_ai.agent` runner) and the Wrap style (`harness.wrap` on an existing agent), with governed tools, policy rules, the lethal-trifecta check, finance approvals, Acme's own middleware and guard as a local plugin, `policy_tests.yaml`, and a red-team eval set that passes offline.
-- `harnessd`, the sidecar (`harnessweaver-sidecar`, ADR-0038), serves one effective spec over `/v1`: `health`, `spec`, `hooks`, `guards/{stage}` (`input`, `context`, `output`), `guards/providers/{name}:check`, `decisions/{router}`, `policy/evaluate`, `tools/{name}/authorize`, `tools/{name}/sanitize`, `validate`, `runs`, `runs/{run_id}`, `runs/{run_id}/approvals/{approval_id}` and `evals/run`. Checks run as one-step sessions answered with their `RunResult`. Every route except `health` needs the bearer token; harnessd refuses to start without one and binds 127.0.0.1 (S6). Errors are `ErrorInfo` bodies, and invalid requests never echo their values (R9). The request models are contracts in `harnessweaver.core.sidecar`.
-- `contracts/openapi/harnessd.openapi.json`, generated by `make schemas` and drift-tested, and `contracts/proto/harnessweaver/v1/harnessd.proto`, which mirrors its routes for gRPC later.
-- `deploy/harnessd/Dockerfile`: harnessd built from `uv.lock` on digest-pinned bases (S5), running as an unprivileged user.
-- `harnessweaver sidecar [SPEC]` runs harnessd.
-- `harnessweaver gateway litellm` writes a LiteLLM Proxy config from the spec (gateway models, aliases, retries, a timeout from the longest deadline, message logging off, the `otel` callback, and a tool-permission guardrail that allows only tools whose manifests need no run), and `harnessweaver gateway mcp` writes the neutral `tool-allow-list` for an MCP gateway: each allowed tool's server, digest and scopes, and every withheld tool with its reason (ADR-0039). Examples 02 and 03 keep both under `gateway/`, tested as golden files.
-- `@harnessweaver/core` 0.1.0, the TypeScript core (ADR-0040): it loads the same `harness.yaml` (layers, locks, bounds, built-in and org profiles, overlays, levels) and runs the hook bus, budgets and cost, the built-in guards, cel-lite policy and validation rules, the `rules` and `lexical` routing stages, the tool governor for tools given in code, the `memory` context provider, versioned prompts and the eval graders, in `harness.session(...)`. Plugins register with `definePlugin`. `SidecarClient` calls every harnessd route, and guards declared `where: sidecar` run there. It passes every suite in `contracts/fixtures/conformance/`, and Example 02's spec behaves as it does in Python.
-- `@harnessweaver/ai-sdk` 0.1.0: `wrapModel(session, model)` (and `harnessMiddleware`) govern AI SDK v7 models: allowed aliases and budgets, `model.before` redactions written back into the prompt, `model.after` redactions in the answer, usage and cost, and `stream.chunk` on each streamed text delta.
-- CI runs the TypeScript workspace (types, tests, build) on Node 22 and 24, with SHA-pinned actions.
-- Example 04 (`examples/04_polyglot_typescript`): Example 02's spec from TypeScript, in process with the Vercel AI SDK and through harnessd. Its tests pass Example 02's golden set with the TypeScript graders, require the same answers from the app and from harnessd, and run the README's `curl` walkthrough as written. The example is part of the pnpm workspace, and the CI TypeScript job installs the Python workspace to start harnessd.
+- Each package has its own `CHANGELOG.md`, with a section per version, and a test requires a section for its current version. This file now holds only repository-wide changes, and the docs site's Release Notes has a page per package.
+
+### Security
+
+- Dependencies with known advisories are updated: certifi 2026.10.23 (GHSA-6q48-6c7w-9gw2, a bundled root CA whose intermediates have compromised keys), uv 0.13.6 in the harnessd image and the Vercel docs build (GHSA-hq85-5cpj-mr62, the same root in uv's CA store), and zod 4.6.7 in the development dependencies of `@harnessweaver/ai-sdk` and Example 04 (GHSA-mrhx-c7xc-m3w5, memory exhaustion on oversized arrays).
+
+### Fixed
+
+- `make release` publishes `harnessweaver` and `@harnessweaver/core` first, so a failure partway never leaves a published package whose core isn't there. It also no longer refuses to run because of `.claude/`, which is now ignored.
+
+## 2026-10-26
+
+### Added
+
+- `vercel.json` deploys the docs site on Vercel from the GitHub repository, built from the `docs` dependency group alone, which now includes ruff so that mkdocstrings formats signatures as `make docs` does.
+
+## 2026-10-25
+
+### Added
+
 - The docs site (ADR-0041, ADR-0042): `mkdocs.yml` and `docs/`, built with MkDocs and Material by `make docs` (strict: broken links and anchors fail) and served by `make docs-serve`, with its tools in a `docs` dependency group and a CI job. It follows the structure of FastAPI's documentation, with top-level tabs for Home, Features, Learn, Reference, Resources, About and Release Notes:
   - **Home** shows a first example and an upgraded one, the requirements, the dependencies and the license; **Features** lists what the framework does.
   - **Learn** holds the quickstart and the concepts (lifecycle and hook points, the hook bus, outcomes and errors, the envelope and budgets, the spec, integration styles, adoption levels), a nineteen-chapter **Tutorial - User Guide** that builds one support-desk app from first steps through models, prompts, typed output, repairs, budgets, guardrails, profiles and the org baseline, sessions, routing, retrieval, tools, policy, approvals, state and replay, observability, testing, evals and debugging, each ending with a Recap, an **Advanced User Guide** (layers, locks and bounds; the tool governor; approvals in depth; TypeScript; harnessd; plugins, providers, middleware, runners and adapters, conformance), the CLI reference, **Deployment** (installation, versions, configuration, gateways and the dev stack, security) and **How To - Recipes** (governing an existing client, writing an org baseline, troubleshooting).
@@ -65,113 +53,52 @@ All notable changes to the HarnessWeaver packages are recorded here. The format 
   - `console` blocks play as typed terminal sessions (termynal, vendored with its MIT license), and the footer links to GitHub.
   - Its theme (`docs/stylesheets/brand.css`) has the HarnessWeaver logo (an H woven from two threaded strands, `docs/assets/logo.svg`) and a favicon rendered from it, the Inter font, a dark navy palette by default and a light one behind the toggle.
 - `QUICKSTART.md` (an offline walk from a clone to a governed, traced and tested task of your own, checked from a fresh clone), `CONTRIBUTING.md` and `SECURITY.md`; READMEs for `@harnessweaver/core` and `@harnessweaver/ai-sdk`.
-- `harnessweaver dev [--up]` writes a local Compose stack into `.harness/dev/` (LiteLLM, an OpenTelemetry collector, Langfuse and harnessd, digest-pinned and on 127.0.0.1 only) with local secrets generated once into `.env`, and starts it.
-- Tool manifests take `server`, the MCP server of a `transport: mcp` tool.
-- Guards declared `where: sidecar` run their provider in harnessd at `sidecar.url`, with the token from `sidecar.token_env`; the guard's fail mode applies when the sidecar can't answer (R2), and `plugins.allow` still applies to the provider's name (S8).
-- `Harness.decide_policy` (the policy engine's answer alone), `Harness.output_type`, and `Session.validate(..., output=type)`, which parses a value into a type before `output.before`.
-- `harnessweaver-openai`: the `openai.chat` provider (retries off, LiteLLM cost header, streaming) and the `instrument()` adapter for `OpenAI` / `AsyncOpenAI`.
-- `harnessweaver-anthropic`: the `anthropic.messages` provider (adaptive thinking, `effort`, server-side refusal fallbacks on by default, thinking blocks replayed unchanged across a tool loop, streaming) and the `instrument()` adapter for `Anthropic` / `AsyncAnthropic`.
-- `harnessweaver-otel`: the `otel.sdk` provider, which sets up the OpenTelemetry SDK with a console or OTLP exporter when `observability.configure_sdk: true` and leaves an app's own setup alone (R5).
-- The test kit, `harnessweaver.testing`: `harness_for_test` (offline, fake clock, injected model, fake tools and deciders), `scripted` replies with `text` / `output` / `tool_call`, `FakeTool`, `FakeDecider`, `assert_trace` and `step`, `assert_no_content` (R9), and `Cassette` to record a real model's answers once and replay them offline.
-- The conformance suite (T5): `pytest --harnessweaver-conformance=<namespace>` checks a plugin's metadata, that importing it is inert (S8), and that every contribution builds, returns valid results, is deterministic when it says so, blocks on timeout, leaks no raw content (R9), meets its latency class, and (for runners and adapters) fires only and all of its declared hooks (R4). Decorators take `sample=` for contributions that need settings. `make conformance` runs it on every first-party plugin and is part of `make check`.
-- `Harness.from_spec(model=...)` replaces `models.provider` with a provider object, for tests and offline runs.
-- `harnessweaver-cli`: the `harnessweaver` command with `init` (built-in and plugin templates), `spec validate`, `spec explain`, `spec diff` (either side can be `git:<ref>:<path>`), `doctor` (level and next steps, reachable hooks, duplicate retry owners, unpinned profiles, shadow guards, content capture), `hooks`, `test` (offline, test mode on) and `contracts export`, plus the `extraction` project template, whose output passes its own tests (T6).
-- Example 01, `examples/01_invoice_extraction`: typed invoice extraction at L1 in the Run style, with PII redaction, a secrets check, business rules, a repaired answer, budgets and prices, and `l0_instrument.py`, which governs an existing OpenAI client in three lines. It runs offline and its tests run in CI, with no app-level retry or tracing code.
-- `examples/_org/acme-baseline.yaml`: an org baseline profile (v1) with a locked plugin allow-list, locked guards and content capture, budget bounds and a required level per risk tier, with tests that each lock and bound fails loading.
-- `Harness.runner_of(task)`: the runner a task uses and the hook points it reaches.
-- Policy (DESIGNS No. 17, ADR-0025): the `PolicyEngine` port and the built-in `cel_lite` engine. Every engine combines `policy.rules` the same way (`hw.decide_by_rules`): deny beats require_approval beats allow, the first of equals decides, an unevaluable rule never loosens, and `default_effect` applies when none match. Rules take `hook: run.start` to restrict runs and sessions as they start. New contracts `PolicyRule`, `PolicyConfig`, `PolicyRequest` and `PolicyDecision`.
-- Tool governance (DESIGNS No. 17): `kind: Tool` manifests (`tools.manifests`, `hw.ToolManifest`) with `native`, `http` and `code` transports, pinned definition digests (`hw.definition_digest`), rate limits, approval rules, output sanitizers and tenant allow-lists; and the nine-step governor every tool call passes, after the `tool.before` middleware and on its final arguments: registry and digest, a JSON Schema subset check (ADR-0026), policy, the lethal trifecta (`tools.trifecta`), rate limits held under concurrency, an optional `tools.judge` that can only tighten, approval (`tools.approval_by_risk`, tasks' `approvals.tools`), and sanitizing before `tool.after`. Each decision is a `harness.governor` trace note. Calls carry an idempotency key that survives resumption. Tools given in code carry manifests too (`ToolDescription.from_manifest`, ADR-0028).
-- Approval channels (DESIGNS No. 18): the `ApprovalChannel` port and the built-in `memory`, `callback`, `console` and `webhook` channels, notified once a request is saved; a failing channel is traced and the run keeps waiting.
-- The `Sandbox` port and `transport: code` tools (ADR-0027).
-- `harnessweaver-cel`: the `cel.policy` engine, full CEL through cel-python, checked against the shared policy fixtures; its tests pin every `expr` fixture where full CEL and cel-lite differ.
-- `harnessweaver-monty`: the `monty.sandbox` sandbox, running code tools in pydantic-monty workers with time and memory limits.
-- Guard findings can be marked `private` (`pii.regex`'s are); finding private data marks the run private for the trifecta check (S3).
-- Routing (DESIGNS No. 19, ADR-0029): `routing.<router>` cascades on `route.decide`, with the built-in `rules`, `lexical`, `semantic` (with the dependency-free `semantic.hashing` `Embedder`) and `llm` stages and any `@hw.decider`. The first confident stage wins, answers outside the options and failing stages abstain, the router's `default` answers otherwise, and every stage's answer is a `harness.routing` trace note. New `Embedder` port.
-- Context (DESIGNS No. 21, ADR-0030): `context.<source>` with the built-in `memory` (documents with ACLs, searched lexically) and `passthrough` providers, and `s.context(name).fetch(query)`. Every item, fetched or passed to `check()`, has its ACL re-checked (`require_acl` drops items without one), is labelled with its source and trust, and is capped by `max_items` and `max_tokens` before the `context.after` middleware; every drop is traced. New `ContextProvider` port.
-- Memory (ADR-0031): the `Memory` port, the in-process `memory` provider, the spec's `memory` section (`default_ttl`) and `s.memory` (`put`, `get`, `delete`, `entries`), namespaced per tenant, principal and task.
-- The `grounded.citations` guard (ADR-0032): output sentences must cite, in square brackets, context ids the run kept; a run's kept ids survive suspension.
-- Fixtures suite `routing`: tokens, similarity, the hashing embedder, the `rules` and `lexical` stages and the cascade. The conformance suite checks context providers (valid items, only what the tenant may see), embedders and memory stores.
-- Evals (DESIGNS No. 23, ADR-0033, ADR-0034): one dataset format (`suite`, `task`, `graders`, `thresholds`, `cases` with `input`, `expect` and their own `graders`), graders as `Evaluator` providers (the new port), the deterministic graders `exact`, `field_equals`, `numeric_close`, `contains`, `regex`, `citation_present`, `schema_valid`, `guard_fired` and `status`, and the `llm_judge` grader, which grades in a governed session. `Harness.evaluate(dataset)` runs a suite and returns a `SuiteResult`; `Harness.output_schema(task)` gives a task's output schema.
-- Online evals: `evals.online.sample_rate` samples runs by their id at `run.end`, grades them with `evals.online.graders` (deterministic only) and keeps an `OnlineSample` per run; `Harness.samples()` reads them. Sampling fails open.
-- The shadow-guard report: how often each `log_only` guard would fire, with false positives and misses against what eval cases expect (R8).
-- `harnessweaver eval run` (baselines in `.harness/baselines/<task>.<suite>.json`, `--update-baseline`, the shadow-guard report; exit 1 on a missed threshold or a regression, 2 when the suites can't run) and `harnessweaver eval report` (online samples).
-- `Harness.authorize(tool, args, ...)`: the governor's verdict on a call as a dry run, using up no rate limit (ADR-0036); `harnessweaver policy test` checks a table of calls against it (`policy_tests.yaml`; exit 1 on a mismatch, 2 when the tests can't run).
-- Recording and replay (ADR-0035): with `state.record: true` a run keeps its model answers, tool results and approvals; `Harness.replay(run_id)` and `harnessweaver replay <run_id>` run it again against the current code and spec without calling out or running tools, and report changed statuses, outputs and decisions (exit 1 when the status or output changed).
-- Fixtures suite `evals`: graders, dataset labels, summaries and baselines, sampling and the shadow-guard report. Schemas `eval-dataset`, `eval-sample`, `grade`, `suite-result`, `baseline`, `online-sample`, `policy-tests`, `recorded-call` and `replay-report`. The conformance suite checks evaluators (valid grades with no raw content, repeatable when deterministic, within their latency class) and state-store recordings and samples.
-- Guards that fire, or would fire in shadow mode, are traced as `harness.guard` notes (codes `guard_fired` and `guard_shadow`) naming the guard in full, like `guardrails.input[pii]`.
-- `harnessweaver doctor` warns about tool manifests without a pinned digest (printing the digest to pin) and fails ones that changed since they were pinned.
-- The conformance suite checks policy engines (valid, repeatable decisions within their latency class), sandboxes (code runs; it can't read a host file) and approval channels; `make conformance` now covers `cel` and `monty` too.
-- Fixtures suite `governor`: canonical JSON and digests, rate syntax, the JSON Schema subset, policy combination, governor steps 1 to 7 and step 9. Schemas `tool-manifest`, `tool-verdict`, `policy-request`, `policy-decision` and `sandbox-result`.
-- Each repair attempt is traced as a note with code `repair`, giving field locations and messages but never the values (R13, R9).
-- `Message.extensions` and `ModelResponse.extensions` for provider data replayed unchanged with a turn (ADR-0022).
-- `HARNESSWEAVER_TEST_MODE=1` (`harnessweaver.ports.network_allowed`) makes live providers refuse to call out; every test runs with it (R14).
-- Errors `NotFound` and `RunInterrupted` (`RunBlocked`, `RunEscalated`, `RunSuspended`) with codes `not_found`, `blocked`, `escalated` and `suspended` (ADR-0020).
-- JSON Schemas for every contract under `contracts/schemas`, with `make schemas` / `make schemas-check` and a drift test (ADR-0005).
-- Language-neutral conformance fixtures under `contracts/fixtures/conformance` (suites `durations`, `semver`, `outcomes`, `hook_order`, `expr`, `merge`, `levels`, `bus`, `budgets`, `plugins`, `guards`) and their Python runners.
-- Hypothesis property tests for outcome combination, cel-lite arithmetic and logic, durations and versions (T3).
-- uv workspace with the core package `harnessweaver`, the developer tooling `harnessweaver-cli` (the `harnessweaver` command), the sidecar `harnessweaver-sidecar` (`harnessd`), and the first-party plugin packages `harnessweaver-openai`, `harnessweaver-anthropic`, `harnessweaver-pydantic-ai`, `harnessweaver-monty`, `harnessweaver-otel` and `harnessweaver-cel`.
-- Core extras that pull in first-party plugins: `harnessweaver[openai]`, `[anthropic]`, `[pydantic-ai]`, `[monty]`, `[otel]`, `[cel]`, `[cli]`, `[sidecar]` and `[all]`.
-- A test that keeps the core's runtime dependencies to `pydantic`, `opentelemetry-api`, `pyyaml`, `anyio` and `loguru` (RULES R6).
-- `make check` (ruff, ruff format, pyright, pytest), CI on Python 3.12-3.14 with SHA-pinned actions, pre-commit hooks and a pull request template.
-- `make check` also rejects characters that aren't on a standard keyboard (`scripts/check_ascii.py`, RULES D5).
-- `vercel.json` deploys the docs site on Vercel from the GitHub repository, built from the `docs` dependency group alone, which now includes ruff so that mkdocstrings formats signatures as `make docs` does.
 - `make build` and `make release` build, and publish to PyPI and npm, the packages that the Git tags on HEAD name (`scripts/release.py`). A release tag is `<package>@<version>`, and its SemVer version must equal the package's manifest version (RULES V1). `PACKAGE=<name>` releases just the named packages.
 - `make clean` removes caches and build output (`__pycache__`, the pytest, ruff, pyright and Hypothesis caches, coverage data, `build/`, `dist/`, `*.egg-info`, `*.tsbuildinfo` and the docs `site/`), keeping `.venv`, `node_modules`, local run state and `.claude/`. `make distclean` also removes `.venv` and `node_modules`.
 
 ### Changed
 
-- Each ADR now has its own file under `docs/adr/`, carried over word for word, and DESIGNS.md No. 28 indexes them; ADR-0041 records the docs toolchain. The README is final for 0.1.0, and the core package's README describes the package instead of a skeleton.
-- `examples/_org/acme-baseline.yaml` 1.1.0 also allows the `pydantic_ai` and `acme` plugins (a loosening, so a minor version, V3).
-- `harnessweaver init` refuses template names starting with `_`, which are scaffolds for other commands.
-- The `StateStore` port gains `append_recording`, `recording`, `put_sample` and `samples`, and the `ToolGovernor` port's `authorize` takes `dry_run`. `Harness.from_spec` takes a `state` store; given `telemetry`, it no longer configures an OpenTelemetry SDK itself.
-- The extraction template's and Example 01's offline overlays answer every golden case, so `harnessweaver eval run -e offline` passes on them; both test their golden sets.
-- Logging goes through loguru (ADR-0024), which becomes the core's fifth dependency (RULES R6). The core and `harnessweaver-otel` are silent until the app opts in with `logger.enable("harnessweaver")` / `logger.enable("harnessweaver_otel")`, and never add sinks. The conformance suite's raw-content check (R9) captures loguru and `logging` output alike.
-- Large modules are now packages of focused modules, each package's `__init__` exporting what other code imports: `harnessweaver.harness` (the `Harness` class is built from mixins for runs, endings, approvals and sessions), `core.context`, `core.plugins`, `core.registry`, `core.telemetry`, `spec.loader`, `spec.merge`, `spec.models`, `modules.guardrails.pipeline`, `modules.guardrails.providers` (one module per built-in guard) and `testing.conformance`; `core.expr` gains `grammar`, `declared` and `operations` modules. The public API (`import harnessweaver as hw`) is unchanged.
-
-### Removed
-
-- `@hw.provider` no longer accepts the planned ports `DatasetStore`, `ErrorClassifier`, `ToolRegistry` and `Validator`: nothing calls providers for them yet, so declaring one is now an `unknown port` error instead of a provider that never runs. DESIGNS.md No. 14 marks them planned.
-- `@hw.provider` no longer accepts `port="ToolGovernor"`. The harness always builds its own governor, which enforces the baseline, so a spec can't select another one (R1) and such a provider never ran. The `ToolGovernor` Protocol stays in `harnessweaver.ports`.
-- `NoSettings` (from `harnessweaver.modules.evals.graders`): the `exact` and `schema_valid` graders declare no config, as other settings-free providers do, and reject settings with `takes no settings`.
-- `MontySandboxConfig` and its `grace` setting from `harnessweaver-monty`: harnesses build sandboxes with no settings, so it could never be set. The 2s grace is now a constant, and `monty.sandbox` takes no settings.
-
-### Security
-
-- Dependencies with known advisories are updated: certifi 2026.10.23 (GHSA-6q48-6c7w-9gw2, a bundled root CA whose intermediates have compromised keys), uv 0.13.6 in the harnessd image and the Vercel docs build (GHSA-hq85-5cpj-mr62, the same root in uv's CA store), and zod 4.6.7 in the development dependencies of `@harnessweaver/ai-sdk` and Example 04 (GHSA-mrhx-c7xc-m3w5, memory exhaustion on oversized arrays).
-
-- Approvals bind what they should (ADR-0044, ADR-0045):
-  - One tool-call approval no longer authorizes every later identical call in the run. A grant covers one execution, and a repeat asks again. `approvals.grant_scope: run` keeps the old run-wide behavior. **This changes behavior for existing specs.**
-  - An approval given for another step's ask no longer satisfies a role the approver doesn't hold. Governor step 7 checks the manifest's `approver_role`, else the task's, else the spec's, in Python and TypeScript. When they differ the run asks again, keeping any edit, so that takes two approvals unless one person holds both roles.
-  - Concurrent answers to one approval can no longer each resume the run. `approve()` claims the request through the new `StateStore.claim_approval`, including across processes on one SQLite file. The loser gets `NotFound` (HTTP 404 from harnessd) and records nothing. `cancel()` claims too. **A third-party `StateStore` must add this method.**
-
-An app's team could shed org baseline controls with files in its own repository. These all fail loading now, in Python and TypeScript (R1, R2, R10, ADR-0043):
-
-- Wildcard locks (`guardrails.input[*]`, `tasks.*.budget`) were never enforced. They now cover every key or item, including ones added later, and `spec explain` shows them.
-- A profile in the app's `.harness/profiles` with a higher version replaced the platform's baseline of the same name. The first directory on the search path holding a name now owns it, and versions are never compared across directories. **Changed:** a platform that splits versions of one name across directories must keep them together.
-- A profile the app listed before its baseline could put keys into items the baseline then locked. Profiles the app's team can write now merge after the platform's.
-- An app file with the same reference text as a platform profile's parent displaced that parent. Profiles are now told apart by file, for duplicates and cycles, so the same relative text in two directories is no longer called a cycle.
-- `null` at a path with a `max` bound removed the limit and passed the bound. It's now a `BoundViolation`.
-- A baseline guard that fails open passed the R2 check when it sat in a parallel group with a closed one. Each guard is now checked. **Changed:** such a baseline now fails loading.
-- An item with the merger's temporary id (`~autoN~`) could edit a locked item that had no id. Those ids are now reserved.
-- A locked `where: sidecar` guard followed an unlocked `sidecar.url`, so a later layer could repoint it. **Changed:** a baseline that locks such a guard must now lock `sidecar.url` too.
-- `spec diff git:<ref>:<path>` read profiles from the working tree, so a pull request that weakened only a profile showed no difference. A `git:` side is now loaded from that ref's own tree, the ref can't be read as a git option, and the diff lists profile layers added and removed.
-- TypeScript: the JSON Schema validator skipped keys named after `Object.prototype` members (`constructor`, `toString`), in specs and in tool arguments, and NaN passed bounds and budgets. Own keys only are now checked, non-finite numbers are refused, and a `__proto__` key in a spec layer fails in both languages.
-
-Model and tool content could get past a runtime control. Each of these now holds (S2, R1, R4, R11):
-
-- A value a `session` or `workflow` handler, or a custom runner, returned skipped `output.before`, so output guards and validation rules didn't apply to it, not even a locked baseline guard. The harness now fires `output.before` on every task's final output, unless the run just accepted exactly that value (`s.generate`, `s.validate`, the `direct` runner). **Changed:** a handler that returns unchecked content a guard objects to now ends blocked, or follows `validation.on_failure` for a repair, since nothing is left to repair it. Runner conformance no longer counts `output.before` as a hook the runner fires itself.
-- The `direct` runner ran any registered tool the model named, skipping the approvals of the task that does offer it. A registered tool the task's `tools` don't list now blocks the run with code `tool_not_offered`, before `tool.before`.
-- Guards never saw JSON object keys, and `pii_redact` and `strip_instructions` skipped them, so an object keyed by e-mail address reached the model and a secret in a key passed `secrets.scan`. Keys are now checked and redacted like values, in Python and TypeScript. Keys that redact to one name stay distinct (`[EMAIL]`, `[EMAIL]#2`), so no entry is lost. **Changed:** a guard also sees field names, so one that flags a field name of a typed output sends it to repair.
-- A Pydantic AI agent's tool with a harness manifest was offered to the model with the agent's own definition, so a third-party toolset could change what a reviewed tool told the model. `HarnessCapability` now offers the manifest's description and schema. The agent's own handler still runs, and a same-named tool isn't proved to behave as reviewed: review or prefix a toolset's tool names, and close the schema to refuse undeclared arguments.
+- Each ADR now has its own file under `docs/adr/`, carried over word for word, and DESIGNS.md No. 28 indexes them; ADR-0041 records the docs toolchain.
 
 ### Fixed
 
-- A `workflow` run that suspended again before another step finished lost its finished steps from the checkpoint, so they ran again.
-- harnessd read and JSON-parsed a request body of any size before it checked the bearer token, so a peer without the token could grow its memory (RULES S6). The token is now checked in ASGI middleware before any of the body is read. Everything except `GET /v1/health` answers 401 without it, which now includes unknown paths and FastAPI's `/docs`, `/redoc` and `/openapi.json`. Bodies are capped too: `--max-body-bytes` on `harnessd` and `harnessweaver sidecar` (`max_body_bytes` on `create_app`), 10 MiB by default, answers 413 with an `ErrorInfo`, counting the bytes that arrive so chunked uploads count. The OpenAPI document gains the 413.
-- The `chat` template's terminal app ends the chat at the end of input (Ctrl-D, or piped input running out) instead of raising `EOFError`.
 - AGENTS.md named a test that doesn't exist, and gave a plugin-conformance command that, at the repository root, runs the normal tests and no conformance checks (the suite file sits inside the `python` test path); it now names the suite file, as `make conformance` does. The plugin READMEs say to run their command from the package's directory.
 - DESIGNS.md's example spec set `observability.exporter: otlp` without `configure_sdk: true`, which fails loading; its YAML now parses and loads as written. The `anthropic.messages` settings tables now show the provider's own `timeout` (600s), `max_retries` (2) and `cost_header` defaults.
 - The README's and the docs home page's first example is now Example 01's real spec and code, runnable as written, instead of a fragment with undefined names.
-- `Harness.runner_of()`, and so `harnessweaver doctor`, failed for a task run by a plugin's runner (such as `pydantic_ai.agent`): it looked the runner up by its short name.
-- A guard with `action: require_approval` in `guardrails.output` asked for approval again after a human approved the output, so the run never completed. The guardrails pipeline now honours `OutputEvent.approval`: the approval answers `require_approval` and is traced as a `guard_approved` note, while `block`, `escalate`, `repair`, redactions and shadow guards still apply (DESIGNS No. 18, No. 20). The `guards` conformance fixtures gain approved-output cases (`approved: true`).
-- `Harness.authorize` (and so `harnessweaver policy test` and harnessd's `POST /v1/tools/{name}/authorize`) gave an approval verdict only the manifest's `approval.approver_role`, while a real run falls back to the task's and then the spec's `approvals.approver_role`. A dry run now names the role a real run waits for (DESIGNS No. 18).
+
+## 2026-10-23
+
+### Added
+
+- CI runs the TypeScript workspace (types, tests, build) on Node 22 and 24, with SHA-pinned actions.
+- Example 04 (`examples/04_polyglot_typescript`): Example 02's spec from TypeScript, in process with the Vercel AI SDK and through harnessd. Its tests pass Example 02's golden set with the TypeScript graders, require the same answers from the app and from harnessd, and run the README's `curl` walkthrough as written. The example is part of the pnpm workspace, and the CI TypeScript job installs the Python workspace to start harnessd.
+
+## 2026-10-20
+
+### Added
+
+- Example 02, `examples/02_support_rag`: a customer-facing support assistant in the Session style with routing, ACL-checked context, injection guards on questions and retrieved articles, citations, a `run.start` policy, and tests that Acme's baseline locks hold.
+- Example 03, `examples/03_refund_agent`: a refund agent in the Run style (the `pydantic_ai.agent` runner) and the Wrap style (`harness.wrap` on an existing agent), with governed tools, policy rules, the lethal-trifecta check, finance approvals, Acme's own middleware and guard as a local plugin, `policy_tests.yaml`, and a red-team eval set that passes offline.
+- `deploy/harnessd/Dockerfile`: harnessd built from `uv.lock` on digest-pinned bases (S5), running as an unprivileged user.
+- Examples 02 and 03 keep the configs `harnessweaver gateway` generates under `gateway/`, tested as golden files.
+
+### Changed
+
+- `examples/_org/acme-baseline.yaml` 1.1.0 also allows the `pydantic_ai` and `acme` plugins (a loosening, so a minor version, V3).
+- Example 01's offline overlay answers every golden case, so `harnessweaver eval run -e offline` passes on it, and it tests its golden set.
+
+## 2026-10-18
+
+### Added
+
+- Example 01, `examples/01_invoice_extraction`: typed invoice extraction at L1 in the Run style, with PII redaction, a secrets check, business rules, a repaired answer, budgets and prices, and `l0_instrument.py`, which governs an existing OpenAI client in three lines. It runs offline and its tests run in CI, with no app-level retry or tracing code.
+- `examples/_org/acme-baseline.yaml`: an org baseline profile (v1) with a locked plugin allow-list, locked guards and content capture, budget bounds and a required level per risk tier, with tests that each lock and bound fails loading.
+- `make conformance` runs the conformance suite on every first-party plugin and is part of `make check`.
+
+## 2026-10-17
+
+### Added
+
+- uv workspace with the core package `harnessweaver`, the developer tooling `harnessweaver-cli` (the `harnessweaver` command), the sidecar `harnessweaver-sidecar` (`harnessd`), and the first-party plugin packages `harnessweaver-openai`, `harnessweaver-anthropic`, `harnessweaver-pydantic-ai`, `harnessweaver-monty`, `harnessweaver-otel` and `harnessweaver-cel`.
+- `make check` (ruff, ruff format, pyright, pytest), CI on Python 3.12-3.14 with SHA-pinned actions, pre-commit hooks and a pull request template.
+- `make check` also rejects characters that aren't on a standard keyboard (`scripts/check_ascii.py`, RULES D5).

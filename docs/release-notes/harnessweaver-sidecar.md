@@ -1,0 +1,1 @@
+--8<-- "python/harnessweaver-sidecar/CHANGELOG.md"

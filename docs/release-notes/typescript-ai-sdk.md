@@ -1,0 +1,1 @@
+--8<-- "typescript/packages/ai-sdk/CHANGELOG.md"

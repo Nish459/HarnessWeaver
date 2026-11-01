@@ -22,9 +22,6 @@ The short version:
 
 HarnessWeaver is a set of packages: a small Python core, a CLI, a sidecar, plugins, and a TypeScript core with an AI SDK adapter. Install the core and only the plugins your spec uses. Installing a plugin enables nothing on its own: only the names your `harness.yaml` refers to are imported (RULES S8).
 
-!!! warning "Not published yet"
-    0.1.0 is in preparation and the packages aren't on PyPI or npm yet. Until then, install from a clone of the repository, as the [Tutorial](../tutorial/index.md#install-harnessweaver) shows. The commands below are what you will use after the release.
-
 | For | You need |
 | --- | --- |
 | Python apps, the CLI and the sidecar | Python 3.12 or later, and [uv](https://docs.astral.sh/uv/) |

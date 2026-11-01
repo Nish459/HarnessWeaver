@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/python-3.12%2B-3080ff" alt="Python 3.12+">
   <img src="https://img.shields.io/badge/typescript-node%2022%2B-3080ff" alt="Node 22+">
   <img src="https://img.shields.io/badge/license-Apache--2.0-ac4bff" alt="License: Apache-2.0">
-  <img src="https://img.shields.io/badge/status-pre--release-ac4bff" alt="Status: pre-release">
+  <img src="https://img.shields.io/badge/status-pre--1.0-ac4bff" alt="Status: pre-1.0">
 </p>
 
 ---
@@ -40,11 +40,6 @@ The key features are:
 Python 3.12 or later. The core depends only on [Pydantic](https://docs.pydantic.dev/), the [OpenTelemetry API](https://opentelemetry.io/), [PyYAML](https://pyyaml.org/), [anyio](https://anyio.readthedocs.io/) and [loguru](https://loguru.readthedocs.io/). Everything else is a plugin.
 
 ## Installation
-
-!!! warning "Not published yet"
-    0.1.0 is in preparation. Until the packages are on PyPI, install from a clone of the repository, as the [Tutorial](tutorial/index.md#install-harnessweaver) shows.
-
-Once published:
 
 ```console
 $ uv add "harnessweaver[openai]"

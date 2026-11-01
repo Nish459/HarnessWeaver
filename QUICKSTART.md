@@ -2,7 +2,7 @@
 
 This walk takes you from nothing to a governed, traced and tested task in about fifteen minutes. Everything runs offline: no API keys, no network calls to a model, no spend. At the end you will have your own project with a typed task, PII redaction, an output check, a budget, a golden eval set with a baseline, and a new guard in shadow mode.
 
-> **Packages aren't published yet** (0.1.0 is in preparation), so this guide installs HarnessWeaver from a clone of the repository and runs your project with that installation.
+> This guide runs the repository's examples, so it installs HarnessWeaver from a clone and runs your project with that installation. To add it to a project of your own instead, use `uv add harnessweaver` ([Installation](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/deployment/index.md#install)).
 
 ## 1. Install
 
@@ -93,7 +93,7 @@ This prints the middleware on each of the 13 hook points, in the order it runs. 
 
 ## 5. Run the task
 
-Your project has its own `pyproject.toml`, but until the packages are published it runs with the clone's installation, so pass `--project ../HarnessWeaver` to `uv run`:
+Your project has its own `pyproject.toml`, but this guide runs it with the clone's installation, so pass `--project ../HarnessWeaver` to `uv run`:
 
 ```bash
 cd ../ticket-triage

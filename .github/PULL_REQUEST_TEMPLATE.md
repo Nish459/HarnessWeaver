@@ -11,5 +11,5 @@
 - [ ] Nothing raw reaches logs or spans before redaction (R9).
 - [ ] No new core dependency (R6); any new dependency has an ADR (C10).
 - [ ] Tests are offline, cover the change, and include property tests or fixtures where relevant (T1-T4).
-- [ ] Docs and `CHANGELOG.md` are updated (D1), using only keyboard characters (D5).
+- [ ] Docs and the changed packages' `CHANGELOG.md` files are updated (D1), using only keyboard characters (D5).
 - [ ] `make check` is green (G5); the commit is approved by a human (G1).

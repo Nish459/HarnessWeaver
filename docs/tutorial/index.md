@@ -34,17 +34,9 @@ Everything runs **offline**: no API keys, no network, no spend. Each chapter's `
 
 ## Install HarnessWeaver
 
-!!! warning "Not published yet"
-    0.1.0 is in preparation and the packages aren't on PyPI yet, so you install HarnessWeaver from a clone of its repository and point your project at it. Once the packages are published, `uv add "harnessweaver[openai]"` will do instead.
+You need [uv](https://docs.astral.sh/uv/getting-started/installation/). It installs a suitable Python (3.12 or later) on its own.
 
-You need [git](https://git-scm.com/) and [uv](https://docs.astral.sh/uv/getting-started/installation/). uv installs a suitable Python (3.12 or later) on its own.
-
-```console
-$ git clone https://github.com/Wise-DreamerZ/HarnessWeaver.git
-$ uv --directory HarnessWeaver sync --all-packages
-```
-
-Next to the clone, create the folder for your project, `support-desk/`, with this `pyproject.toml`:
+Create the folder for your project, `support-desk/`, with this `pyproject.toml`:
 
 ```toml title="pyproject.toml"
 [project]
@@ -55,12 +47,6 @@ dependencies = ["harnessweaver[openai]"]
 
 [dependency-groups]
 dev = ["harnessweaver-cli", "pytest"]
-
-# Until the packages are published: use the clone next to this folder.
-[tool.uv.sources]
-harnessweaver = { path = "../HarnessWeaver/python/harnessweaver", editable = true }
-harnessweaver-openai = { path = "../HarnessWeaver/python/plugins/openai", editable = true }
-harnessweaver-cli = { path = "../HarnessWeaver/python/harnessweaver-cli", editable = true }
 ```
 
 `harnessweaver` is the core, `harnessweaver-openai` lets the harness call any OpenAI-compatible endpoint, and `harnessweaver-cli` gives you the `harnessweaver` command. [Installation details](../deployment/index.md#install) lists every package and extra.
@@ -70,7 +56,7 @@ Then, inside `support-desk/`:
 ```console
 $ uv sync
 $ uv run harnessweaver --version
-harnessweaver-cli 0.1.0 (harnessweaver 0.1.0)
+harnessweaver-cli 0.7.1 (harnessweaver 0.17.1)
 ```
 
 !!! tip

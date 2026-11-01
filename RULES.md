@@ -78,7 +78,7 @@ When two design goals conflict, the earlier goal in [DESIGNS.md, Design goals](D
 
 | ID | Rule |
 | --- | --- |
-| **D1** | A change to public API, spec format, CLI or behavior updates the relevant docs page and `CHANGELOG.md` in the same commit. |
+| **D1** | A change to public API, spec format, CLI or behavior updates the relevant docs page and the `CHANGELOG.md` of each package it changes (the root one for repository-wide changes) in the same commit. |
 | **D2** | Diagrams are Mermaid, kept next to the text they explain, so they are reviewed like code. PNGs are only for diagrams that Mermaid can't express. |
 | **D3** | Code in docs is either a tested example (included from `examples/`) or short enough to be checked by eye. Never document an API that doesn't exist yet without marking it *planned*. |
 | **D4** | Any deviation from the design guide (`docs/AI Harness Framework Design and Build Guide.md`) is recorded as an ADR (in `docs/adr/`, indexed in DESIGNS.md No. 28) with its reason, and listed in DESIGNS.md No. 29. |
@@ -91,7 +91,7 @@ When two design goals conflict, the earlier goal in [DESIGNS.md, Design goals](D
 | **V1** | Three version streams move independently: contracts (`apiVersion: harnessweaver/v1`), packages (SemVer per package) and profiles (SemVer; specs pin ranges like `@^2`). |
 | **V2** | Within a contract major, changes are additive: new optional fields, new hook points, new actions. Removing or changing anything needs a new major `apiVersion`, and the previous major stays supported for 12 months. |
 | **V3** | Tightening a baseline profile (a new lock, a narrower bound) is a breaking profile change and needs a major profile version. |
-| **V4** | Deprecations warn for at least one minor release before removal, and are listed in `CHANGELOG.md`. |
+| **V4** | Deprecations warn for at least one minor release before removal, and are listed in the package's `CHANGELOG.md`. |
 | **V5** | Every provider and adapter declares the contract range it supports (`contract=">=1.0,<2"`). The loader refuses incompatible combinations. |
 
 ## Git and commit rules
@@ -118,5 +118,5 @@ Copy this into every pull request (it is also in `.github/PULL_REQUEST_TEMPLATE.
 - [ ] Nothing raw reaches logs or spans before redaction (R9).
 - [ ] No new core dependency (R6); any new dependency has an ADR (C10).
 - [ ] Tests are offline, cover the change, and include property tests or fixtures where relevant (T1-T4).
-- [ ] Docs and `CHANGELOG.md` are updated (D1), using only keyboard characters (D5).
+- [ ] Docs and the changed packages' `CHANGELOG.md` files are updated (D1), using only keyboard characters (D5).
 - [ ] `make check` is green (G5); the commit is approved by a human (G1).

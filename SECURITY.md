@@ -16,7 +16,7 @@ You will get an acknowledgement, and updates as the report is investigated and f
 
 ## Supported versions
 
-HarnessWeaver is pre-release: 0.1.0 is in preparation. Until it ships, fixes go to the `main` branch only. From then on, the latest two minor versions of each package get security fixes, as described in [Versioning](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/deployment/versions.md).
+The latest two minor versions of each package get security fixes, as described in [Versioning](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/deployment/versions.md).
 
 ## Scope
 

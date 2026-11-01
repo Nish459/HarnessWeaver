@@ -57,14 +57,6 @@ middleware:
 
 `harnessweaver plugin new acme` writes this layout for you, with a sample guard and tests whose `uv run pytest` also runs the conformance suite.
 
-!!! note "Before the packages are published"
-    The scaffold depends on `harnessweaver` from PyPI, which isn't published yet. Point it at your clone of the repository in its `pyproject.toml`, then `uv sync && uv run pytest` works as it will after the release:
-
-    ```toml
-    [tool.uv.sources]
-    harnessweaver = { path = "../HarnessWeaver/python/harnessweaver", editable = true }
-    ```
-
 ### hw.Plugin
 
 | Argument | Meaning |

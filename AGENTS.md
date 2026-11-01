@@ -18,7 +18,8 @@ This file is for AI coding agents (and humans) working **on** the HarnessWeaver 
 
 ```
 .
-|-- README.md  QUICKSTART.md  CONTRIBUTING.md  SECURITY.md  CHANGELOG.md
+|-- README.md  QUICKSTART.md  CONTRIBUTING.md  SECURITY.md
+|-- CHANGELOG.md                    # an index, plus repository-wide changes; each package has its own
 |-- AGENTS.md  CLAUDE.md  RULES.md  DESIGNS.md
 |-- pyproject.toml                  # uv workspace root (virtual): members, dev and docs groups, tool config
 |-- Makefile                        # make check | test | lint | fmt | typecheck | conformance | schemas | docs | build | release
@@ -134,7 +135,7 @@ flowchart LR
 3. Add it to the owning plugin's `hw.Plugin(providers=[...])`. Its name must sit in that plugin's namespace (`acme.pii`); core providers belong to the built-in plugin and use the reserved area namespaces (DESIGNS No. 13).
 4. Add unit tests, and make it pass `--harnessweaver-conformance=<name>` (T5).
 5. If its behavior is part of a contract (built-in guards, cel-lite, the governor), add JSON fixtures and make the TypeScript implementation pass them too (R11, T4).
-6. Document its settings in `docs/reference/providers.md`, mention it in the tutorial chapter for its module (`docs/tutorial/`), and add it to `CHANGELOG.md` (D1).
+6. Document its settings in `docs/reference/providers.md`, mention it in the tutorial chapter for its module (`docs/tutorial/`), and add it to the package's `CHANGELOG.md` (D1).
 
 ### Add middleware
 1. `@hw.middleware(hooks=[...], band=..., fail_mode="closed"|"open", timeout=...)`. `fail_mode` is required (R2, ADR-0014).
@@ -152,7 +153,7 @@ flowchart LR
 2. Change the contract model first, then run `make schemas`.
 3. Add or extend fixtures in `contracts/fixtures/conformance/<suite>/` (format in [contracts/README.md](contracts/README.md)). Write expected values by hand from the design, never by copying an implementation's output.
 4. Make Python **and** TypeScript (and the sidecar, if affected) pass (R11).
-5. Update DESIGNS.md, the docs page and `CHANGELOG.md`.
+5. Update DESIGNS.md, the docs page and the changed packages' `CHANGELOG.md` files.
 
 ### Add a module (new port)
 Platform-level decision. Write an ADR first (a file in `docs/adr/`, a row in DESIGNS.md No. 28 and an entry in `mkdocs.yml`'s `nav`), covering the port, default provider, hook points, config schema, failure modes, telemetry and tests. Then give the module a tutorial chapter (`docs/tutorial/`, its code tested in `docs_src/tutorial/`), its settings in `docs/reference/providers.md`, and a row in `docs/reference/modules.md`.
@@ -181,11 +182,11 @@ A plugin is defined by its design, not its name (DESIGNS No. 13, ADR-0015). Firs
 ## Docs
 
 - Diagrams are Mermaid, next to the text (D2), and use only keyboard characters (D5). Never document an API that doesn't exist without marking it *planned* (D3).
-- `make docs` builds the site strictly: a broken link or anchor, or a page missing from `mkdocs.yml`'s `nav`, fails it. `QUICKSTART.md`, `CONTRIBUTING.md`, `SECURITY.md` and `CHANGELOG.md` are included in the site, so links in them must be absolute URLs.
+- `make docs` builds the site strictly: a broken link or anchor, or a page missing from `mkdocs.yml`'s `nav`, fails it. `QUICKSTART.md`, `CONTRIBUTING.md`, `SECURITY.md` and every `CHANGELOG.md` are included in the site, so links in them must be absolute URLs.
 - A new ADR is a file `docs/adr/NNNN-slug.md` plus a row in DESIGNS.md No. 28 and an entry in `mkdocs.yml`'s `nav`.
 - The tutorial's code lives in `docs_src/tutorial/<chapter>/` and pages include it with `--8<--` snippets, so it is never copied by hand. Change the code there, run `uv run pytest docs_src/tests`, and paste any changed output into the page: the tests check that each chapter prints what its page shows.
 - The Python API reference (`docs/reference/python/`) is generated from docstrings by mkdocstrings, so a public function's docstring is its documentation.
-- Every public change updates the relevant doc and `CHANGELOG.md` (D1).
+- Every public change updates the relevant doc and the `CHANGELOG.md` of each package it changes (D1). A new package gets its own, and a page under `docs/release-notes/` in `mkdocs.yml`'s `nav`.
 
 ## Commits and pull requests
 

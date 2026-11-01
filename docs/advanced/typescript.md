@@ -41,7 +41,7 @@ sequenceDiagram
 
 ## Install
 
-From the repository (until the packages are published): `pnpm -C typescript install && pnpm -C typescript build`. After the release: `npm install @harnessweaver/core`, plus `npm install @harnessweaver/ai-sdk ai @ai-sdk/provider` for the AI SDK adapter. Node 22 or later; ESM only.
+`npm install @harnessweaver/core`, plus `npm install @harnessweaver/ai-sdk ai @ai-sdk/provider` for the AI SDK adapter. Node 22 or later; ESM only. From a clone of the repository: `pnpm -C typescript install && pnpm -C typescript build`.
 
 ## Loading
 

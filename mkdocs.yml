@@ -105,8 +105,8 @@ markdown_extensions:
       # Marks each block with its language, so terminals.js finds the `console` ones.
       pygments_lang_class: true
   - pymdownx.inlinehilite
-  # QUICKSTART.md, CONTRIBUTING.md, SECURITY.md and CHANGELOG.md have one source each,
-  # at the repository root, included here.
+  # QUICKSTART.md, CONTRIBUTING.md, SECURITY.md and the changelogs have one source each,
+  # at the repository root or in their package, included here.
   - pymdownx.snippets:
       base_path: ["."]
       check_paths: true
@@ -263,4 +263,16 @@ nav:
           - "ADR-0043: Profiles an app's team can write merge after the platform's": adr/0043-profile-ownership.md
           - "ADR-0044: An answer claims the approval before it resumes the run": adr/0044-answers-claim-the-approval.md
           - "ADR-0045: What an approval covers: one execution, by the role that step needs": adr/0045-what-an-approval-covers.md
-  - Release Notes: release-notes.md
+  - Release Notes:
+      - release-notes/index.md
+      - harnessweaver: release-notes/harnessweaver.md
+      - harnessweaver-cli: release-notes/harnessweaver-cli.md
+      - harnessweaver-sidecar: release-notes/harnessweaver-sidecar.md
+      - harnessweaver-openai: release-notes/harnessweaver-openai.md
+      - harnessweaver-anthropic: release-notes/harnessweaver-anthropic.md
+      - harnessweaver-otel: release-notes/harnessweaver-otel.md
+      - harnessweaver-pydantic-ai: release-notes/harnessweaver-pydantic-ai.md
+      - harnessweaver-monty: release-notes/harnessweaver-monty.md
+      - harnessweaver-cel: release-notes/harnessweaver-cel.md
+      - "@harnessweaver/core": release-notes/typescript-core.md
+      - "@harnessweaver/ai-sdk": release-notes/typescript-ai-sdk.md
