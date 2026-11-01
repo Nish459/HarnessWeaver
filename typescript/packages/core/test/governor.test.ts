@@ -32,7 +32,7 @@ async function steps(c: Case) {
     newEnvelope({ tenant: c.tenant ?? "acme", principal: c.principal ?? { id: "alice", roles: ["support"] }, task: c.task ?? null, clock }),
     c.labels ?? {},
   );
-  const run = { envelope, clock, trace: new RunTrace(clock) };
+  const run = { envelope, clock, trace: new RunTrace(clock), fallbackApproverRole: c.fallback_role ?? null };
   const limit = tool.manifest?.spec.rate_limit;
   for (let i = 0; i < (c.previous_calls ?? 0); i++) {
     const wanted: [string, number, number][] = [];
@@ -40,7 +40,7 @@ async function steps(c: Case) {
     if (limit?.per_tenant) wanted.push([limitKey(tool.info.name, "tenant", envelope.tenant), ...parseRate(limit.per_tenant)]);
     expect(governor.limiter.acquire(wanted, clock.now() / 1000)).toBeDefined();
   }
-  const approval = c.approved ? { approval_id: "apr_1", decision: "approve" as const, approver: { id: "bob" } } : null;
+  const approval = c.approved ? { approval_id: "apr_1", decision: "approve" as const, approver: { id: "bob", roles: c.approved_roles ?? [] } } : null;
   return governor.authorize(run, { id: "call_1", name: tool.info.name, arguments: c.args }, tool, approval);
 }
 

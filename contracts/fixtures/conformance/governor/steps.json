@@ -1,6 +1,6 @@
 {
   "suite": "governor",
-  "description": "Governor steps 1 to 7 for one call (DESIGNS No. 17). Defaults: principal alice (support), tenant acme, no task, empty labels, no policy rules with default allow, tools.require_manifest true, trifecta require_approval, no previous calls, not approved. task_approvals maps a task to the tools it always asks about. A tool is a manifest's name and spec fields; manifest: false means a tool without one.",
+  "description": "Governor steps 1 to 7 for one call (DESIGNS No. 17). Defaults: principal alice (support), tenant acme, no task, empty labels, no policy rules with default allow, tools.require_manifest true, trifecta require_approval, no previous calls, not approved. approved_roles are the roles the approver of an approved call holds (default none); fallback_role is who approves when the rule names nobody (default none). task_approvals maps a task to the tools it always asks about. A tool is a manifest's name and spec fields; manifest: false means a tool without one.",
   "cases": [
     {
       "name": "a plain call is allowed",
@@ -536,6 +536,132 @@
         "decision": "allow",
         "step": 7,
         "code": "approved"
+      }
+    },
+    {
+      "name": "an approval without the rule's role asks again",
+      "tool": {
+        "name": "refund",
+        "input_schema": {
+          "type": "object"
+        },
+        "approval": {
+          "when": "args.amount_usd > 100",
+          "approver_role": "treasury"
+        }
+      },
+      "args": {
+        "amount_usd": 500
+      },
+      "approved": true,
+      "approved_roles": [
+        "helpdesk"
+      ],
+      "expect": {
+        "decision": "require_approval",
+        "step": 7,
+        "code": "approval_required"
+      }
+    },
+    {
+      "name": "an approval with the rule's role goes ahead",
+      "tool": {
+        "name": "refund",
+        "input_schema": {
+          "type": "object"
+        },
+        "approval": {
+          "when": "args.amount_usd > 100",
+          "approver_role": "treasury"
+        }
+      },
+      "args": {
+        "amount_usd": 500
+      },
+      "approved": true,
+      "approved_roles": [
+        "treasury"
+      ],
+      "expect": {
+        "decision": "allow",
+        "step": 7,
+        "code": "approved"
+      }
+    },
+    {
+      "name": "the run's fallback role binds when the rule names none",
+      "tool": {
+        "name": "refund",
+        "input_schema": {
+          "type": "object"
+        },
+        "approval": {
+          "when": "args.amount_usd > 100"
+        }
+      },
+      "args": {
+        "amount_usd": 500
+      },
+      "approved": true,
+      "approved_roles": [
+        "helpdesk"
+      ],
+      "fallback_role": "treasury",
+      "expect": {
+        "decision": "require_approval",
+        "step": 7,
+        "code": "approval_required"
+      }
+    },
+    {
+      "name": "the rule's role wins over the run's fallback role",
+      "tool": {
+        "name": "refund",
+        "input_schema": {
+          "type": "object"
+        },
+        "approval": {
+          "when": "args.amount_usd > 100",
+          "approver_role": "treasury"
+        }
+      },
+      "args": {
+        "amount_usd": 500
+      },
+      "approved": true,
+      "approved_roles": [
+        "treasury"
+      ],
+      "fallback_role": "helpdesk",
+      "expect": {
+        "decision": "allow",
+        "step": 7,
+        "code": "approved"
+      }
+    },
+    {
+      "name": "an approval without the role doesn't matter when nothing asks for one",
+      "tool": {
+        "name": "refund",
+        "input_schema": {
+          "type": "object"
+        },
+        "approval": {
+          "when": "args.amount_usd > 100",
+          "approver_role": "treasury"
+        }
+      },
+      "args": {
+        "amount_usd": 5
+      },
+      "approved": true,
+      "approved_roles": [
+        "helpdesk"
+      ],
+      "expect": {
+        "decision": "allow",
+        "step": 7,
+        "code": null
       }
     },
     {

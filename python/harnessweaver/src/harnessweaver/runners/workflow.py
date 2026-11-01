@@ -141,12 +141,17 @@ class WorkflowRunner:
     ) -> Any:
         raw = resume.get("completed") if resume else None
         completed: dict[str, JsonValue] = dict(raw) if isinstance(raw, dict) else {}
+        # Keep the finished steps if this pass suspends before another step finishes.
+        ctx.set_resume_point({"completed": dict(completed)})
         remaining = [s for s in self.config.steps if s.id not in completed]
 
         async def run_step(step: WorkflowStep) -> None:
             inputs: dict[str, Any] = {"input": input, **{n: completed[n] for n in step.needs}}
             output = await self._step(ctx, step, inputs)
             completed[step.id] = to_json(output)
+            # ponytail: run-wide settle, so a parallel step still running may ask a human
+            # again about a call it repeats; per-step grants if that ever matters.
+            ctx.settle_grants()
             ctx.set_resume_point({"completed": dict(completed)})
 
         while remaining:

@@ -161,6 +161,7 @@ class HarnessBase:
             task=task,
             prompts=self._prompts,
             grants=grants,
+            grant_scope=self._effective.spec.approvals.grant_scope,
             on_chunk=on_chunk,
             harness=self,
             can_suspend=can_suspend,

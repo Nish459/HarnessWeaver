@@ -214,7 +214,7 @@ A channel that fails is traced (`approval_notify_failed`) and the run keeps wait
 | `memory` | Everything in the process (the default) | none |
 | `sqlite` | Everything in a SQLite file | `path`: default `.harness/state.db`, relative to the working directory; `:memory:` keeps it in memory |
 
-Any `StateStore` provider works, and the conformance suite checks it with a round-trip contract. Postgres and Redis stores are *planned*.
+Any `StateStore` provider works, and the conformance suite checks it with a round-trip contract, including that only one answer can claim a pending approval. Postgres and Redis stores are *planned*.
 
 ## Policy engines
 

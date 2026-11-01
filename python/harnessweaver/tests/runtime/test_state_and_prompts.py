@@ -42,6 +42,20 @@ async def store(request: pytest.FixtureRequest, tmp_path: Path) -> StateStore:
     return SqliteStateStore(SqliteStateConfig(path=str(tmp_path / "deep" / "state.db")))
 
 
+async def test_only_one_answer_claims_a_pending_approval(store: StateStore) -> None:
+    answered = Checkpoint(run_id="r1", resume={"step": 2})
+    assert not await store.claim_approval(answered, "apr_1")
+    await store.put_checkpoint(Checkpoint(run_id="r1", resume={"step": 1}))
+    assert not await store.claim_approval(answered, "apr_1")
+    pending = hw.ApprovalRequest(approval_id="apr_1", run_id="r1", reason="r", requested_at=NOW)
+    await store.put_checkpoint(Checkpoint(run_id="r1", resume={"step": 1}, approval=pending))
+    assert not await store.claim_approval(answered, "apr_other")
+    assert await store.claim_approval(answered, "apr_1")
+    assert not await store.claim_approval(answered, "apr_1")
+    assert await store.get_checkpoint("r1") == answered
+    await store.aclose()
+
+
 async def test_runs_checkpoints_keys_and_events(store: StateStore) -> None:
     assert await store.get_run("r1") is None
     await store.put_run(record("r1"))

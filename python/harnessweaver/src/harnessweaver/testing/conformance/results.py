@@ -25,7 +25,7 @@ from harnessweaver.core.policy import PolicyDecision
 from harnessweaver.core.ports import StreamingModelProvider
 from harnessweaver.core.results import RunEvent
 from harnessweaver.core.retrieval import ContextItem
-from harnessweaver.core.runs import RunStatus
+from harnessweaver.core.runs import ApprovalRequest, RunStatus
 from harnessweaver.core.state import Checkpoint, RecordedCall, RunRecord
 from harnessweaver.core.tools import SandboxLimits, SandboxResult, ToolResult
 from harnessweaver.modules.guardrails import Guard, guard_handler
@@ -86,6 +86,26 @@ async def model_results(provider: Any) -> list[ModelResponse] | None:
     return results
 
 
+async def _claim_contract(store: Any, now: datetime) -> None:
+    """Exactly one answer may claim a pending approval (ADR-0044)."""
+    answered = Checkpoint(run_id="run_conformance", resume={"step": 2})
+    expect(not await store.claim_approval(answered, "apr_1"), "claimed a missing checkpoint")
+    await store.put_checkpoint(Checkpoint(run_id="run_conformance", resume={"step": 1}))
+    expect(not await store.claim_approval(answered, "apr_1"), "claimed with nothing pending")
+    pending = ApprovalRequest(
+        approval_id="apr_1", run_id="run_conformance", reason="r", requested_at=now
+    )
+    await store.put_checkpoint(
+        Checkpoint(run_id="run_conformance", resume={"step": 1}, approval=pending)
+    )
+    expect(not await store.claim_approval(answered, "apr_other"), "claimed another request")
+    expect(await store.claim_approval(answered, "apr_1"), "the first answer must win")
+    expect(not await store.claim_approval(answered, "apr_1"), "a second answer must lose")
+    checkpoint = await store.get_checkpoint("run_conformance")
+    expect(checkpoint is not None and checkpoint.resume == {"step": 2}, "the claim must replace")
+    await store.delete_checkpoint("run_conformance")
+
+
 async def _state_contract(store: Any) -> None:
     from harnessweaver.core.envelope import Envelope as _Envelope
 
@@ -109,6 +129,7 @@ async def _state_contract(store: Any) -> None:
     expect(checkpoint is not None and checkpoint.resume == {"step": 1}, "checkpoint round trip")
     await store.delete_checkpoint("run_conformance")
     expect(await store.get_checkpoint("run_conformance") is None)
+    await _claim_contract(store, now)
     expect(await store.claim_idempotency("t", "x", "k", "run_a") == "run_a")
     expect(await store.claim_idempotency("t", "x", "k", "run_b") == "run_a", "idempotency claim")
     for seq in (2, 0, 1):

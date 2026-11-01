@@ -4,6 +4,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+import anyio
+import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -15,6 +17,7 @@ from harnessweaver_sidecar.main import load
 
 DESK = Path(__file__).resolve().parent / "desk"
 ALICE = {"principal": "alice", "tenant": "acme"}
+TOKEN = "sk-test-harnessd"
 
 
 def post(client: TestClient, path: str, body: dict[str, Any]) -> dict[str, Any]:
@@ -183,6 +186,53 @@ def test_a_run_waits_for_finance_then_refunds_once(client: TestClient) -> None:
     assert client.get(f"/v1/runs/{waiting['run_id']}").json()["status"] == "completed"
     unknown = client.get("/v1/runs/run_nope")
     assert (unknown.status_code, unknown.json()["code"]) == (404, "not_found")
+
+
+@pytest.mark.anyio
+async def test_concurrent_answers_over_http_refund_once() -> None:
+    """A double submit or a relay retry: one 200, one 404 and one refund (ADR-0044)."""
+    import harnessd_desk.tools
+
+    harnessd_desk.tools.REFUNDS.clear()
+    harness = load(DESK / "harness.yaml")
+    app = create_app(harness, token=TOKEN)
+    state: Any = harness._state  # pyright: ignore[reportPrivateUsage]
+    read = state.get_checkpoint
+    arrived = 0
+    met = anyio.Event()
+
+    async def read_then_meet(run_id: str) -> Any:
+        """Hold each answer until both have read the pending checkpoint."""
+        nonlocal arrived
+        found = await read(run_id)
+        arrived += 1
+        if arrived >= 2:
+            met.set()
+        await met.wait()
+        return found
+
+    transport = httpx.ASGITransport(app=app)
+    headers = {"Authorization": f"Bearer {TOKEN}"}
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(transport=transport, base_url="http://harnessd", headers=headers) as http,
+    ):
+        body = {**ALICE, "task": "refund", "input": "Refund 250 dollars"}
+        waiting = (await http.post("/v1/runs", json=body)).json()
+        assert waiting["status"] == "awaiting_approval"
+        path = f"/v1/runs/{waiting['run_id']}/approvals/{waiting['approval']['approval_id']}"
+        approver = {"id": "bob", "roles": ["finance"]}
+        state.get_checkpoint = read_then_meet
+        codes: list[int] = []
+
+        async def answer() -> None:
+            codes.append((await http.post(path, json={"approver": approver})).status_code)
+
+        async with anyio.create_task_group() as group:
+            group.start_soon(answer)
+            group.start_soon(answer)
+    assert sorted(codes) == [200, 404]
+    assert len(harnessd_desk.tools.REFUNDS) == 1
 
 
 def test_evals_run_a_listed_suite_or_one_sent_inline(client: TestClient) -> None:

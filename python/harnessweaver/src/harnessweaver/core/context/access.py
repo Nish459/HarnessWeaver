@@ -4,6 +4,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from pydantic import JsonValue
+
 from harnessweaver.core.budgets import PriceLookup
 from harnessweaver.core.envelope import Envelope
 from harnessweaver.core.errors import (
@@ -61,6 +63,8 @@ class TaskInfo:
 
     name: str
     version: str = "1.0.0"
+    approver_role: str | None = None
+    """Who approves when the step that asks names nobody: the task's role, else the spec's."""
     model: str | None = None
     prompt: str | None = None
     tools: tuple[str, ...] = ()
@@ -91,3 +95,5 @@ class PendingApproval:
     digest: str
     call: ToolCall | None = None
     tool: ToolInfo | None = None
+    edited_args: dict[str, JsonValue] | None = None
+    """Arguments an earlier answer chose, when this asks again about the same call."""

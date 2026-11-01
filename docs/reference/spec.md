@@ -175,6 +175,7 @@ The approval channel and the defaults for every approval. Extra keys are the cha
 | `timeout` | duration | none (the defaults profile sets `24h`) | How long a request stays open |
 | `on_timeout` | `escalate` or `reject` | `escalate` | What an answer after expiry does to the run |
 | `approver_role` | string | none | The role that may approve, when the step that asked names none |
+| `grant_scope` | `call` or `run` | `call` | How long a tool call's approval lasts: one execution, or the rest of the run ([Approvals in depth](../advanced/approvals.md#grants)) |
 
 ## budgets
 

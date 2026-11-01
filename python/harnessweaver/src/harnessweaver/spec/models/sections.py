@@ -195,6 +195,10 @@ class ApprovalsSpec(ProviderModel):
     timeout: Duration | None = None
     on_timeout: Literal["escalate", "reject"] = "escalate"
     approver_role: str | None = None
+    grant_scope: Literal["call", "run"] = Field(
+        default="call",
+        description="How long a tool call's approval lasts: one execution, or the whole run.",
+    )
 
 
 # --- budgets, state, observability, evals, prompts, sidecar -------------------------------

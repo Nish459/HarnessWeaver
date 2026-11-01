@@ -26,7 +26,7 @@ from harnessweaver.core.ports import (
     ToolBackend,
     ToolDescription,
 )
-from harnessweaver.core.state import call_digest
+from harnessweaver.core.state import Grant, call_digest
 from harnessweaver.core.tools import ToolInfo, ToolResult
 
 
@@ -74,13 +74,13 @@ class ToolCalls(RunContextBase):
         )
         before = await self.emit(HookPoint.TOOL_BEFORE, event)
         if isinstance(before.outcome, Suspend):
-            self.pending = PendingApproval(
-                HookPoint.TOOL_BEFORE,
+            self._ask_about(
+                before.event.call,
+                description.info,
+                digest,
                 before.outcome.reason,
                 before.outcome.approver_role,
-                digest,
-                call=before.event.call,
-                tool=description.info,
+                grant,
             )
         self.halt_on(before)
         call = before.event.call
@@ -92,16 +92,12 @@ class ToolCalls(RunContextBase):
                     verdict.reason, hook=HookPoint.TOOL_BEFORE.value, code=verdict.code
                 )
             if verdict.decision == "require_approval":
-                self.pending = PendingApproval(
-                    HookPoint.TOOL_BEFORE,
-                    verdict.reason,
-                    verdict.approver_role,
-                    digest,
-                    call=call,
-                    tool=description.info,
+                self._ask_about(
+                    call, description.info, digest, verdict.reason, verdict.approver_role, grant
                 )
                 suspend = Suspend(reason=verdict.reason, approver_role=verdict.approver_role)
                 raise self.interrupt(HookPoint.TOOL_BEFORE, suspend)
+        self._spend(grant)
         self.meter.start_tool_call()
         self._refresh_budget()
         with self._tool_span(call, description.info) as span:
@@ -135,6 +131,29 @@ class ToolCalls(RunContextBase):
         if description.info.reads_private_data:
             self.mark_private(f"tool:{call.name}")
         return final
+
+    def _ask_about(
+        self,
+        call: ToolCall,
+        tool: ToolInfo,
+        digest: str,
+        reason: str,
+        role: str | None,
+        held: Grant | None,
+    ) -> None:
+        """Record what the run waits on. An approval the call held didn't answer this ask, so
+        the new answer replaces it, keeping the arguments it chose (ADR-0045)."""
+        if held is not None:
+            self.grants.remove(held)
+        self.pending = PendingApproval(
+            HookPoint.TOOL_BEFORE,
+            reason,
+            role,
+            digest,
+            call=call,
+            tool=tool,
+            edited_args=held.decision.edited_args if held is not None else None,
+        )
 
     def approval_needed(
         self,

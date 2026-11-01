@@ -120,6 +120,20 @@ class SqliteStateStore:
         )
         return Checkpoint.model_validate_json(row[0]) if row else None
 
+    async def claim_approval(self, checkpoint: Checkpoint, approval_id: str) -> bool:
+        """One ``UPDATE``, so SQLite's write lock picks the winner, across processes too."""
+        data = checkpoint.model_dump_json()
+        changed = await self._run(
+            lambda db: (
+                db.execute(
+                    "UPDATE checkpoints SET data = ? "
+                    "WHERE run_id = ? AND json_extract(data, '$.approval.approval_id') = ?",
+                    (data, checkpoint.run_id, approval_id),
+                ).rowcount
+            )
+        )
+        return changed == 1
+
     async def delete_checkpoint(self, run_id: str) -> None:
         await self._run(
             lambda db: db.execute("DELETE FROM checkpoints WHERE run_id = ?", (run_id,))

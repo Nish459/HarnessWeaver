@@ -45,6 +45,8 @@ export interface GovernedRun {
   envelope: Envelope;
   trace: RunTrace;
   clock: Clock;
+  /** Who approves when the governor's own rule names nobody. */
+  fallbackApproverRole?: string | null;
 }
 
 function block(step: number, code: string, reason: string): ToolVerdict {
@@ -87,7 +89,7 @@ export class Governor {
       verdict = decided.verdict;
       if (verdict === undefined) [reservation, verdict] = this.limits(run, tool);
       if (verdict === undefined) [effect, verdict] = await this.judged(run, call, effect, decided.reasons);
-      verdict ??= this.approval(effect, decided.role, decided.reasons, approval);
+      verdict ??= this.approval(effect, decided.role ?? run.fallbackApproverRole ?? null, decided.reasons, approval);
     }
     if (reservation !== undefined && (dryRun || verdict.decision !== "allow")) this.limiter.release(reservation);
     run.trace.note(SOURCE, verdict.reason, {
@@ -216,7 +218,11 @@ export class Governor {
   private approval(effect: PolicyEffect, role: string | null, reasons: string[], approval: ApprovalDecision | null): ToolVerdict {
     if (effect !== "require_approval") return { decision: "allow", step: 7, code: null, reason: "allowed", approver_role: null };
     if (approval && approval.decision !== "reject") {
-      return { decision: "allow", step: 7, code: "approved", reason: `approved by ${approval.approver.id}`, approver_role: null };
+      // An approval given for another step's ask counts only with the role this step needs (ADR-0045).
+      if (role === null || (approval.approver.roles ?? []).includes(role)) {
+        return { decision: "allow", step: 7, code: "approved", reason: `approved by ${approval.approver.id}`, approver_role: null };
+      }
+      reasons = [...reasons, `${approval.approver.id} approved without the role ${JSON.stringify(role)}`];
     }
     return { decision: "require_approval", step: 7, code: "approval_required", reason: reasons.join("; "), approver_role: role };
   }

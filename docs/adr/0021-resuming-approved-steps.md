@@ -1,6 +1,6 @@
 # ADR-0021: How approved steps resume
 
-**Status:** Accepted
+**Status:** Accepted. Amended by [ADR-0045](0045-what-an-approval-covers.md), which limits how long a match lasts.
 
 ## Decision
 

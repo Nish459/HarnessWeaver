@@ -905,13 +905,14 @@ stateDiagram-v2
 - **Checkpoint** (on Suspend): messages so far, the pending tool call, the budget meter, labels and the step index. Stored in the `StateStore` (`memory` or `sqlite`), so a run resumes after a process restart.
 - **`harness.approve(run_id, approval_id, decision, approver, edited_args=None)`**:
   1. Checks the approver holds `approver_role`.
-  2. Fires `approval.resolved`.
-  3. Re-runs schema and policy on any edited args.
-  4. Resumes.
+  2. Claims the request in the state store, so one of several concurrent answers wins and the rest get `NotFound` (ADR-0044).
+  3. Fires `approval.resolved`.
+  4. Re-runs schema and policy on any edited args.
+  5. Resumes.
 - **Approval requests.** The approver role comes from the step that asked (a middleware's `Suspend`, or the manifest's `approval.approver_role`), then the task's `approvals`, then the spec's `approvals`; the expiry from the task's `approvals`, then the spec's.
 - **Channels.** Once the request and checkpoint are saved, the `ApprovalChannel` that `approvals.use` names is notified: `memory` (the default; keeps the requests), `callback` (`handler: "module:function"`, sync or async), `console` (one line on stderr or stdout) or `webhook` (`url`; POSTs the `approval-request` contract, with headers from `headers_env`; refuses the network in test mode). A channel that fails is traced (`approval_notify_failed`) and the run keeps waiting, since the request is already saved. A handler must not answer in-line.
-- **Grants.** An approval becomes a grant that matches the call by tool name and arguments, or the output by its content. A matching call carries the approval into `tool.before` as `event.approval`, so middleware doesn't ask again but still checks edited arguments. A matching output carries it into `output.before` the same way, where it answers the guards that ask for approval (No. 20). One approval answers every ask for approval at that step, and nothing else: it never turns a block, an escalation or a repair into an allow.
-- **How runs resume** (ADR-0021). `direct` continues from the exact step. `session` and `workflow` run the interrupted handler or step again; finished workflow steps don't run again. Work before a suspension point should be safe to repeat. `pydantic_ai.agent` continues the agent from its saved message history with every deferred call answered as approved; the harness's grant lets through the call a human approved and asks again about any other (ADR-0037).
+- **Grants** (ADR-0045). An approval becomes a grant that matches the call by tool name and arguments, or the output by its content. `approvals.grant_scope` says how long a call's grant lasts: `call` (the default) for one execution, `run` for the rest of the run. A matching call carries the approval into `tool.before` as `event.approval`, so middleware doesn't ask again but still checks edited arguments. Governor step 7 accepts it only if the approver holds the role that step needs (the manifest's, else the task's, else the spec's); otherwise the call asks again, naming that role, and the new answer replaces the old grant, keeping any edit. A matching output carries it into `output.before` the same way, where it answers the guards that ask for approval (No. 20). One approval answers every ask for approval at that step, and nothing else: it never turns a block, an escalation or a repair into an allow.
+- **How runs resume** (ADR-0021). `direct` continues from the exact step. `session` and `workflow` run the interrupted handler or step again, so their spent grants stay in the checkpoint for the repeat; finished workflow steps don't run again, and their grants are gone. Work before a suspension point should be safe to repeat. `pydantic_ai.agent` continues the agent from its saved message history with every deferred call answered as approved; the harness's grant lets through the call a human approved and asks again about any other (ADR-0037).
 - **Approvals a framework asks for.** `RunContext.approval_needed(call, reason)` turns an approval an adapter's framework asks for into the harness's own: the run suspends at `tool.before` (or escalates where it can't), and the approval is matched to the call by name and arguments like any other.
 - **Expiry.** An answer after `expires_at` ends the run as `on_timeout` says (`escalate` or `reject`).
 - **Crash safety.** `approve()` saves the answer before resuming. `harness.resume(run_id)` continues a run whose answer was saved but which didn't finish. `harness.cancel(run_id)` stops a live or waiting run.
@@ -1287,6 +1288,8 @@ Each ADR records a decision, the reason for it, and its status, in its own file 
 | [0041](docs/adr/0041-docs-site.md) | The docs site: MkDocs and Material | Accepted |
 | [0042](docs/adr/0042-docs-structure.md) | The docs follow FastAPI's structure, with tested tutorial code | Accepted |
 | [0043](docs/adr/0043-profile-ownership.md) | Profiles an app's team can write merge after the platform's | Accepted |
+| [0044](docs/adr/0044-answers-claim-the-approval.md) | An answer claims the approval before it resumes the run | Accepted |
+| [0045](docs/adr/0045-what-an-approval-covers.md) | What an approval covers: one execution, by the role that step needs | Accepted |
 
 ## 29. Deviations from the design guide
 

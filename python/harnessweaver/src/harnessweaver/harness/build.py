@@ -192,6 +192,8 @@ def build_task(
             output_type=import_type(task.output, f"{where}.output"),
             max_repairs=validation.max_repairs,
             on_failure=validation.on_failure,
+            approver_role=(task.approvals.approver_role if task.approvals else None)
+            or effective.spec.approvals.approver_role,
         ),
         runner=runner,
         runner_name=task.runner.use,  # qualified (pydantic_ai.agent), as the registry looks it up

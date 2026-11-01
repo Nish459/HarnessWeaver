@@ -79,6 +79,7 @@ class RunContextBase:
         recorder: Callable[[RecordedCall], Awaitable[None]] | None = None,
         recorded: int = 0,
         replaying: bool = False,
+        grant_scope: Literal["call", "run"] = "call",
     ) -> None:
         self._envelope = envelope
         self.bus = bus
@@ -89,6 +90,8 @@ class RunContextBase:
         self.task = task
         self.prompts = prompts
         self.grants: list[Grant] = list(grants)
+        self.spent_grants: list[Grant] = []
+        self.grant_scope = grant_scope
         self.on_chunk = on_chunk
         self.harness = harness
         self.can_suspend = can_suspend
@@ -232,3 +235,23 @@ class RunContextBase:
 
     def _grant(self, hook: HookPoint, digest: str) -> Grant | None:
         return next((g for g in self.grants if g.hook == hook.value and g.digest == digest), None)
+
+    def _spend(self, grant: Grant | None) -> None:
+        """Use up a call's approval as the call runs, unless grants last the run (ADR-0045)."""
+        if grant is not None and self.grant_scope == "call":
+            self.grants.remove(grant)
+            self.spent_grants.append(grant)
+
+    def settle_grants(self) -> None:
+        """Forget spent approvals for good: the calls they cover won't run again.
+
+        A runner that re-runs interrupted work calls this once that work has finished.
+        Until then a spent approval is saved with the checkpoint, so the re-run's repeat
+        of the call doesn't ask twice (ADR-0021).
+        """
+        self.spent_grants.clear()
+
+    @property
+    def fallback_approver_role(self) -> str | None:
+        """The role an approval needs when the governor's own rule names none."""
+        return self.task.approver_role if self.task is not None else None

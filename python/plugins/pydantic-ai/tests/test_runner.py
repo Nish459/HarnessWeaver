@@ -197,14 +197,52 @@ async def test_an_approved_output_is_still_validated() -> None:
     assert done.error.details["code"] == "validation_failed"
 
 
-async def test_a_call_a_human_approved_runs_again_without_asking() -> None:
+async def test_a_call_a_human_approved_asks_again_when_repeated() -> None:
     cancel = reply(tool_calls=[{"name": "cancel_order", "arguments": {"order_id": "7"}}])
     harness = app("helper", cancel, cancel, "done", tools=manifests("cancel_order"))
+    waiting = await harness.run("t", "cancel it, twice")
+    assert waiting.approval is not None
+    second = await harness.approve(waiting.run_id, waiting.approval.approval_id, approver=FINANCE)
+    assert second.approval is not None
+    assert RAN == [("cancel_order", {"order_id": "7"})]
+    done = await harness.approve(second.run_id, second.approval.approval_id, approver=FINANCE)
+    assert done.ok, done.error
+    assert RAN == [("cancel_order", {"order_id": "7"})] * 2
+
+
+async def test_a_run_wide_grant_lets_the_repeat_through() -> None:
+    cancel = reply(tool_calls=[{"name": "cancel_order", "arguments": {"order_id": "7"}}])
+    harness = app(
+        "helper",
+        cancel,
+        cancel,
+        "done",
+        tools=manifests("cancel_order"),
+        approvals={"grant_scope": "run"},
+    )
     waiting = await harness.run("t", "cancel it, twice")
     assert waiting.approval is not None
     done = await harness.approve(waiting.run_id, waiting.approval.approval_id, approver=FINANCE)
     assert done.ok, done.error
     assert RAN == [("cancel_order", {"order_id": "7"})] * 2
+
+
+async def test_the_agents_own_approval_doesnt_satisfy_a_manifests_role() -> None:
+    cancel = reply(tool_calls=[{"name": "cancel_order", "arguments": {"order_id": "7"}}])
+    tools = manifests("cancel_order", approval={"when": "true", "approver_role": "treasury"})
+    harness = app("helper", cancel, "done", tools=tools, approvals={"approver_role": "helpdesk"})
+    helpdesk = hw.Principal(id="bob", roles=("helpdesk",))
+    treasury = hw.Principal(id="tessa", roles=("treasury",))
+    waiting = await harness.run("t", "cancel it")
+    assert waiting.approval is not None
+    assert waiting.approval.approver_role == "helpdesk"
+    second = await harness.approve(waiting.run_id, waiting.approval.approval_id, approver=helpdesk)
+    assert second.approval is not None
+    assert second.approval.approver_role == "treasury"
+    assert RAN == []
+    done = await harness.approve(second.run_id, second.approval.approval_id, approver=treasury)
+    assert done.ok, done.error
+    assert RAN == [("cancel_order", {"order_id": "7"})]
 
 
 async def test_an_output_can_wait_for_approval() -> None:

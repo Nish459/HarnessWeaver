@@ -58,6 +58,16 @@ export const SCHEMAS: Record<string, Record<string, unknown>> = {
             ],
             "default": null,
             "title": "Approver Role"
+          },
+          "grant_scope": {
+            "default": "call",
+            "description": "How long a tool call's approval lasts: one execution, or the whole run.",
+            "enum": [
+              "call",
+              "run"
+            ],
+            "title": "Grant Scope",
+            "type": "string"
           }
         },
         "title": "ApprovalsSpec",
@@ -1608,7 +1618,8 @@ export const SCHEMAS: Record<string, Record<string, unknown>> = {
           "use": "memory",
           "timeout": null,
           "on_timeout": "escalate",
-          "approver_role": null
+          "approver_role": null,
+          "grant_scope": "call"
         }
       },
       "budgets": {
@@ -1766,6 +1777,16 @@ export const SCHEMAS: Record<string, Record<string, unknown>> = {
             ],
             "default": null,
             "title": "Approver Role"
+          },
+          "grant_scope": {
+            "default": "call",
+            "description": "How long a tool call's approval lasts: one execution, or the whole run.",
+            "enum": [
+              "call",
+              "run"
+            ],
+            "title": "Grant Scope",
+            "type": "string"
           }
         },
         "title": "ApprovalsSpec",
@@ -3316,7 +3337,8 @@ export const SCHEMAS: Record<string, Record<string, unknown>> = {
           "use": "memory",
           "timeout": null,
           "on_timeout": "escalate",
-          "approver_role": null
+          "approver_role": null,
+          "grant_scope": "call"
         }
       },
       "budgets": {

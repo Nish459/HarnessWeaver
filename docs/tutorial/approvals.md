@@ -76,6 +76,8 @@ The harness checks that the approver holds the approver role, so `fiona` needs t
 
 The approver role comes from the step that asked, else the task's `approvals.approver_role`, else the spec's `approvals.approver_role`.
 
+An approval covers one execution of the call: if the model asks for the same call again, a person is asked again. `approvals.grant_scope: run` makes it last the run instead ([Approvals in depth](../advanced/approvals.md#grants)).
+
 ## Where requests go
 
 `approvals.use` picks the channel that is told about each request, once it and the run's checkpoint are saved:

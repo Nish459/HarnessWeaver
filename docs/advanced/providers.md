@@ -68,7 +68,7 @@ Settings arrive validated: the spec item's keys that HarnessWeaver doesn't own (
 | `StreamingModelProvider` | `generate(...)`, and `stream(request, env)` yielding `StreamChunk`s, then the final `ModelResponse` | `models.provider` |
 | `Evaluator` | `grade(sample: EvalSample) -> Grade` | a grader name in an eval dataset |
 | `ApprovalChannel` | `async notify(request: ApprovalRequest, env: Envelope) -> None` | `approvals.use` |
-| `StateStore` | runs, checkpoints, idempotency claims, events, recordings, online samples, `aclose()` | `state.use` |
+| `StateStore` | runs, checkpoints, approval and idempotency claims, events, recordings, online samples, `aclose()` | `state.use` |
 | `Sandbox` | `run(code: str, inputs: Mapping, limits: SandboxLimits) -> SandboxResult` | a `code` tool's `sandbox` |
 | `Telemetry` | `configure(*, service_name, exporter, endpoint)` | `observability.configure_sdk` |
 
@@ -79,7 +79,7 @@ The method signatures are in `harnessweaver.ports`, typed; check whether each is
 - **ModelProvider.** Take and return only neutral contracts (R7); put a provider's own per-turn data in `ModelResponse.extensions` ([ADR-0022](../adr/0022-provider-extensions.md)); turn client errors into `ProviderError`; refuse the network in test mode (`harnessweaver.ports.network_allowed()`); report cost in `cost_usd` when the API gives it; build clients with retries off when a gateway owns them (R5).
 - **PolicyEngine.** Combine `policy.rules` exactly as `decide_by_rules` does ([Policy](../tutorial/policy.md#how-rules-combine)); declare `deterministic=True`.
 - **Evaluator.** Score 1 or 0 for a deterministic grader. Give the config model a `SHORTHAND: ClassVar[str | None]` naming the field a single value fills, so `{field_equals: total}` works like `{field_equals: {field: total}}`.
-- **StateStore.** Pass the conformance suite's round-trip contract; `claim_idempotency` must be atomic.
+- **StateStore.** Pass the conformance suite's round-trip contract; `claim_idempotency` and `claim_approval` must be atomic, across processes for a store they share ([ADR-0044](../adr/0044-answers-claim-the-approval.md)).
 
 ## Functions as providers
 

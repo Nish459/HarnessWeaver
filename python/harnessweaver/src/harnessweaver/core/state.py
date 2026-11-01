@@ -50,7 +50,8 @@ class _Record(BaseModel):
 
 
 class Grant(_Record):
-    """An approval a human gave. A matching call or output passes without asking again."""
+    """An approval a human gave. A matching output passes without asking again, and so does
+    a matching call: once, unless ``approvals.grant_scope`` is ``run`` (ADR-0045)."""
 
     hook: Literal["tool.before", "output.before"]
     digest: str = Field(description="call_digest of the original call, or output_digest.")
@@ -99,6 +100,9 @@ class Checkpoint(_Record):
     approval_hook: Literal["tool.before", "output.before"] | None = None
     approval_digest: str | None = Field(
         default=None, description="What the approval covers: call_digest or output_digest."
+    )
+    approval_args: dict[str, JsonValue] | None = Field(
+        default=None, description="Arguments an earlier answer chose, which this one inherits."
     )
     time_left: timedelta | None = Field(
         default=None, description="Deadline time left at suspension; waiting doesn't count."

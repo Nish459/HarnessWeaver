@@ -26,6 +26,7 @@ class _DryRun:
 
     trace: RunTrace
     envelope: Envelope
+    fallback_approver_role: str | None = None  # authorize() resolves the role itself
 
     @property
     def clock(self) -> Clock:

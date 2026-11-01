@@ -25,6 +25,7 @@ class _Run:
 
     envelope: hw.Envelope
     clock: hw.FakeClock
+    fallback_approver_role: str | None = None
     trace: RunTrace = field(init=False)
 
     def __post_init__(self) -> None:
@@ -40,7 +41,7 @@ def _run(case: dict[str, Any]) -> _Run:
         tenant=case.get("tenant", "acme"), principal=principal, task=case.get("task"), clock=clock
     )
     envelope = envelope.with_labels(hw.Labels.model_validate(case.get("labels", {})))
-    return _Run(envelope, clock)
+    return _Run(envelope, clock, case.get("fallback_role"))
 
 
 def _tool(spec: dict[str, Any]) -> ToolDescription:
@@ -79,7 +80,9 @@ async def _steps(case: dict[str, Any]) -> hw.ToolVerdict:
     approval = None
     if case.get("approved"):
         approval = hw.ApprovalDecision(
-            approval_id="apr_1", decision="approve", approver=hw.Principal(id="bob")
+            approval_id="apr_1",
+            decision="approve",
+            approver=hw.Principal(id="bob", roles=tuple(case.get("approved_roles", ()))),
         )
     call = hw.ToolCall(id="call_1", name=tool.info.name, arguments=case["args"])
     return await governor.authorize(run, call, tool, approval)

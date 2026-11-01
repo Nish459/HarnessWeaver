@@ -50,6 +50,14 @@ class MemoryStateStore:
     async def get_checkpoint(self, run_id: str) -> Checkpoint | None:
         return self._checkpoints.get(run_id)
 
+    async def claim_approval(self, checkpoint: Checkpoint, approval_id: str) -> bool:
+        """Atomic because nothing here awaits, and one event loop owns this store."""
+        stored = self._checkpoints.get(checkpoint.run_id)
+        if stored is None or stored.approval is None or stored.approval.approval_id != approval_id:
+            return False
+        self._checkpoints[checkpoint.run_id] = checkpoint
+        return True
+
     async def delete_checkpoint(self, run_id: str) -> None:
         self._checkpoints.pop(run_id, None)
 

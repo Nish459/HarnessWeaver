@@ -27,9 +27,28 @@ state: { use: sqlite }              # so waiting runs survive a restart
 
 ## Grants
 
-An approval becomes a **grant** that matches the call by tool name and arguments, or the output by its content. When the resumed run repeats that call, it carries the approval into `tool.before` as `event.approval`, so middleware doesn't ask again (but still sees edited arguments). An approved output carries it into `output.before`, where it answers guards that ask for approval: the guard lets it through and adds a `guard_approved` note naming the guard and the approver (R13).
+An approval becomes a **grant** that matches the call by tool name and arguments, or the output by its content. When the resumed run repeats that call, it carries the approval into `tool.before` as `event.approval`, so middleware doesn't ask again (but still sees edited arguments). ([ADR-0045](../adr/0045-what-an-approval-covers.md)) An approved output carries it into `output.before`, where it answers guards that ask for approval: the guard lets it through and adds a `guard_approved` note naming the guard and the approver (R13).
 
 One approval answers every request for approval at that step, and nothing else. It never turns a block, an escalation or a repair into an allow, redactions still chain, and shadow guards still record. A rejection is never a grant.
+
+`approvals.grant_scope` says how long a tool call's grant lasts:
+
+| `grant_scope` | A repeat of the approved call |
+| --- | --- |
+| `call` (default) | Asks a human again: the approval covered one execution |
+| `run` | Passes for the rest of the run, without asking. Only budgets, rate limits and idempotency keys bound it, so an approved payment can be made again. Lock it in a baseline if that isn't acceptable (`locks: [approvals.grant_scope]`) |
+
+A re-run isn't a repeat: under `call`, a `session` handler or `workflow` step that runs again after an approval passes the calls it already made without asking, once per approval. Their side effects do happen again, so use the call's idempotency key.
+
+### Different roles
+
+An approval counts only if the approver holds the role that step needs: the manifest's `approval.approver_role`, else the task's `approvals.approver_role`, else the spec's. When a middleware asks the help desk first and the manifest needs treasury, the help desk's approval isn't enough. The run suspends again, naming `treasury`, and the call runs once treasury approves. That is two approvals unless one person holds both roles.
+
+If the first approver edited the arguments, the second request shows the edited arguments, and approving it approves them. A call the edit took under the rule's threshold needs no second approval.
+
+### Concurrent answers
+
+One answer wins ([ADR-0044](../adr/0044-answers-claim-the-approval.md)). If two answers to one request race, from a double submit, a relay's retry or two approvers, even in separate processes on one state file, exactly one resumes the run. The other gets `NotFound` (HTTP 404 from harnessd) and leaves nothing behind, and the run's stored status matches the winner. An answer that arrives while this process is still suspending the run gets `NotFound` too, and can be sent again.
 
 ## How runs resume
 

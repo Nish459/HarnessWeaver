@@ -97,7 +97,9 @@ class Governor:
             if verdict is None:
                 effect, verdict = await self._judge(ctx, call, effect, reasons)
             if verdict is None:
-                verdict = self._approval(effect, role, reasons, approval)
+                verdict = self._approval(
+                    effect, role or ctx.fallback_approver_role, reasons, approval
+                )
         if reservation is not None and (dry_run or verdict.decision != "allow"):
             self.limiter.release(reservation)
         ctx.trace.note(
@@ -245,8 +247,12 @@ class Governor:
         if effect is not PolicyEffect.REQUIRE_APPROVAL:
             return ToolVerdict(decision="allow", step=7, reason="allowed")
         if approval is not None and approval.decision != "reject":
-            reason = f"approved by {approval.approver.id}"
-            return ToolVerdict(decision="allow", step=7, code="approved", reason=reason)
+            # An approval given for another step's ask counts only if the approver also holds
+            # the role this step needs (ADR-0045).
+            if role is None or approval.approver.has_role(role):
+                reason = f"approved by {approval.approver.id}"
+                return ToolVerdict(decision="allow", step=7, code="approved", reason=reason)
+            reasons = [*reasons, f"{approval.approver.id} approved without the role {role!r}"]
         return ToolVerdict(
             decision="require_approval",
             step=7,

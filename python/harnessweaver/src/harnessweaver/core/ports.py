@@ -136,6 +136,14 @@ class StateStore(Protocol):
 
     async def delete_checkpoint(self, run_id: str) -> None: ...
 
+    async def claim_approval(self, checkpoint: Checkpoint, approval_id: str) -> bool:
+        """Replace the run's checkpoint only if it still waits on ``approval_id``.
+
+        Must be atomic, across processes for a store they share: of any answers racing
+        for one request, exactly one gets ``True`` and resumes the run (ADR-0044).
+        """
+        ...
+
     async def claim_idempotency(self, tenant: str, task: str, key: str, run_id: str) -> str:
         """Record ``run_id`` for ``(tenant, task, key)`` unless one exists; return the owner."""
         ...
@@ -240,7 +248,8 @@ class ApprovalChannel(Protocol):
 
 
 class GovernedRun(Protocol):
-    """What the governor reads from a run: its envelope, clock and trace."""
+    """What the governor reads from a run: its envelope, clock and trace, and who approves
+    when its own rule names nobody."""
 
     trace: RunTrace
 
@@ -249,6 +258,9 @@ class GovernedRun(Protocol):
 
     @property
     def clock(self) -> Clock: ...
+
+    @property
+    def fallback_approver_role(self) -> str | None: ...
 
 
 class ToolGovernor(Protocol):

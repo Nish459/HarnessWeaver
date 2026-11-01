@@ -137,6 +137,11 @@ All notable changes to the HarnessWeaver packages are recorded here. The format 
 
 ### Security
 
+- Approvals bind what they should (ADR-0044, ADR-0045):
+  - One tool-call approval no longer authorizes every later identical call in the run. A grant covers one execution, and a repeat asks again. `approvals.grant_scope: run` keeps the old run-wide behavior. **This changes behavior for existing specs.**
+  - An approval given for another step's ask no longer satisfies a role the approver doesn't hold. Governor step 7 checks the manifest's `approver_role`, else the task's, else the spec's, in Python and TypeScript. When they differ the run asks again, keeping any edit, so that takes two approvals unless one person holds both roles.
+  - Concurrent answers to one approval can no longer each resume the run. `approve()` claims the request through the new `StateStore.claim_approval`, including across processes on one SQLite file. The loser gets `NotFound` (HTTP 404 from harnessd) and records nothing. `cancel()` claims too. **A third-party `StateStore` must add this method.**
+
 An app's team could shed org baseline controls with files in its own repository. These all fail loading now, in Python and TypeScript (R1, R2, R10, ADR-0043):
 
 - Wildcard locks (`guardrails.input[*]`, `tasks.*.budget`) were never enforced. They now cover every key or item, including ones added later, and `spec explain` shows them.
@@ -158,6 +163,8 @@ Model and tool content could get past a runtime control. Each of these now holds
 - A Pydantic AI agent's tool with a harness manifest was offered to the model with the agent's own definition, so a third-party toolset could change what a reviewed tool told the model. `HarnessCapability` now offers the manifest's description and schema. The agent's own handler still runs, and a same-named tool isn't proved to behave as reviewed: review or prefix a toolset's tool names, and close the schema to refuse undeclared arguments.
 
 ### Fixed
+
+- A `workflow` run that suspended again before another step finished lost its finished steps from the checkpoint, so they ran again.
 
 - The `chat` template's terminal app ends the chat at the end of input (Ctrl-D, or piped input running out) instead of raising `EOFError`.
 - AGENTS.md named a test that doesn't exist, and gave a plugin-conformance command that, at the repository root, runs the normal tests and no conformance checks (the suite file sits inside the `python` test path); it now names the suite file, as `make conformance` does. The plugin READMEs say to run their command from the package's directory.

@@ -66,6 +66,8 @@ class ApprovalMixin(RunMixin):
             requested_at=now,
             expires_at=now + timeout if timeout is not None else None,
         )
+        # A runner that re-runs its work repeats calls it already ran: they need their grants.
+        rerun = run.task is not None and not run.task.resumable
         checkpoint = Checkpoint(
             run_id=ctx.run_id,
             task=run.record.task,
@@ -73,8 +75,9 @@ class ApprovalMixin(RunMixin):
             resume=ctx.resume_point,
             meter=ctx.meter.snapshot(),
             labels=ctx.envelope.labels,
-            grants=tuple(ctx.grants),
+            grants=(*(ctx.spent_grants if rerun else ()), *ctx.grants),
             approval=approval,
+            approval_args=pending.edited_args,
             approval_hook=pending.hook.value,  # pyright: ignore[reportArgumentType]
             approval_digest=pending.digest,
             time_left=ctx.time_left(),
@@ -158,14 +161,16 @@ class ApprovalMixin(RunMixin):
         """Answer a pending approval and continue the run (DESIGNS No. 18).
 
         1. Checks the approver holds the request's ``approver_role``.
-        2. Fires ``approval.resolved``.
-        3. On ``approve`` or ``edit``, resumes; edited arguments go through
+        2. Claims the request in the state store, so one answer wins (ADR-0044).
+        3. Fires ``approval.resolved``.
+        4. On ``approve`` or ``edit``, resumes; edited arguments go through
            ``tool.before`` again. On ``reject``, the run ends ``blocked``.
 
         An expired request ends the run as ``approvals.on_timeout`` says.
 
         Raises:
-            NotFound: If the run has no such pending approval.
+            NotFound: If the run has no such pending approval, another answer won it,
+                or this process is still suspending the run.
             PolicyDenied: If the approver lacks the required role.
             ValidationFailed: For an ``edit`` without arguments, or of an output.
         """
@@ -177,6 +182,7 @@ class ApprovalMixin(RunMixin):
             or checkpoint is None
             or checkpoint.approval is None
             or checkpoint.approval.approval_id != approval_id
+            or run_id in self._active
         ):
             raise NotFound(f"run {run_id} has no pending approval {approval_id!r}", run_id=run_id)
         request = checkpoint.approval
@@ -197,9 +203,34 @@ class ApprovalMixin(RunMixin):
             raise from_known(exc) or ValidationFailed("invalid approval") from None
         if answer.decision == "edit" and checkpoint.approval_hook != HookPoint.TOOL_BEFORE.value:
             raise ValidationFailed("only a tool call's arguments can be edited")
-        run = await self._restore(record, checkpoint)
+        expired = request.expires_at is not None and self._clock.now() > request.expires_at
+        grants = checkpoint.grants
+        if (
+            not expired
+            and answer.decision != "reject"
+            and checkpoint.approval_hook
+            and checkpoint.approval_digest
+        ):
+            carried = checkpoint.approval_args
+            grant = Grant(
+                hook=checkpoint.approval_hook,
+                digest=checkpoint.approval_digest,
+                # Approving a request that shows edited arguments approves those arguments.
+                decision=answer.model_copy(update={"decision": "edit", "edited_args": carried})
+                if answer.decision == "approve" and carried is not None
+                else answer,
+            )
+            grants = (*grants, grant)
+        # Claim first, so a losing answer leaves nothing behind. The claim also persists the
+        # answer before resuming, so a crash doesn't lose it (resume() continues).
+        resolved = checkpoint.model_copy(
+            update={"approval": None, "approval_args": None, "grants": grants}
+        )
+        if not await self._state.claim_approval(resolved, approval_id):
+            raise NotFound(f"run {run_id} has no pending approval {approval_id!r}", run_id=run_id)
+        run = await self._restore(record, resolved)
         self._telemetry.approval(run_id, approval_id, answer.decision)
-        if request.expires_at is not None and self._clock.now() > request.expires_at:
+        if expired:
             return await self._expire(run)
         if checkpoint.approval_hook and checkpoint.approval_digest:
             await run.ctx.record(
@@ -208,19 +239,6 @@ class ApprovalMixin(RunMixin):
                 hook=checkpoint.approval_hook,
                 decision=answer,
             )
-        grants = list(checkpoint.grants)
-        if answer.decision != "reject" and checkpoint.approval_hook and checkpoint.approval_digest:
-            grants.append(
-                Grant(
-                    hook=checkpoint.approval_hook,
-                    digest=checkpoint.approval_digest,
-                    decision=answer,
-                )
-            )
-        run.ctx.grants = grants
-        # Persist the answer before resuming, so a crash doesn't lose it (resume() continues).
-        resolved = checkpoint.model_copy(update={"approval": None, "grants": tuple(grants)})
-        await self._state.put_checkpoint(resolved)
         return await self._drive(run, resolved, (request, answer))
 
     async def _expire(self, run: LiveRun) -> RunResult:
@@ -272,5 +290,10 @@ class ApprovalMixin(RunMixin):
         if record.status.is_terminal and record.result is not None:
             return record.result
         checkpoint = await self._state.get_checkpoint(run_id) or Checkpoint(run_id=run_id)
+        if checkpoint.approval is not None:
+            # An answer racing this cancel must not also resume the run (ADR-0044).
+            resolved = checkpoint.model_copy(update={"approval": None})
+            if not await self._state.claim_approval(resolved, checkpoint.approval.approval_id):
+                return await self.result(run_id)
         run = await self._restore(record, checkpoint)
         return await self._finish(run, RunStatus.CANCELLED)
