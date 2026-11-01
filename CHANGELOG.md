@@ -137,6 +137,8 @@ All notable changes to the HarnessWeaver packages are recorded here. The format 
 
 ### Security
 
+- Dependencies with known advisories are updated: certifi 2026.10.23 (GHSA-6q48-6c7w-9gw2, a bundled root CA whose intermediates have compromised keys), uv 0.13.6 in the harnessd image and the Vercel docs build (GHSA-hq85-5cpj-mr62, the same root in uv's CA store), and zod 4.6.7 in the development dependencies of `@harnessweaver/ai-sdk` and Example 04 (GHSA-mrhx-c7xc-m3w5, memory exhaustion on oversized arrays).
+
 - Approvals bind what they should (ADR-0044, ADR-0045):
   - One tool-call approval no longer authorizes every later identical call in the run. A grant covers one execution, and a repeat asks again. `approvals.grant_scope: run` keeps the old run-wide behavior. **This changes behavior for existing specs.**
   - An approval given for another step's ask no longer satisfies a role the approver doesn't hold. Governor step 7 checks the manifest's `approver_role`, else the task's, else the spec's, in Python and TypeScript. When they differ the run asks again, keeping any edit, so that takes two approvals unless one person holds both roles.

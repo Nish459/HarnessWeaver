@@ -31,10 +31,10 @@ importers:
         version: link:../../typescript/packages/core
       ai:
         specifier: 7.0.128
-        version: 7.0.128(zod@4.6.5)
+        version: 7.0.128(zod@4.6.7)
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: 26.6.4
@@ -57,10 +57,10 @@ importers:
         version: 4.0.22
       ai:
         specifier: 7.0.128
-        version: 7.0.128(zod@4.6.5)
+        version: 7.0.128(zod@4.6.7)
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
 
   packages/core:
     dependencies:
@@ -630,26 +630,26 @@ packages:
     engines: {node: '>= 14.6'}
     hasBin: true
 
-  zod@4.6.5:
-    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
 snapshots:
 
-  '@ai-sdk/gateway@4.0.104(zod@4.6.5)':
+  '@ai-sdk/gateway@4.0.104(zod@4.6.7)':
     dependencies:
       '@ai-sdk/provider': 4.0.22
-      '@ai-sdk/provider-utils': 5.0.54(zod@4.6.5)
+      '@ai-sdk/provider-utils': 5.0.54(zod@4.6.7)
       '@vercel/oidc': 3.2.0
-      zod: 4.6.5
+      zod: 4.6.7
 
-  '@ai-sdk/provider-utils@5.0.54(zod@4.6.5)':
+  '@ai-sdk/provider-utils@5.0.54(zod@4.6.7)':
     dependencies:
       '@ai-sdk/provider': 4.0.22
       '@standard-schema/spec': 1.1.0
       '@workflow/serde': 4.1.0
       eventsource-parser: 3.1.1
       undici: 7.30.1
-      zod: 4.6.5
+      zod: 4.6.7
 
   '@ai-sdk/provider@4.0.22':
     dependencies:
@@ -803,12 +803,12 @@ snapshots:
 
   '@workflow/serde@4.1.0': {}
 
-  ai@7.0.128(zod@4.6.5):
+  ai@7.0.128(zod@4.6.7):
     dependencies:
-      '@ai-sdk/gateway': 4.0.104(zod@4.6.5)
+      '@ai-sdk/gateway': 4.0.104(zod@4.6.7)
       '@ai-sdk/provider': 4.0.22
-      '@ai-sdk/provider-utils': 5.0.54(zod@4.6.5)
-      zod: 4.6.5
+      '@ai-sdk/provider-utils': 5.0.54(zod@4.6.7)
+      zod: 4.6.7
 
   assertion-error@2.0.1: {}
 
@@ -1000,4 +1000,4 @@ snapshots:
 
   yaml@2.9.1: {}
 
-  zod@4.6.5: {}
+  zod@4.6.7: {}
