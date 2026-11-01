@@ -7,8 +7,6 @@ npm install @harnessweaver/core
 npm install @harnessweaver/ai-sdk ai @ai-sdk/provider     # to govern Vercel AI SDK models
 ```
 
-> Pre-release: the package isn't published yet; build it from the repository (`pnpm -C typescript install && pnpm -C typescript build`).
-
 ```ts
 import { load } from "@harnessweaver/core";
 import { wrapModel } from "@harnessweaver/ai-sdk";

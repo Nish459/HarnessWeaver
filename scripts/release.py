@@ -31,6 +31,7 @@ from harnessweaver.core.semver import Version
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "dist" / "release"
+CORES = {"harnessweaver", "@harnessweaver/core"}
 
 
 @dataclass(frozen=True)
@@ -114,6 +115,9 @@ def releases(
             problems.append(f"{tag}: {where} has version {package.version}")
         else:
             chosen.append(package)
+    # Everything else depends on a core, so a failure partway never leaves a published
+    # package that can't be installed. The sort is stable, so the rest keep their order.
+    chosen.sort(key=lambda package: package.name not in CORES)
     return chosen, problems
 
 

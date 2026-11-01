@@ -1,6 +1,6 @@
 {
   "name": "@harnessweaver/core",
-  "version": "0.1.0",
+  "version": "0.4.1",
   "description": "The HarnessWeaver core for TypeScript: the same harness.yaml, hook bus, guards, governor and routing as Python.",
   "license": "Apache-2.0",
   "type": "module",

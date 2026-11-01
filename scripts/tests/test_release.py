@@ -17,6 +17,27 @@ def test_every_package_in_the_repository_has_a_semver_version() -> None:
         assert is_semver(package.version), package
 
 
+def test_every_package_ships_the_license() -> None:
+    # Hatchling and pnpm pack each include a LICENSE beside the manifest, and Apache-2.0
+    # requires that recipients get a copy.
+    license_text = (ROOT / "LICENSE").read_text()
+    for package in packages().values():
+        assert (package.manifest.parent / "LICENSE").read_text() == license_text, package.name
+
+
+def test_core_packages_are_released_before_the_packages_that_need_them() -> None:
+    otel = Package("harnessweaver-otel", "0.2.0", ROOT / "python/plugins/otel/pyproject.toml")
+    ai_sdk = Package(
+        "@harnessweaver/ai-sdk", "0.2.0", ROOT / "typescript/packages/ai-sdk/package.json"
+    )
+    ts_core = Package("@harnessweaver/core", "0.2.0", TS_CORE.manifest)
+    known = {package.name: package for package in (CORE, otel, ai_sdk, ts_core)}
+    tags = [f"{name}@0.2.0" for name in sorted(known)]
+    chosen, problems = releases(tags, known)
+    assert problems == []
+    assert {package.name for package in chosen[:2]} == {"harnessweaver", "@harnessweaver/core"}
+
+
 @pytest.mark.parametrize("text", ["0.1.0", "1.0.0-rc.1", "10.20.30-alpha.beta.1"])
 def test_semver_versions_are_accepted(text: str) -> None:
     assert is_semver(text)

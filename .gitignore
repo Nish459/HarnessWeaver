@@ -32,8 +32,7 @@ site/
 .vscode/
 
 # Claude Code local files
-.claude/settings.local.json
-.claude/.cc-writes/
+.claude/
 
 # Secrets
 .env

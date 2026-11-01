@@ -513,7 +513,7 @@ wheels = [
 
 [[package]]
 name = "harnessweaver"
-version = "0.1.0"
+version = "0.17.1"
 source = { editable = "python/harnessweaver" }
 dependencies = [
     { name = "anyio" },
@@ -580,7 +580,7 @@ provides-extras = ["openai", "anthropic", "pydantic-ai", "monty", "otel", "cel",
 
 [[package]]
 name = "harnessweaver-anthropic"
-version = "0.1.0"
+version = "0.1.2"
 source = { editable = "python/plugins/anthropic" }
 dependencies = [
     { name = "anthropic" },
@@ -595,7 +595,7 @@ requires-dist = [
 
 [[package]]
 name = "harnessweaver-cel"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "python/plugins/cel" }
 dependencies = [
     { name = "cel-python" },
@@ -610,7 +610,7 @@ requires-dist = [
 
 [[package]]
 name = "harnessweaver-cli"
-version = "0.1.0"
+version = "0.7.1"
 source = { editable = "python/harnessweaver-cli" }
 dependencies = [
     { name = "harnessweaver" },
@@ -629,7 +629,7 @@ requires-dist = [
 
 [[package]]
 name = "harnessweaver-monty"
-version = "0.1.0"
+version = "0.2.1"
 source = { editable = "python/plugins/monty" }
 dependencies = [
     { name = "harnessweaver" },
@@ -644,7 +644,7 @@ requires-dist = [
 
 [[package]]
 name = "harnessweaver-openai"
-version = "0.1.0"
+version = "0.1.2"
 source = { editable = "python/plugins/openai" }
 dependencies = [
     { name = "harnessweaver" },
@@ -659,7 +659,7 @@ requires-dist = [
 
 [[package]]
 name = "harnessweaver-otel"
-version = "0.1.0"
+version = "0.2.1"
 source = { editable = "python/plugins/otel" }
 dependencies = [
     { name = "harnessweaver" },
@@ -678,7 +678,7 @@ requires-dist = [
 
 [[package]]
 name = "harnessweaver-pydantic-ai"
-version = "0.1.0"
+version = "0.1.2"
 source = { editable = "python/plugins/pydantic-ai" }
 dependencies = [
     { name = "harnessweaver" },
@@ -693,7 +693,7 @@ requires-dist = [
 
 [[package]]
 name = "harnessweaver-sidecar"
-version = "0.1.0"
+version = "0.2.1"
 source = { editable = "python/harnessweaver-sidecar" }
 dependencies = [
     { name = "fastapi" },

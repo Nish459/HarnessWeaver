@@ -8,8 +8,6 @@ uv add "harnessweaver[openai]"       # plus a first-party plugin
 uv add "harnessweaver[all]"          # every first-party plugin, the CLI and the sidecar
 ```
 
-> Pre-release: the package isn't published yet; install from a clone of the repository ([QUICKSTART](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/QUICKSTART.md)).
-
 ```python
 import harnessweaver as hw
 

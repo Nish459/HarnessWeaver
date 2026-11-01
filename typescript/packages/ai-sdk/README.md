@@ -6,8 +6,6 @@ Vercel AI SDK (v7) models governed by a [HarnessWeaver](https://github.com/Wise-
 npm install @harnessweaver/core @harnessweaver/ai-sdk ai @ai-sdk/provider
 ```
 
-> Pre-release: the package isn't published yet; build it from the repository (`pnpm -C typescript install && pnpm -C typescript build`).
-
 ```ts
 import { wrapModel, harnessMiddleware } from "@harnessweaver/ai-sdk";
 import { generateText, streamText, wrapLanguageModel } from "ai";
