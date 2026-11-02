@@ -13,6 +13,8 @@ from typing import ClassVar
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 from pydantic import ValidationError as _PydanticValidationError
 
+from harnessweaver.core.messages import ModelResponse
+
 __all__ = [
     "BoundViolation",
     "BudgetExceeded",
@@ -27,6 +29,7 @@ __all__ = [
     "InternalError",
     "LevelTooLow",
     "LockViolation",
+    "ModelRefusal",
     "NotFound",
     "PluginConflict",
     "PluginNotAllowed",
@@ -153,6 +156,30 @@ class RunBlocked(RunInterrupted):
     """A hook refused the step. ``details["code"]`` holds the ``Block`` code."""
 
     code = ErrorCode.BLOCKED
+
+
+class ModelRefusal(RunBlocked):
+    """The model declined the request, or a content filter cut its answer short.
+
+    Providers raise this, with the code ``model_refusal``, instead of returning the
+    answer. A declined call still costs tokens, so ``response`` carries its usage and
+    cost for the run to count, without its text (R9).
+
+    Args:
+        message: Never the model's own words (R9).
+        response: What the call used. Leave its text empty.
+        **details: Extra details, such as the refusal's ``category``.
+    """
+
+    def __init__(
+        self,
+        message: str = "the model declined the request",
+        *,
+        response: ModelResponse | None = None,
+        **details: JsonValue,
+    ) -> None:
+        super().__init__(message, code="model_refusal", **details)
+        self.response = response if response is not None else ModelResponse()
 
 
 class RunEscalated(RunInterrupted):

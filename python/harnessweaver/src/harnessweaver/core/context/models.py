@@ -13,6 +13,7 @@ from harnessweaver.core.context.access import MODEL_RETRIES
 from harnessweaver.core.context.base import RunContextBase
 from harnessweaver.core.errors import (
     HarnessError,
+    ModelRefusal,
     ProviderError,
     RunBlocked,
     SpecError,
@@ -99,8 +100,16 @@ class ModelCalls(RunContextBase):
             name = self.models.provider_name
             with self._model_span(sent, name) as span:
                 started = time.perf_counter()
-                response = await self._call_provider(sent, provider)
-                await self.record("model", request_digest(sent), response=response)
+                # A declined call still cost tokens, so it is counted like any other
+                # below; only then does the refusal end the run, before model.after,
+                # as there is no answer to pass on.
+                refusal: ModelRefusal | None = None
+                try:
+                    response = await self._call_provider(sent, provider)
+                except ModelRefusal as exc:
+                    refusal, response = exc, exc.response
+                else:
+                    await self.record("model", request_digest(sent), response=response)
                 cost, source = resolve_cost(response, sent, self.models.prices)
                 over = self.meter.record_model_call(response.usage, cost)
                 usage: dict[str, JsonValue] = {
@@ -124,6 +133,14 @@ class ModelCalls(RunContextBase):
                         seconds=elapsed(started),
                     )
                 self._refresh_budget()
+                if refusal is not None:
+                    self.trace.note(
+                        "harness.models",
+                        refusal.message,
+                        hook=HookPoint.MODEL_AFTER,
+                        code="model_refusal",
+                    )
+                    raise refusal
                 after = await self.emit(
                     HookPoint.MODEL_AFTER, ModelResponseEvent(request=sent, response=response)
                 )

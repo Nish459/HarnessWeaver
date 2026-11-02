@@ -4,6 +4,14 @@ All notable changes to the core package. The format follows [Keep a Changelog](h
 
 ## [Unreleased]
 
+### Added
+
+- `harnessweaver.errors.ModelRefusal`, a `RunBlocked` with code `model_refusal` that a model provider raises when the model declines. Its `response` carries what the call used.
+
+### Fixed
+
+- A governed model call counts the usage and cost of a request the model declined, and notes the refusal on the trace (RULES R13), before it ends the run. It doesn't run `model.after`.
+
 ## 0.17.1 - 2026-11-01
 
 The first version published to PyPI.
