@@ -4,6 +4,8 @@ All notable changes to this plugin. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+## 0.2.0 - 2026-11-02
+
 ### Added
 
 - The README says what `openai.chat` doesn't carry for Claude: thinking, `effort` and server-side refusal fallbacks.

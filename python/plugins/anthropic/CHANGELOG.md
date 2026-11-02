@@ -4,6 +4,8 @@ All notable changes to this plugin. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+## 0.2.0 - 2026-11-02
+
 ### Added
 
 - `hold_stream` delivers a streamed answer's chunks only once it has finished, so nothing from a declined answer reaches the app.

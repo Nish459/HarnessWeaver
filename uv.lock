@@ -513,7 +513,7 @@ wheels = [
 
 [[package]]
 name = "harnessweaver"
-version = "0.17.1"
+version = "0.18.0"
 source = { editable = "python/harnessweaver" }
 dependencies = [
     { name = "anyio" },
@@ -580,7 +580,7 @@ provides-extras = ["openai", "anthropic", "pydantic-ai", "monty", "otel", "cel",
 
 [[package]]
 name = "harnessweaver-anthropic"
-version = "0.1.2"
+version = "0.2.0"
 source = { editable = "python/plugins/anthropic" }
 dependencies = [
     { name = "anthropic" },
@@ -644,7 +644,7 @@ requires-dist = [
 
 [[package]]
 name = "harnessweaver-openai"
-version = "0.1.2"
+version = "0.2.0"
 source = { editable = "python/plugins/openai" }
 dependencies = [
     { name = "harnessweaver" },

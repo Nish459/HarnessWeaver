@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "harnessweaver-anthropic"
-version = "0.1.2"
+version = "0.2.0"
 description = "HarnessWeaver plugin: Anthropic models."
 readme = "README.md"
 license = "Apache-2.0"
@@ -22,7 +22,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "harnessweaver>=0.1.0",
+    "harnessweaver>=0.18.0",
     "anthropic>=1.12",
 ]
 

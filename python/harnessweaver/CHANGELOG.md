@@ -4,6 +4,8 @@ All notable changes to the core package. The format follows [Keep a Changelog](h
 
 ## [Unreleased]
 
+## 0.18.0 - 2026-11-02
+
 ### Added
 
 - `harnessweaver.errors.ModelRefusal`, a `RunBlocked` with code `model_refusal` that a model provider raises when the model declines. Its `response` carries what the call used.
