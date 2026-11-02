@@ -29,8 +29,9 @@ models:
 | `max_retries` | `2` | SDK retries; set `0` behind a gateway, which then owns retries (R5) |
 | `cost_header` | `x-litellm-response-cost` | A gateway's reported cost, used before `models.prices` |
 | `base_url`, `api_key_env` | SDK defaults | Client settings. Credentials follow the SDK's own resolution unless `api_key_env` names a variable |
+| `hold_stream` | `false` | Deliver a streamed answer's chunks only once it has finished, so nothing from a declined answer reaches the app. Output is no longer live |
 
-Server-side fallbacks are on by default: a request a model declines for policy reasons is re-run on Anthropic's recommended fallback model, and on a model without fallbacks the request simply runs alone. A request that is still declined ends the run `blocked` with code `model_refusal`.
+Server-side fallbacks are on by default: a request a model declines for policy reasons is re-run on Anthropic's recommended fallback model, and on a model without fallbacks the request simply runs alone. A request that is still declined ends the run `blocked` with code `model_refusal`, and its tokens still count.
 
 Each answer's own content blocks, thinking included, are replayed unchanged on the next request of a tool loop, so the model's reasoning carries over (ADR-0022). An answer the harness changed (a redaction) is replayed without its thinking, consistently, so the history stays append-only.
 

@@ -61,6 +61,11 @@ class AnthropicMessagesConfig(BaseModel):
     timeout: hw.Duration = Field(default=timedelta(minutes=10))
     max_retries: int = Field(default=2, ge=0, description="Set 0 behind a gateway (R5).")
     cost_header: str = "x-litellm-response-cost"
+    hold_stream: bool = Field(
+        default=False,
+        description="Deliver a streamed answer's chunks only once it has finished, so nothing "
+        "from a declined answer reaches the app, at the cost of live output.",
+    )
 
 
 def provider_error(exc: Exception) -> hw.errors.ProviderError:
@@ -154,6 +159,7 @@ class AnthropicMessages:
 
         kwargs = self._kwargs(request, stream=True)
         index = 0
+        held: list[hw.StreamChunk] = []
         try:
             async with self._endpoint(kwargs).stream(**kwargs) as stream:
                 async for event in stream:
@@ -162,9 +168,16 @@ class AnthropicMessages:
                         event.type == "content_block_delta"
                         and getattr(delta, "type", None) == "text_delta"
                     ):
-                        yield hw.StreamChunk(index=index, delta=delta.text)
+                        piece = hw.StreamChunk(index=index, delta=delta.text)
                         index += 1
+                        if self.config.hold_stream:
+                            held.append(piece)
+                        else:
+                            yield piece
                 message = await stream.get_final_message()
         except APIError as exc:
             raise provider_error(exc) from exc
-        yield from_message(message, None)
+        response = from_message(message, None)  # raises if the model declined
+        for piece in held:
+            yield piece
+        yield response

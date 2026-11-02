@@ -4,6 +4,14 @@ All notable changes to this plugin. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Added
+
+- `hold_stream` delivers a streamed answer's chunks only once it has finished, so nothing from a declined answer reaches the app.
+
+### Fixed
+
+- A request the model declines still counts its usage and cost in the run, and the refusal is noted on the trace (RULES R13). It raises `ModelRefusal`, still a `RunBlocked` with code `model_refusal`. Needs `harnessweaver` 0.18.0.
+
 ## 0.1.2 - 2026-11-01
 
 The first version published to PyPI.

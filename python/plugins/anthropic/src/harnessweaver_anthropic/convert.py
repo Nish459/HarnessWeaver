@@ -72,17 +72,9 @@ def from_message(message: Any, cost: float | None) -> hw.ModelResponse:
     """A Messages API answer as a neutral response.
 
     Raises:
-        RunBlocked: When the model declined (``stop_reason: refusal``); nothing
-            else in the answer is usable.
+        ModelRefusal: When the model declined (``stop_reason: refusal``); nothing
+            else in the answer is usable, only what it used.
     """
-    if _get(message, "stop_reason") == "refusal":
-        details = _get(message, "stop_details")
-        category = _get(details, "category") if details is not None else None
-        raise hw.errors.RunBlocked(
-            "the model declined the request",
-            code="model_refusal",
-            category=category if isinstance(category, str) else None,
-        )
     content = _get(message, "content") or []
     calls = tuple(
         hw.ToolCall(id=_get(b, "id"), name=_get(b, "name"), arguments=dict(_get(b, "input") or {}))
@@ -94,12 +86,25 @@ def from_message(message: Any, cost: float | None) -> hw.ModelResponse:
         _get(usage, field) or 0
         for field in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
     )
+    spent = hw.Usage(input_tokens=input_tokens, output_tokens=_get(usage, "output_tokens") or 0)
+    if _get(message, "stop_reason") == "refusal":
+        details = _get(message, "stop_details")
+        category = _get(details, "category") if details is not None else None
+        raise hw.errors.ModelRefusal(
+            response=hw.ModelResponse(
+                model=_get(message, "model"),
+                usage=spent,
+                cost_usd=cost,
+                finish_reason="refusal",
+            ),
+            category=category if isinstance(category, str) else None,
+        )
     text = text_of_blocks(content)
     return hw.ModelResponse(
         model=_get(message, "model"),
         text=text,
         tool_calls=calls,
-        usage=hw.Usage(input_tokens=input_tokens, output_tokens=_get(usage, "output_tokens") or 0),
+        usage=spent,
         cost_usd=cost,
         finish_reason=_get(message, "stop_reason"),
         extensions={EXTENSION: _extension(_echo_blocks(content), text, calls)},

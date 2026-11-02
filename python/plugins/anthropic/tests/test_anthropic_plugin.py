@@ -10,7 +10,7 @@ from anthropic import Anthropic, AsyncAnthropic
 
 import harnessweaver as hw
 from harnessweaver.core.registry import PluginCatalog, PluginSource
-from harnessweaver.errors import ProviderError, RunBlocked, SpecError
+from harnessweaver.errors import ModelRefusal, ProviderError, RunBlocked, SpecError
 from harnessweaver_anthropic import AnthropicMessages, AnthropicMessagesConfig
 from harnessweaver_anthropic.convert import assistant_content
 
@@ -269,6 +269,116 @@ async def test_streaming_yields_text_then_the_message() -> None:
     assert server.requests[0]["max_tokens"] == 64_000
 
 
+REFUSAL = {"type": "refusal", "category": "cyber", "explanation": "a secret explanation"}
+SPENT = hw.Usage(input_tokens=15, output_tokens=5)
+
+
+def refused_stream(*blocks: str) -> httpx2.Response:
+    """A streamed answer that ends in a refusal, after any text ``blocks``."""
+    start = {**message(), "content": [], "stop_reason": None}
+    events: list[dict[str, Any]] = [{"type": "message_start", "message": start}]
+    for index, value in enumerate(blocks):
+        events += [
+            {
+                "type": "content_block_start",
+                "index": index,
+                "content_block": {"type": "text", "text": ""},
+            },
+            {
+                "type": "content_block_delta",
+                "index": index,
+                "delta": {"type": "text_delta", "text": value},
+            },
+            {"type": "content_block_stop", "index": index},
+        ]
+    events += [
+        {
+            "type": "message_delta",
+            "delta": {"stop_reason": "refusal", "stop_sequence": None, "stop_details": REFUSAL},
+            "usage": {"output_tokens": 5},
+        },
+        {"type": "message_stop"},
+    ]
+    return sse(*events)
+
+
+def stream_request() -> hw.ModelRequest:
+    return hw.ModelRequest(model="m", messages=(hw.Message.user("x"),), stream=True)
+
+
+async def collect(stream: Any, into: list[Any]) -> None:
+    """Add each item of ``stream`` to ``into``, which keeps them if the stream raises."""
+    async for item in stream:
+        into.append(item)
+
+
+@pytest.mark.anyio
+async def test_a_refusal_reports_its_usage_without_its_text() -> None:
+    server = Server(ok(message(text("partial"), stop="refusal", stop_details=REFUSAL)))
+    with pytest.raises(ModelRefusal) as caught:
+        await provider(server).generate(hw.ModelRequest(messages=(hw.Message.user("x"),)), ENV)
+    assert caught.value.details == {"code": "model_refusal", "category": "cyber"}
+    assert caught.value.response.usage == SPENT
+    assert caught.value.response.text == ""
+    assert "secret" not in caught.value.message  # R9
+
+
+@pytest.mark.anyio
+async def test_a_refused_stream_blocks_and_reports_its_usage() -> None:
+    received: list[Any] = []
+    stream = provider(Server(refused_stream("partial"))).stream(stream_request(), ENV)
+    with pytest.raises(ModelRefusal) as caught:
+        await collect(stream, received)
+    assert [i.delta for i in received] == ["partial"]  # delivered before the signal arrived
+    assert caught.value.response.usage == SPENT
+
+
+@pytest.mark.anyio
+async def test_hold_stream_delivers_nothing_from_a_refused_stream() -> None:
+    received: list[Any] = []
+    held = provider(Server(refused_stream("partial")), hold_stream=True)
+    with pytest.raises(ModelRefusal):
+        await collect(held.stream(stream_request(), ENV), received)
+    assert received == []
+
+
+@pytest.mark.anyio
+async def test_hold_stream_releases_an_ordinary_answer_in_order() -> None:
+    start = {**message(), "content": [], "stop_reason": None}
+    server = Server(
+        sse(
+            {"type": "message_start", "message": start},
+            {
+                "type": "content_block_start",
+                "index": 0,
+                "content_block": {"type": "text", "text": ""},
+            },
+            {
+                "type": "content_block_delta",
+                "index": 0,
+                "delta": {"type": "text_delta", "text": "Hel"},
+            },
+            {
+                "type": "content_block_delta",
+                "index": 0,
+                "delta": {"type": "text_delta", "text": "lo"},
+            },
+            {"type": "content_block_stop", "index": 0},
+            {
+                "type": "message_delta",
+                "delta": {"stop_reason": "end_turn", "stop_sequence": None},
+                "usage": {"output_tokens": 2},
+            },
+            {"type": "message_stop"},
+        )
+    )
+    items = [i async for i in provider(server, hold_stream=True).stream(stream_request(), ENV)]
+    assert [getattr(i, "delta", None) for i in items[:-1]] == ["Hel", "lo"]
+    final = items[-1]
+    assert isinstance(final, hw.ModelResponse)
+    assert final.text == "Hello"
+
+
 @pytest.mark.anyio
 async def test_test_mode_and_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     request = hw.ModelRequest(messages=(hw.Message.user("x"),))
@@ -377,6 +487,45 @@ def test_instrument_governs_a_sync_client(tmp_path: Path) -> None:
     )
     assert getattr(answer.content[0], "text", None) == "fine"
     assert server.requests[0]["messages"][0]["content"] == "call [PHONE]"
+
+
+@pytest.mark.anyio
+async def test_a_refusal_ends_the_run_blocked_with_its_usage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    server = Server(ok(message(stop="refusal", stop_details=REFUSAL)))
+    monkeypatch.setattr(AnthropicMessages, "_get_client", lambda self: server.async_client())
+    app = harness(
+        tmp_path,
+        models={"provider": "anthropic.messages", "default": "strong"},
+        tasks={"ask": {"runner": "direct"}},
+    )
+    result = await app.run("ask", "what is the answer?")
+    assert result.status is hw.RunStatus.BLOCKED
+    assert result.error is not None
+    assert result.error.details["code"] == "model_refusal"
+    assert result.error.details["category"] == "cyber"
+    assert result.usage == SPENT
+    assert [e for e in result.trace if e.code == "model_refusal"]  # R13
+
+
+@pytest.mark.anyio
+async def test_instrument_blocks_a_refusal(tmp_path: Path) -> None:
+    server = Server(ok(message(stop="refusal", stop_details=REFUSAL)))
+    client = harness(tmp_path).instrument(server.async_client())
+    with pytest.raises(RunBlocked) as caught:
+        await client.messages.create(
+            model="m", max_tokens=1, messages=[{"role": "user", "content": "x"}]
+        )
+    assert caught.value.details["code"] == "model_refusal"
+
+
+def test_instrument_blocks_a_refusal_on_a_sync_client(tmp_path: Path) -> None:
+    server = Server(ok(message(stop="refusal", stop_details=REFUSAL)))
+    client = harness(tmp_path).instrument(server.sync_client())
+    with pytest.raises(RunBlocked) as caught:
+        client.messages.create(model="m", max_tokens=1, messages=[{"role": "user", "content": "x"}])
+    assert caught.value.details["code"] == "model_refusal"
 
 
 @pytest.mark.anyio
