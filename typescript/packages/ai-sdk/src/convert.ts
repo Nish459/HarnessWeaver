@@ -16,7 +16,7 @@ import type {
   LanguageModelV4ToolResultOutput,
   LanguageModelV4Usage,
 } from "@ai-sdk/provider";
-import type { JsonObject, JsonValue, Message, ModelRequest, ModelResponse, ToolCall, ToolSpec, Usage } from "@harnessweaver/core";
+import { ModelRefusal, type JsonObject, type JsonValue, type Message, type ModelRequest, type ModelResponse, type ToolCall, type ToolSpec, type Usage } from "@harnessweaver/core";
 
 /**
  * Where a neutral message came from: `[message, part]` in the prompt (`part` is -1 for a
@@ -125,6 +125,19 @@ export function toResponse(result: LanguageModelV4GenerateResult, model: Languag
     usage: usageOf(result.usage),
     finish_reason: result.finishReason.unified,
   };
+}
+
+/**
+ * The error for an answer the model declined, keeping what it used but none of its text
+ * (R9). AI SDK providers report that as `content-filter`, also what a content filter sets
+ * when it cuts an answer short; either way the answer can't be used.
+ *
+ * @param blockEmpty Also treat an answer with no text and no tool calls as declined.
+ */
+export function refusalOf(response: ModelResponse, blockEmpty = false): ModelRefusal | undefined {
+  const empty = blockEmpty && !response.text && !response.tool_calls?.length;
+  if (response.finish_reason !== "content-filter" && !empty) return undefined;
+  return new ModelRefusal(undefined, { ...response, text: "", tool_calls: [] });
 }
 
 /** The model's answer with its text replaced, when `model.after` middleware changed it. */

@@ -18,4 +18,6 @@ await harness.session({ principal: user.id }, async (s) => {
 });
 ```
 
+An answer the model declined (finish reason `content-filter`) throws `ModelRefusal`, a `RunBlocked` with the code `model_refusal`, and its usage and cost still count. `holdStream: true` delivers a stream's parts only once it has finished, so nothing from a declined answer reaches your app. `blockEmptyAnswers: true` treats an answer with no text and no tool calls as declined, for a provider that drops the refusal, as `@ai-sdk/openai` 4 does with OpenAI's `refusal` field.
+
 `ai` and `@ai-sdk/provider` are peer dependencies. Documentation: [TypeScript](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/advanced/typescript.md#models).

@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { LanguageModelV4GenerateResult, LanguageModelV4StreamPart } from "@ai-sdk/provider";
-import { defineMiddleware, definePlugin, FakeClock, load, outcome, RunBlocked, type Plugin, type RunResult } from "@harnessweaver/core";
+import { defineMiddleware, definePlugin, FakeClock, load, ModelRefusal, outcome, RunBlocked, type Plugin, type RunResult } from "@harnessweaver/core";
 import { generateText, simulateReadableStream, streamText } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it } from "vitest";
@@ -23,14 +23,26 @@ function answer(text: string): LanguageModelV4GenerateResult {
   return { content: [{ type: "text", text }], finishReason: { unified: "stop", raw: "stop" }, usage: USAGE, warnings: [] };
 }
 
-function streamed(...deltas: string[]): { stream: ReadableStream<LanguageModelV4StreamPart> } {
+// What a provider reports when a model declines: @ai-sdk/anthropic maps Claude's stop reason
+// `refusal` to the unified `content-filter`, also what a content filter cutting an answer sets.
+const DECLINED = { unified: "content-filter", raw: "refusal" } as const;
+
+function declined(text: string): LanguageModelV4GenerateResult {
+  return { ...answer(text), finishReason: DECLINED };
+}
+
+function finishing(finishReason: { unified: "stop" | "content-filter"; raw: string }, ...deltas: string[]): { stream: ReadableStream<LanguageModelV4StreamPart> } {
   const chunks: LanguageModelV4StreamPart[] = [
     { type: "text-start", id: "t" },
     ...deltas.map((delta): LanguageModelV4StreamPart => ({ type: "text-delta", id: "t", delta })),
     { type: "text-end", id: "t" },
-    { type: "finish", usage: USAGE, finishReason: { unified: "stop", raw: "stop" } },
+    { type: "finish", usage: USAGE, finishReason },
   ];
   return { stream: simulateReadableStream({ chunks, initialDelayInMs: null, chunkDelayInMs: null }) };
+}
+
+function streamed(...deltas: string[]): { stream: ReadableStream<LanguageModelV4StreamPart> } {
+  return finishing({ unified: "stop", raw: "stop" }, ...deltas);
 }
 
 // A plugin middleware that masks an email on the way in and a code on the way out.
@@ -105,6 +117,132 @@ describe("wrapModel", () => {
       }),
     ).rejects.toBeInstanceOf(RunBlocked);
     expect(seen).toEqual(["fine, "]);
+  });
+
+  it("blocks a declined call once, counting its usage and keeping its text from the app", async () => {
+    const model = new MockLanguageModelV4({ modelId: "mock-model", doGenerate: declined("partial answer") });
+    const h = harness({ ...PRICES, middleware: [{ use: "acme.mask" }] }, [mask]);
+    let ended: RunResult | undefined;
+    const run = h.session({ onEnd: (r) => (ended = r) }, async (s) => {
+      const result = await generateText({ model: wrapModel(s, model), prompt: "hi" });
+      return result.text;
+    });
+    await expect(run).rejects.toBeInstanceOf(ModelRefusal);
+    await expect(run).rejects.toMatchObject({ details: { code: "model_refusal" } });
+    expect(model.doGenerateCalls).toHaveLength(1); // the AI SDK's retries don't re-ask it
+    expect(ended?.status).toBe("blocked");
+    expect(ended?.cost_usd).toBeCloseTo(0.002, 9);
+    expect(ended?.trace?.filter((e) => e.code === "model_refusal").length).toBeGreaterThan(0);
+    expect(ended?.trace?.filter((e) => e.hook === "model.after" && e.kind !== "note").length).toBe(0);
+  });
+
+  it("errors a declined stream at its finish, counting its usage", async () => {
+    const model = new MockLanguageModelV4({ modelId: "mock-model", doStream: finishing(DECLINED, "partial ", "answer") });
+    const h = harness(PRICES);
+    let ended: RunResult | undefined;
+    const seen: string[] = [];
+    await expect(
+      h.session({ onEnd: (r) => (ended = r) }, async (s) => {
+        const { stream } = await wrapModel(s, model).doStream({ prompt: [{ role: "user", content: [{ type: "text", text: "go" }] }] });
+        for await (const part of stream) if (part.type === "text-delta") seen.push(part.delta);
+      }),
+    ).rejects.toBeInstanceOf(ModelRefusal);
+    expect(seen).toEqual(["partial ", "answer"]); // delivered before the signal arrived
+    expect(ended?.status).toBe("blocked");
+    expect(ended?.cost_usd).toBeCloseTo(0.002, 9);
+    expect(ended?.trace?.filter((e) => e.code === "model_refusal").length).toBeGreaterThan(0);
+  });
+
+  it("fails streamText on a declined stream, and the run ends blocked", async () => {
+    const model = new MockLanguageModelV4({ modelId: "mock-model", doStream: finishing(DECLINED, "partial") });
+    let ended: RunResult | undefined;
+    const run = harness(PRICES).session({ onEnd: (r) => (ended = r) }, async (s) => {
+      const result = streamText({ model: wrapModel(s, model), prompt: "hi", onError: () => undefined });
+      return await result.text;
+    });
+    await expect(run).rejects.toBeInstanceOf(ModelRefusal);
+    expect(ended?.status).toBe("blocked");
+    expect(ended?.cost_usd).toBeCloseTo(0.002, 9);
+  });
+
+  const PROMPT = { prompt: [{ role: "user" as const, content: [{ type: "text" as const, text: "go" }] }] };
+
+  it("with holdStream, delivers nothing from a declined stream", async () => {
+    const model = new MockLanguageModelV4({ modelId: "mock-model", doStream: finishing(DECLINED, "partial ", "answer") });
+    let ended: RunResult | undefined;
+    const seen: string[] = [];
+    await expect(
+      harness(PRICES).session({ onEnd: (r) => (ended = r) }, async (s) => {
+        const { stream } = await wrapModel(s, model, { holdStream: true }).doStream(PROMPT);
+        for await (const part of stream) seen.push(part.type);
+      }),
+    ).rejects.toBeInstanceOf(ModelRefusal);
+    expect(seen).toEqual([]);
+    expect(ended?.cost_usd).toBeCloseTo(0.002, 9);
+  });
+
+  it("with holdStream, releases an ordinary answer in order, after its guards", async () => {
+    const model = new MockLanguageModelV4({ modelId: "mock-model", doStream: streamed("write to ", "ann@example.com") });
+    const h = harness({ guardrails: { stream: [{ id: "pii", use: "pii.regex", entities: ["EMAIL"] }] } });
+    const seen: string[] = [];
+    await h.session({}, async (s) => {
+      const { stream } = await wrapModel(s, model, { holdStream: true }).doStream(PROMPT);
+      for await (const part of stream) seen.push(part.type === "text-delta" ? part.delta : part.type);
+    });
+    expect(seen).toEqual(["text-start", "write to ", "[EMAIL]", "text-end", "finish"]);
+  });
+
+  it("with holdStream, releases what a stream with no finish part sent", async () => {
+    const chunks: LanguageModelV4StreamPart[] = [{ type: "text-start", id: "t" }, { type: "text-delta", id: "t", delta: "hi" }];
+    const model = new MockLanguageModelV4({ modelId: "mock-model", doStream: { stream: simulateReadableStream({ chunks, initialDelayInMs: null, chunkDelayInMs: null }) } });
+    const seen: string[] = [];
+    await harness({}).session({}, async (s) => {
+      const { stream } = await wrapModel(s, model, { holdStream: true }).doStream(PROMPT);
+      for await (const part of stream) seen.push(part.type);
+    });
+    expect(seen).toEqual(["text-start", "text-delta"]);
+  });
+
+  it("with blockEmptyAnswers, blocks an answer a provider emptied of its refusal", async () => {
+    const empty = { ...answer(""), content: [] };
+    const generated = new MockLanguageModelV4({ modelId: "mock-model", doGenerate: empty });
+    await expect(harness({}).session({}, (s) => generateText({ model: wrapModel(s, generated, { blockEmptyAnswers: true }), prompt: "hi" }))).rejects.toBeInstanceOf(ModelRefusal);
+    const streaming = new MockLanguageModelV4({ modelId: "mock-model", doStream: streamed() });
+    await expect(
+      harness({}).session({}, async (s) => {
+        const { stream } = await wrapModel(s, streaming, { blockEmptyAnswers: true }).doStream(PROMPT);
+        for await (const _ of stream);
+      }),
+    ).rejects.toBeInstanceOf(ModelRefusal);
+  });
+
+  it("lets empty answers through by default, and a tool call is never empty", async () => {
+    const empty = new MockLanguageModelV4({ modelId: "mock-model", doGenerate: { ...answer(""), content: [] } });
+    const text = await harness({}).session({}, async (s) => (await generateText({ model: wrapModel(s, empty), prompt: "hi" })).text);
+    expect(text).toBe(""); // a model may end a tool loop with nothing to add
+    const call = { type: "tool-call", toolCallId: "c1", toolName: "find", input: "{}" } as const;
+    const calling = new MockLanguageModelV4({ modelId: "mock-model", doGenerate: { ...answer(""), content: [call], finishReason: { unified: "tool-calls", raw: "tool_use" } } });
+    await harness({}).session({}, async (s) => {
+      const result = await wrapModel(s, calling, { blockEmptyAnswers: true }).doGenerate(PROMPT);
+      expect(result.content).toHaveLength(1);
+    });
+    const chunks: LanguageModelV4StreamPart[] = [call, { type: "finish", usage: USAGE, finishReason: { unified: "tool-calls", raw: "tool_use" } }];
+    const streaming = new MockLanguageModelV4({ modelId: "mock-model", doStream: { stream: simulateReadableStream({ chunks, initialDelayInMs: null, chunkDelayInMs: null }) } });
+    const seen: string[] = [];
+    await harness({}).session({}, async (s) => {
+      const { stream } = await wrapModel(s, streaming, { blockEmptyAnswers: true }).doStream(PROMPT);
+      for await (const part of stream) seen.push(part.type);
+    });
+    expect(seen).toEqual(["tool-call", "finish"]);
+  });
+
+  it("leaves other finish reasons alone", async () => {
+    const model = new MockLanguageModelV4({
+      modelId: "mock-model",
+      doGenerate: { ...answer("cut off"), finishReason: { unified: "length", raw: "max_tokens" } },
+    });
+    const text = await harness({}).session({}, async (s) => (await generateText({ model: wrapModel(s, model), prompt: "hi" })).text);
+    expect(text).toBe("cut off");
   });
 });
 

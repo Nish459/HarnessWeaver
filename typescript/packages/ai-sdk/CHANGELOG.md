@@ -4,6 +4,15 @@ All notable changes to this package. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+
+- `holdStream` delivers a stream's parts only once it has finished, so nothing from a declined answer reaches the app.
+- `blockEmptyAnswers` treats an answer with no text and no tool calls as declined, for a provider that drops the refusal.
+
+### Fixed
+
+- An answer with the finish reason `content-filter` now throws `ModelRefusal`, from the call or the stream, and the run ends `blocked` with code `model_refusal` and its usage and cost counted. It used to pass as an ordinary answer. Needs `@harnessweaver/core` 0.5.0.
+
 ## 0.1.1 - 2026-11-01
 
 The first version published to npm.
