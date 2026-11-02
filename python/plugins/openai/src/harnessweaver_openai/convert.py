@@ -15,6 +15,8 @@ __all__ = [
     "from_completion",
     "from_messages",
     "parse_arguments",
+    "raise_if_declined",
+    "refusal_of",
     "request_kwargs",
     "to_messages",
     "to_tools",
@@ -98,8 +100,34 @@ def _get(value: Any, name: str) -> Any:
     return value.get(name) if isinstance(value, Mapping) else getattr(value, name, None)
 
 
+def refusal_of(message: Any) -> Any:
+    """A message's or delta's refusal text. LiteLLM moves it to ``provider_specific_fields``."""
+    return _get(message, "refusal") or _get(_get(message, "provider_specific_fields"), "refusal")
+
+
+def raise_if_declined(response: hw.ModelResponse, refusal: Any) -> None:
+    """Stop when the model declined, which reaches us in one of two ways.
+
+    OpenAI sets a ``refusal`` text on the message (see ``refusal_of``). LiteLLM reports
+    a Claude refusal as ``finish_reason: content_filter``, also what a provider's content
+    filter sets when it cuts an answer short. Either way the answer can't be used.
+
+    Raises:
+        ModelRefusal: With ``response``'s usage and cost, and none of its text or the
+            refusal's (R9).
+    """
+    if refusal or response.finish_reason == "content_filter":
+        raise hw.errors.ModelRefusal(
+            response=response.model_copy(update={"text": "", "tool_calls": ()})
+        )
+
+
 def from_completion(completion: Any, cost: float | None) -> hw.ModelResponse:
-    """A ``ChatCompletion`` as a neutral response."""
+    """A ``ChatCompletion`` as a neutral response.
+
+    Raises:
+        ModelRefusal: When the model declined (see ``raise_if_declined``).
+    """
     choices = _get(completion, "choices") or []
     message = _get(choices[0], "message") if choices else None
     calls = tuple(
@@ -112,7 +140,7 @@ def from_completion(completion: Any, cost: float | None) -> hw.ModelResponse:
         if _get(call, "function") is not None
     )
     usage = _get(completion, "usage")
-    return hw.ModelResponse(
+    response = hw.ModelResponse(
         model=_get(completion, "model"),
         text=(_get(message, "content") or "") if message is not None else "",
         tool_calls=calls,
@@ -123,6 +151,8 @@ def from_completion(completion: Any, cost: float | None) -> hw.ModelResponse:
         cost_usd=cost,
         finish_reason=_get(choices[0], "finish_reason") if choices else None,
     )
+    raise_if_declined(response, refusal_of(message))
+    return response
 
 
 def content_text(content: Any) -> str:

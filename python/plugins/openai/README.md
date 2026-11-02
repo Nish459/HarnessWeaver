@@ -28,6 +28,12 @@ models:
 | `max_tokens_param` | `max_tokens` | Or `max_completion_tokens` |
 | `cost_header` | `x-litellm-response-cost` | The gateway's reported cost, used before `models.prices` |
 | `default_headers` | none | Extra headers on every request |
+| `hold_stream` | `false` | Deliver a streamed answer's chunks only once it has finished, so nothing from a declined answer reaches the app. Output is no longer live |
+| `block_empty_answers` | `false` | Treat an answer with no text and no tool calls as declined. LiteLLM drops a streamed refusal, leaving only that; but a model may also just have nothing to add |
+
+A request the model declines ends the run `blocked` with code `model_refusal`, here and through `harness.instrument(client)`, and its tokens and cost still count. It is recognized by the message's `refusal` field, also under `provider_specific_fields` where LiteLLM moves it, or the finish reason `content_filter`, which is how LiteLLM reports a Claude refusal, so an answer a content filter cut short ends the same way. An endpoint that returns a refusal as ordinary text can't be told apart from an answer: use a `regex.deny` output guard on the wording you see.
+
+A gateway can serve Claude through this provider, but only what Chat Completions carries gets through: thinking isn't requested or replayed, `effort` isn't a setting, and there are no server-side refusal fallbacks. Use `anthropic.messages` from `harnessweaver-anthropic` for those.
 
 ## `harness.instrument(client)`
 

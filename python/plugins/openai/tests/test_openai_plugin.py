@@ -11,6 +11,7 @@ from openai import AsyncOpenAI, OpenAI
 import harnessweaver as hw
 from harnessweaver.core.registry import PluginCatalog, PluginSource
 from harnessweaver.errors import (
+    ModelRefusal,
     PluginNotAllowed,
     ProviderError,
     RunBlocked,
@@ -19,6 +20,7 @@ from harnessweaver.errors import (
     UnreachableHook,
 )
 from harnessweaver_openai import OpenAIChat, OpenAIChatConfig
+from harnessweaver_openai.convert import from_completion
 
 FAKE_KEY = "sk-test-not-a-real-key"
 CATALOG = PluginCatalog([PluginSource("openai", "harnessweaver_openai:plugin", "entry_point")])
@@ -185,6 +187,108 @@ async def test_streaming_yields_chunks_then_the_response() -> None:
     assert server.requests[0]["stream_options"] == {"include_usage": True}
 
 
+REFUSAL_TEXT = "I can't help with that secret plan"
+
+
+def declined(signal: str) -> dict[str, Any]:
+    """An answer the model declined, in the shapes real endpoints send.
+
+    The ``litellm_*`` shapes were captured from LiteLLM Proxy 1.106.6: it moves an upstream
+    ``refusal`` under ``provider_specific_fields``, and maps Claude's stop reason ``refusal``
+    to ``content_filter`` with ``content: null``, keeping any text it streamed for ``partial``.
+    """
+    if signal == "refusal":
+        return completion("", refusal=REFUSAL_TEXT)
+    if signal == "litellm_refusal":
+        return completion("", provider_specific_fields={"refusal": REFUSAL_TEXT})
+    body = completion("partial answer" if signal == "content_filter" else "")
+    body["choices"][0]["finish_reason"] = "content_filter"
+    return body
+
+
+SIGNALS = ["refusal", "content_filter", "litellm_refusal", "litellm_claude"]
+SPENT = hw.Usage(input_tokens=12, output_tokens=3)
+USAGE_CHUNK = {
+    **chunk({}),
+    "choices": [],
+    "usage": {"prompt_tokens": 12, "completion_tokens": 3, "total_tokens": 15},
+}
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("signal", SIGNALS)
+async def test_a_declined_request_blocks_and_reports_its_usage(signal: str) -> None:
+    server = Server(ok(declined(signal), cost="0.5"))
+    with pytest.raises(ModelRefusal) as caught:
+        await provider(server).generate(
+            hw.ModelRequest(model="m", messages=(hw.Message.user("x"),)), ENV
+        )
+    assert caught.value.details["code"] == "model_refusal"
+    assert REFUSAL_TEXT not in caught.value.message  # R9
+    assert caught.value.response.usage == SPENT
+    assert caught.value.response.cost_usd == pytest.approx(0.5)
+    assert caught.value.response.text == ""  # the partial answer goes no further
+
+
+def test_ordinary_answers_are_not_declined() -> None:
+    for answer in (
+        completion("fine", refusal=None),
+        completion("fine", provider_specific_fields={"refusal": None}),
+        completion("fine", provider_specific_fields={"citations": None}),
+    ):
+        assert from_completion(answer, None).text == "fine"
+
+
+DECLINED_STREAMS = [
+    pytest.param(chunk({"refusal": REFUSAL_TEXT}, "stop"), id="refusal"),
+    pytest.param(chunk({}, "content_filter"), id="content_filter"),
+]
+
+
+def stream_request() -> hw.ModelRequest:
+    return hw.ModelRequest(model="m", messages=(hw.Message.user("x"),), stream=True)
+
+
+async def collect(stream: Any, into: list[Any]) -> None:
+    """Add each item of ``stream`` to ``into``, which keeps them if the stream raises."""
+    async for item in stream:
+        into.append(item)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("last", DECLINED_STREAMS)
+async def test_a_declined_stream_blocks_and_reports_its_usage(last: dict[str, Any]) -> None:
+    server = Server(sse(chunk({"role": "assistant", "content": "partial"}), last, USAGE_CHUNK))
+    received: list[Any] = []
+    with pytest.raises(ModelRefusal) as caught:
+        await collect(provider(server).stream(stream_request(), ENV), received)
+    assert [i.delta for i in received] == ["partial"]  # delivered before the signal arrived
+    assert caught.value.details["code"] == "model_refusal"
+    assert REFUSAL_TEXT not in caught.value.message  # R9
+    assert caught.value.response.usage == SPENT
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("last", DECLINED_STREAMS)
+async def test_hold_stream_delivers_nothing_from_a_declined_stream(last: dict[str, Any]) -> None:
+    server = Server(sse(chunk({"role": "assistant", "content": "partial"}), last, USAGE_CHUNK))
+    received: list[Any] = []
+    with pytest.raises(ModelRefusal):
+        await collect(provider(server, hold_stream=True).stream(stream_request(), ENV), received)
+    assert received == []
+
+
+@pytest.mark.anyio
+async def test_hold_stream_releases_an_ordinary_answer_in_order() -> None:
+    server = Server(sse(chunk({"content": "Hel"}), chunk({"content": "lo"}, "stop"), USAGE_CHUNK))
+    items = [i async for i in provider(server, hold_stream=True).stream(stream_request(), ENV)]
+    assert [getattr(i, "delta", None) for i in items[:-1]] == ["Hel", "lo"]
+    final = items[-1]
+    assert isinstance(final, hw.ModelResponse)
+    assert final.text == "Hello"
+    assert final.usage == SPENT
+
+
 @pytest.mark.anyio
 async def test_errors_are_classified_and_not_retried() -> None:
     server = Server(httpx2.Response(503, json={"error": {"message": "secret detail"}}))
@@ -255,6 +359,142 @@ async def test_a_task_runs_on_openai_chat(tmp_path: Path, monkeypatch: pytest.Mo
     assert result.output == '{"answer": 42}'
     assert result.cost_usd == pytest.approx(0.5)
     assert server.requests[0]["model"] == "gpt-x-mini"
+
+
+@pytest.mark.anyio
+async def test_a_declined_request_ends_the_run_blocked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    server = Server(ok(declined("content_filter")))
+    monkeypatch.setattr(OpenAIChat, "_get_client", lambda self: server.async_client())
+    app = harness(
+        tmp_path,
+        models={"provider": "openai.chat", "default": "fast"},
+        tasks={"ask": {"runner": "direct"}},
+    )
+    result = await app.run("ask", "what is the answer?")
+    assert result.status is hw.RunStatus.BLOCKED
+    assert result.error is not None
+    assert result.error.details["code"] == "model_refusal"
+    assert result.usage == SPENT  # the declined call still cost tokens
+    assert [e for e in result.trace if e.code == "model_refusal"]  # R13
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("signal", SIGNALS)
+async def test_instrument_blocks_a_declined_request(tmp_path: Path, signal: str) -> None:
+    server = Server(ok(declined(signal)))
+    client = harness(tmp_path).instrument(server.async_client())
+    with pytest.raises(RunBlocked) as caught:
+        await client.chat.completions.create(model="m", messages=[{"role": "user", "content": "x"}])
+    assert caught.value.details["code"] == "model_refusal"
+    # The same answer through the bare client is an ordinary completion the app must inspect.
+    bare = await server.async_client().chat.completions.create(model="m", messages=[])
+    assert bare.choices[0].message.content in ("", "partial answer")
+
+
+def test_instrument_blocks_a_declined_request_on_a_sync_client(tmp_path: Path) -> None:
+    client = harness(tmp_path).instrument(Server(ok(declined("refusal"))).sync_client())
+    with pytest.raises(RunBlocked) as caught:
+        client.chat.completions.create(model="m", messages=[{"role": "user", "content": "x"}])
+    assert caught.value.details["code"] == "model_refusal"
+
+
+@pytest.mark.anyio
+async def test_instrument_inside_a_session_counts_a_declined_call(tmp_path: Path) -> None:
+    app = harness(tmp_path)
+    client = app.instrument(Server(ok(declined("litellm_claude"))).async_client())
+    session = app.session()
+    with pytest.raises(RunBlocked):
+        async with session:
+            await client.chat.completions.create(
+                model="m", messages=[{"role": "user", "content": "x"}]
+            )
+    assert session.result is not None
+    assert session.result.usage == SPENT
+
+
+# A refusal sent as ordinary text carries no marker, so a team that sees one says what to
+# look for with a guard.
+REFUSAL_GUARD = {
+    "id": "refusal-text",
+    "use": "regex.deny",
+    "patterns": [r"^i('m| am) sorry, but i can('|no)t"],
+    "ignore_case": True,
+}
+
+
+async def run_answering(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: str, **guard: Any
+) -> hw.RunResult:
+    server = Server(ok(completion(text)))
+    monkeypatch.setattr(OpenAIChat, "_get_client", lambda self: server.async_client())
+    app = harness(
+        tmp_path,
+        models={"provider": "openai.chat", "default": "fast"},
+        tasks={"ask": {"runner": "direct"}},
+        guardrails={"output": [{**REFUSAL_GUARD, **guard}]},
+    )
+    return await app.run("ask", "what is the answer?")
+
+
+@pytest.mark.anyio
+async def test_a_guard_catches_a_refusal_sent_as_ordinary_text(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    text = "I'm sorry, but I can't help with that."
+    result = await run_answering(tmp_path, monkeypatch, text)
+    assert result.status is hw.RunStatus.BLOCKED
+    assert result.error is not None
+    assert result.error.details["code"] == "guard_blocked"
+    shadow = await run_answering(tmp_path, monkeypatch, text, mode="log_only")  # R8
+    assert shadow.status is hw.RunStatus.COMPLETED
+    assert [e for e in shadow.trace if e.code == "guard_shadow"]
+
+
+# LiteLLM Proxy 1.106.6 drops a streamed `refusal`: all that is left is an empty answer.
+LITELLM_STREAMED_REFUSAL = (chunk({"role": "assistant"}), chunk({}, "stop"), USAGE_CHUNK)
+
+
+@pytest.mark.anyio
+async def test_block_empty_answers_catches_a_refusal_litellm_dropped_from_a_stream() -> None:
+    server = Server(sse(*LITELLM_STREAMED_REFUSAL))
+    with pytest.raises(ModelRefusal) as caught:
+        [i async for i in provider(server, block_empty_answers=True).stream(stream_request(), ENV)]
+    assert caught.value.response.usage == SPENT
+
+
+@pytest.mark.anyio
+async def test_block_empty_answers_covers_generate() -> None:
+    request = hw.ModelRequest(model="m", messages=(hw.Message.user("x"),))
+    with pytest.raises(ModelRefusal):
+        await provider(Server(ok(completion(""))), block_empty_answers=True).generate(request, ENV)
+
+
+@pytest.mark.anyio
+async def test_empty_answers_pass_by_default_and_tool_calls_are_not_empty() -> None:
+    items = [
+        i
+        async for i in provider(Server(sse(*LITELLM_STREAMED_REFUSAL))).stream(
+            stream_request(), ENV
+        )
+    ]
+    final = items[-1]
+    assert isinstance(final, hw.ModelResponse)
+    assert final.text == ""  # a model may end a tool loop with nothing to add
+    calls = [{"id": "t1", "type": "function", "function": {"name": "look", "arguments": "{}"}}]
+    answer = await provider(
+        Server(ok(completion("", tool_calls=calls))), block_empty_answers=True
+    ).generate(hw.ModelRequest(model="m", messages=(hw.Message.user("x"),)), ENV)
+    assert answer.tool_calls[0].name == "look"
+
+
+@pytest.mark.anyio
+async def test_the_refusal_guard_lets_an_ordinary_answer_through(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    result = await run_answering(tmp_path, monkeypatch, "Sorry for the wait: the total is 12.")
+    assert result.ok
 
 
 GUARDS = {

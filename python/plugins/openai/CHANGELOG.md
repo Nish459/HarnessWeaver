@@ -4,6 +4,16 @@ All notable changes to this plugin. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Added
+
+- The README says what `openai.chat` doesn't carry for Claude: thinking, `effort` and server-side refusal fallbacks.
+- `hold_stream` delivers a streamed answer's chunks only once it has finished, so nothing from a declined answer reaches the app.
+- `block_empty_answers` treats an answer with no text and no tool calls as declined, which catches a streamed refusal LiteLLM dropped.
+
+### Fixed
+
+- A request the model declines (the message's `refusal` field, also under `provider_specific_fields` where LiteLLM moves it, or the finish reason `content_filter`) now ends the run `blocked` with code `model_refusal`, in `openai.chat` and through `harness.instrument(client)`, and its usage and cost still count. It used to pass as an ordinary answer, often empty. An app that reads `message.refusal` on an instrumented client now gets `RunBlocked` instead. Needs `harnessweaver` 0.18.0.
+
 ## 0.1.2 - 2026-11-01
 
 The first version published to PyPI.
