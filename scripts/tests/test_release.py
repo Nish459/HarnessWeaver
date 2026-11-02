@@ -1,6 +1,11 @@
 """Tests for scripts/release.py: a release tag names one package at its exact version."""
 
+import json
+import re
+from pathlib import Path
+
 import pytest
+import release
 from release import ROOT, Package, is_semver, packages, releases
 
 CORE = Package("harnessweaver", "0.2.0", ROOT / "python/harnessweaver/pyproject.toml")
@@ -15,6 +20,74 @@ def test_every_package_in_the_repository_has_a_semver_version() -> None:
     assert {"harnessweaver", "harnessweaver-pydantic-ai", "@harnessweaver/ai-sdk"} <= found.keys()
     for package in found.values():
         assert is_semver(package.version), package
+
+
+def test_upload_sends_what_was_built_without_rebuilding(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # CI attests the artifacts it built, so uploading must not replace them with new ones.
+    version = packages()["harnessweaver"].version
+    monkeypatch.setattr(release, "OUT", tmp_path)
+    (tmp_path / "harnessweaver").mkdir()
+    monkeypatch.setattr(
+        release, "git", lambda *args: f"harnessweaver@{version}\n" if args[0] == "tag" else ""
+    )
+    monkeypatch.setattr(release, "build", lambda *args: pytest.fail("rebuilt"))
+    uploaded: list[str] = []
+    monkeypatch.setattr(release, "upload", lambda package, out: uploaded.append(package.name))
+    assert release.main(["upload", "harnessweaver"]) == 0
+    assert uploaded == ["harnessweaver"]
+    assert (tmp_path / "harnessweaver").is_dir()
+
+
+def test_upload_refuses_a_package_that_was_not_built(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    version = packages()["harnessweaver"].version
+    monkeypatch.setattr(release, "OUT", tmp_path)
+    monkeypatch.setattr(
+        release, "git", lambda *args: f"harnessweaver@{version}\n" if args[0] == "tag" else ""
+    )
+    monkeypatch.setattr(release, "upload", lambda *args: pytest.fail("uploaded"))
+    assert release.main(["upload", "harnessweaver"]) == 1
+    assert "harnessweaver: nothing built" in capsys.readouterr().err
+
+
+def test_npm_packages_are_published_with_npm(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # npm's own client does the trusted-publishing exchange and adds provenance.
+    (tmp_path / "core-1.0.0-rc.1.tgz").touch()
+    commands: list[tuple[str | Path, ...]] = []
+    monkeypatch.setattr(release, "run", lambda *args: commands.append(args))
+    release.upload(TS_CORE, tmp_path)
+    assert commands == [
+        (
+            "npm",
+            "publish",
+            tmp_path / "core-1.0.0-rc.1.tgz",
+            "--access",
+            "public",
+            "--tag",
+            "next",
+        )
+    ]
+
+
+def test_npm_packages_name_their_repository() -> None:
+    # npm refuses provenance unless repository.url matches the repository that built it.
+    for package in packages().values():
+        if package.manifest.name == "package.json":
+            repository = json.loads(package.manifest.read_text())["repository"]
+            assert repository["url"] == "git+https://github.com/Wise-DreamerZ/HarnessWeaver.git"
+            assert (ROOT / repository["directory"]) == package.manifest.parent
+
+
+def test_every_workflow_action_is_pinned_by_commit() -> None:
+    # RULES S5: a tag can be moved, so a release must not run whatever a tag now points at.
+    for workflow in (ROOT / ".github/workflows").glob("*.yml"):
+        for used in re.findall(r"uses:\s*(\S+)", workflow.read_text()):
+            assert re.fullmatch(r"[\w.-]+/[\w./-]+@[0-9a-f]{40}", used), (workflow.name, used)
 
 
 def test_every_package_ships_the_license() -> None:

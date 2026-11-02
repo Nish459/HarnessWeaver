@@ -5,12 +5,13 @@ version, such as ``harnessweaver@0.2.0`` or ``@harnessweaver/core@0.2.0``. Each 
 releases one package, and that package's ``pyproject.toml`` or ``package.json`` must
 have exactly that version, because every package is versioned on its own (RULES V1).
 Python packages go to PyPI with ``uv publish``, TypeScript packages to npm with
-``pnpm publish``.
+``npm publish``.
 
 Usage::
 
     python scripts/release.py build [PACKAGE ...]     # check the tags, build into dist/release/
     python scripts/release.py publish [PACKAGE ...]   # the same, then upload what was built
+    python scripts/release.py upload [PACKAGE ...]    # upload an earlier build, unchanged
 
 Naming packages releases just those, from their tags on HEAD, and leaves the other
 tags alone; with no names, every tag on HEAD is released.
@@ -153,41 +154,48 @@ def upload(package: Package, out: Path) -> None:
         # uv picks the sdist and wheel out of the folder (uv build also writes a .gitignore).
         run("uv", "publish", out / "*")
         return
-    # Credentials: the npm login in ~/.npmrc. A prerelease goes to the "next" dist-tag,
-    # so `npm install` keeps getting the latest release. A tag checkout is a detached
-    # HEAD, which pnpm's branch check refuses; main() has already checked the tree.
+    # Credentials: the npm login in ~/.npmrc, or trusted publishing on CI. npm, not pnpm,
+    # because pnpm only warns when trusted publishing fails and then tries other credentials.
+    # `pnpm pack` has already resolved workspace: versions in the tarball. A prerelease goes
+    # to the "next" dist-tag, so `npm install` keeps getting the latest release.
     dist_tag = ["--tag", "next"] if "-" in package.version else []
     for tarball in sorted(out.glob("*.tgz")):
-        run("pnpm", "publish", tarball, "--access", "public", "--no-git-checks", *dist_tag)
+        run("npm", "publish", tarball, "--access", "public", *dist_tag)
 
 
 def main(argv: list[str]) -> int:
-    """Check the release tags on HEAD, then build (and, for ``publish``, upload) each package.
+    """Check the release tags on HEAD, then build and/or upload each package.
 
     Args:
-        argv: ``build`` or ``publish``, then optionally the names of the packages to release.
+        argv: ``build``, ``publish`` or ``upload``, then optionally the names of the packages
+            to release.
 
     Returns:
-        0 on success, 1 when a tag or the working tree is wrong, 2 on a usage error.
+        0 on success, 1 when a tag, the working tree or a build is wrong, 2 on a usage error.
     """
-    if not argv or argv[0] not in ("build", "publish"):
+    if not argv or argv[0] not in ("build", "publish", "upload"):
         print(__doc__, file=sys.stderr)
         return 2
-    publish = argv[0] == "publish"
+    command = argv[0]
     tags = git("tag", "--points-at", "HEAD").split()
     chosen, problems = releases(tags, packages(), only=argv[1:])
-    if publish and git("status", "--porcelain"):
+    if command != "build" and git("status", "--porcelain"):
         problems.append("the working tree has changes: publish only a clean checkout of the tag")
+    if command == "upload":
+        problems += [
+            f"{p.name}: nothing built in {OUT}" for p in chosen if not (OUT / p.name).is_dir()
+        ]
     if problems:
         print("Nothing released:", *problems, sep="\n  ", file=sys.stderr)
         return 1
-    shutil.rmtree(OUT, ignore_errors=True)
-    for package in chosen:
-        build(package, OUT / package.name)
-    if publish:
+    if command != "upload":
+        shutil.rmtree(OUT, ignore_errors=True)
+        for package in chosen:
+            build(package, OUT / package.name)
+    if command != "build":
         for package in chosen:
             upload(package, OUT / package.name)
-    print("Released:" if publish else "Built in dist/release/:")
+    print("Built in dist/release/:" if command == "build" else "Released:")
     for package in chosen:
         print(f"  {package.name} {package.version}")
     return 0

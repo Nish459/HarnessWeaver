@@ -1,0 +1,140 @@
+# Publishes the packages that the release tags on the chosen ref name (scripts/release.py),
+# with an SBOM and signed attestations (RULES S5). Setup and use: CONTRIBUTING.md, Releasing.
+#
+# It starts by hand, with "Use workflow from" set to the tagged commit's tag or branch. A push
+# can't start it: GitHub creates no events when more than three tags are pushed at once, and a
+# full release has more. One job builds and attests, and a second uploads those same files, so
+# only the second one needs the release environment and its credentials.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: Packages to release, separated by spaces (empty for every tag on the ref)
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+
+jobs:
+  build:
+    name: Check, build and attest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      # Actions are pinned by commit SHA (RULES S5). No caches: a release builds from nothing.
+      # scripts/release.py reads the tags on HEAD, so fetch them.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.6"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: typescript/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: Install workspaces
+        run: |
+          uv sync --all-packages --locked
+          pnpm -C typescript install --frozen-lockfile
+      # A published version can't be taken back, so the tagged commit must pass here too.
+      - name: Check
+        run: |
+          make check
+          pnpm -C typescript typecheck
+          pnpm -C typescript test
+      # Inputs stay in the environment, and $PACKAGES is split but never run as code. `make`
+      # would paste it into a shell command, so this calls the script that `make build` calls.
+      - name: Build
+        env:
+          PACKAGES: ${{ inputs.packages }}
+        run: uv run --no-sync python scripts/release.py build $PACKAGES
+      - name: Generate SBOMs
+        run: |
+          mkdir -p dist/sbom
+          uv export --frozen --all-packages --no-dev --format cyclonedx1.5 \
+            --preview-features sbom-export --output-file dist/sbom/python.cdx.json > /dev/null
+          pnpm -C typescript --filter @harnessweaver/core --filter @harnessweaver/ai-sdk sbom \
+            --sbom-format cyclonedx --prod --lockfile-only > dist/sbom/typescript.cdx.json
+      - name: Attest build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            dist/release/**/*.whl
+            dist/release/**/*.tar.gz
+            dist/release/**/*.tgz
+      - name: Attest the Python SBOM
+        if: hashFiles('dist/release/**/*.whl') != ''
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            dist/release/**/*.whl
+            dist/release/**/*.tar.gz
+          sbom-path: dist/sbom/python.cdx.json
+      - name: Attest the TypeScript SBOM
+        if: hashFiles('dist/release/**/*.tgz') != ''
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/release/**/*.tgz
+          sbom-path: dist/sbom/typescript.cdx.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: dist/release
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom
+          path: dist/sbom
+          if-no-files-found: error
+          retention-days: 90
+
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    # PyPI's trusted publisher names this environment. Give it required reviewers in the
+    # repository's settings, so a person approves each upload.
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.6"
+      # Node 24's npm is new enough for trusted publishing, and registry-url writes the .npmrc.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: dist/release
+      - name: Upload what was attested
+        env:
+          PACKAGES: ${{ inputs.packages }}
+          # npm can't trust a publisher for a package that doesn't exist yet, so a first
+          # release needs this secret. Delete it once trusted publishers are set up.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Trusted publishing adds provenance by itself; a token needs asking for it.
+          NPM_CONFIG_PROVENANCE: "true"
+        run: uv run --locked --package harnessweaver python scripts/release.py upload $PACKAGES

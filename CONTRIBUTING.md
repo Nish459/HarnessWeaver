@@ -96,7 +96,7 @@ Every package has its own version (RULES V1), and Git tags say what to release. 
 1. Bump the version in the package's manifest, turn *Unreleased* in the package's `CHANGELOG.md` into a section for that version, and merge the change once CI is green.
 2. Tag the merged commit, one tag per package: `git tag harnessweaver@0.2.0`, `git tag @harnessweaver/core@0.2.0`.
 3. Run `make build`. It checks every tag on HEAD and builds the tagged packages into `dist/release/`, publishing nothing. It stops before building if a tag names no package in the repository, isn't SemVer, or doesn't match its manifest's version.
-4. Run `make release`, which does the same from a clean working tree and then publishes: Python packages to PyPI with `uv publish` (a token in `UV_PUBLISH_TOKEN`, or trusted publishing on CI), TypeScript packages to npm with `pnpm publish` (your npm login; a prerelease goes to the `next` dist-tag, so `latest` stays on the last release).
+4. Run `make release`, which does the same from a clean working tree and then publishes: Python packages to PyPI with `uv publish` (a token in `UV_PUBLISH_TOKEN`, or trusted publishing on CI), TypeScript packages to npm with `npm publish` (your npm login; a prerelease goes to the `next` dist-tag, so `latest` stays on the last release).
 5. Push the tags: `git push origin harnessweaver@0.2.0 @harnessweaver/core@0.2.0`.
 
 To release one package alone when HEAD has several tags, name it: `make release PACKAGE=harnessweaver-cli`, or `PACKAGE="harnessweaver @harnessweaver/core"` for a few. `make build` takes `PACKAGE` too. A named package still needs its tag on HEAD, and the other tags are left alone.
@@ -106,6 +106,31 @@ To release one package alone when HEAD has several tags, name it: `make release 
 Tags on commits before the first published release mark where each feature or fix landed in a package. Their manifests still say 0.1.0, so they can't be released: they are history.
 
 A package's first release needs two things the registries can't create from a tag: a PyPI token scoped to your whole account (a project-scoped token needs the project to exist already), and the `harnessweaver` organization on npm, which owns the `@harnessweaver` scope.
+
+### Releasing from CI
+
+Prefer this to `make release`: only a release from the `Release` workflow (`.github/workflows/release.yml`) has the SBOMs and signed attestations that RULES S5 asks for. Push the commit and its tags, then start it, leaving `packages` empty for every tag on the ref:
+
+```bash
+gh workflow run release.yml --ref harnessweaver@0.2.0 -f packages="harnessweaver"
+```
+
+It runs the checks, builds, attests the artifacts and their SBOMs, then uploads those same files. If an upload fails partway, run it again naming the packages it hadn't reached.
+
+The setup only the repository's owner can do, once:
+
+1. Make the repository public. GitHub only offers attestations to private repositories on Enterprise Cloud, and npm refuses provenance from a private one.
+2. Create a GitHub environment named `release`, with yourself as a required reviewer.
+3. On PyPI, add a trusted publisher for each Python package (a *pending* publisher for one that doesn't exist yet): this repository, workflow `release.yml`, environment `release`.
+4. On npm, create the `harnessweaver` organization. A package must exist before npm can trust a publisher for it, so add a granular access token that can publish as the `NPM_TOKEN` secret of the `release` environment for the first release. Then add a trusted publisher to each package (workflow `release.yml`, environment `release`) and delete the secret.
+
+To check a package you downloaded, using the file itself:
+
+```bash
+gh attestation verify harnessweaver-0.2.0-py3-none-any.whl --repo Wise-DreamerZ/HarnessWeaver
+```
+
+Add `--predicate-type https://cyclonedx.org/bom` to check its SBOM attestation instead. `uv publish` makes no PyPI attestations of its own, so PyPI's page shows none; these are GitHub's, and npm's provenance shows on the npm page.
 
 ## Security issues
 

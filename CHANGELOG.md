@@ -20,6 +20,14 @@ Below are the changes that belong to the repository rather than to one package: 
 
 ## [Unreleased]
 
+### Added
+
+- The `Release` workflow (`.github/workflows/release.yml`) runs the checks, builds the tagged packages, attests their provenance and SBOMs (RULES S5) and publishes those same files with trusted publishing. `scripts/release.py upload` uploads an earlier build unchanged. The `@harnessweaver` packages name their repository, which npm's provenance requires.
+
+### Changed
+
+- `make release` publishes TypeScript packages with `npm publish` instead of `pnpm publish`, because pnpm only warns when trusted publishing fails. It needs an npm login, not a pnpm one.
+
 ## 2026-11-01
 
 ### Added

@@ -3,6 +3,11 @@
   "version": "0.1.1",
   "description": "Vercel AI SDK models governed by HarnessWeaver: budgets, model.before, model.after and stream.chunk.",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wise-DreamerZ/HarnessWeaver.git",
+    "directory": "typescript/packages/ai-sdk"
+  },
   "type": "module",
   "engines": { "node": ">=22" },
   "exports": {

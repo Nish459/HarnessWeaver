@@ -3,6 +3,11 @@
   "version": "0.4.1",
   "description": "The HarnessWeaver core for TypeScript: the same harness.yaml, hook bus, guards, governor and routing as Python.",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wise-DreamerZ/HarnessWeaver.git",
+    "directory": "typescript/packages/core"
+  },
   "type": "module",
   "engines": { "node": ">=22" },
   "exports": {

@@ -13,7 +13,7 @@ HarnessWeaver's job is to keep AI applications inside the lines their owners dra
 | Privilege escalation through an LLM decision | Deterministic policy only (R3); judges and classifiers may only tighten |
 | Cost runaway, denial of wallet | Per-run budgets and deadlines checked before every call; tenant budgets at the gateway; tool-call caps |
 | Malicious generated code | `transport: code` with a sandbox such as `monty`; never `eval` or `exec` in the host (S4) |
-| Supply-chain compromise | Locked dependencies, SHA-pinned CI actions, digest-pinned images (S5); plugin allow-lists (S8) |
+| Supply-chain compromise | Locked dependencies, SHA-pinned CI actions, digest-pinned images, releases with SBOMs and signed attestations (S5); plugin allow-lists (S8) |
 | Sidecar exposure | Binds 127.0.0.1 by default; a bearer token on every route except health, compared in constant time (S6) |
 | Apps switching controls off | Locks and bounds enforced when a spec loads (R1, R10); `require_level` by risk tier |
 
