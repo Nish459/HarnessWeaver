@@ -47,12 +47,34 @@ From `harnessweaver-openai`: Chat Completions on any OpenAI-compatible endpoint 
 | `max_tokens_param` | `max_tokens` | Or `max_completion_tokens` |
 | `cost_header` | `x-litellm-response-cost` | The gateway's reported cost, used before `models.prices` |
 | `default_headers` | none | Extra headers on every request |
+| `hold_stream` | `false` | Deliver a streamed answer's chunks only once it has finished, so nothing from a declined answer reaches the app. Output is no longer live |
+| `block_empty_answers` | `false` | Treat an answer with no text and no tool calls as declined |
 
 Output schemas are sent as `response_format` (non-strict JSON Schema). Streaming includes usage.
 
+A request the model declines ends the run `blocked` with the code `model_refusal`, and its tokens and cost still count. It is recognized by the message's `refusal` field (LiteLLM moves it to `provider_specific_fields`, which is also read) or the finish reason `content_filter`, which is how LiteLLM reports a Claude refusal. So an answer a content filter cut short ends the same way, and its partial text is dropped.
+
+Three cases need a setting, because the signal is late or missing:
+
+| Case | What happens by default | What to set |
+| --- | --- | --- |
+| The signal arrives after text has been streamed | The run ends blocked, but those chunks have already been delivered | `hold_stream: true` |
+| A streamed refusal through LiteLLM, which drops the field (seen on 1.106.6) | An empty answer that completes normally | `block_empty_answers: true`. Off by default, because a model may also end a tool loop with nothing to add |
+| An endpoint that sends a refusal as ordinary text | An answer like any other | A `regex.deny` output guard on the wording you see. It starts in shadow mode (RULES R8) and ends the run with the code `guard_blocked`. Guards don't run on empty text |
+
+```yaml
+guardrails:
+  output:
+    - id: refusal-text
+      use: regex.deny
+      patterns: ["^i'm sorry, but i can't"]
+      ignore_case: true
+      mode: log_only
+```
+
 ### anthropic.messages
 
-From `harnessweaver-anthropic`: the Claude Messages API, for teams without a gateway.
+From `harnessweaver-anthropic`: the Claude Messages API, called directly or through a gateway that serves it.
 
 ```yaml
 models:
@@ -75,8 +97,26 @@ models:
 | `max_retries` | `2` | SDK retries. Set `0` behind a gateway, which then owns retries (R5) |
 | `cost_header` | `x-litellm-response-cost` | A gateway's reported cost, used before `models.prices` |
 | `base_url`, `api_key_env` | SDK defaults | Client settings. Credentials follow the SDK's own resolution unless `api_key_env` names a variable |
+| `hold_stream` | `false` | Deliver a streamed answer's chunks only once it has finished, so nothing from a declined answer reaches the app. Output is no longer live |
 
-A request the model still declines after fallbacks ends the run `blocked` with the code `model_refusal`. Each answer's content blocks, thinking included, are replayed unchanged on the next request of a tool loop, so reasoning carries over ([ADR-0022](../adr/0022-provider-extensions.md)).
+A request the model still declines after fallbacks ends the run `blocked` with the code `model_refusal`, and its tokens still count. Each answer's content blocks, thinking included, are replayed unchanged on the next request of a tool loop, so reasoning carries over ([ADR-0022](../adr/0022-provider-extensions.md)).
+
+### Choosing a model provider
+
+`openai.chat` is the one route to every model: point it at a gateway, and the gateway reaches the rest, Claude included. But it speaks only Chat Completions, so what that API doesn't carry is lost. To use what is specific to Claude, use `anthropic.messages`.
+
+| | `openai.chat` | `anthropic.messages` |
+| --- | --- | --- |
+| Reaches | Any model behind an OpenAI-compatible endpoint | Claude, directly or through a gateway that serves the Messages API |
+| Thinking | Not requested, and not replayed between turns | Adaptive, and replayed between turns of a tool loop |
+| `effort`, `thinking`, `fallbacks` | Not settings of this provider: naming one fails loading (RULES R4) | Settings of this provider |
+| A request the model declines | The run ends `blocked` with the code `model_refusal`, with no fallback and no category. Through LiteLLM it can't be told apart from a content filter | Re-run on the fallback model, then the run ends `blocked` with the code `model_refusal` and the refusal's `category` |
+| `temperature` | Sent when a request sets it | Sent only with `sampling: true` |
+| SDK retries by default | `0`: the gateway owns them (RULES R5) | `2`: set `0` behind a gateway |
+
+Behind a gateway, `anthropic.messages` takes `base_url` and `max_retries: 0`, and `fallbacks: none` if the gateway rejects beta parameters.
+
+`harness.instrument()` is a separate choice. It picks its adapter from the client the app passes, not from `models.provider`, so each SDK needs its own plugin ([Govern an existing client](../how-to/wrap-a-client.md#what-instrument-does)).
 
 ## Guards
 

@@ -90,7 +90,7 @@ harness.session<T>(options: SessionOptions, fn: (s: Session) => Promise<T> | T):
 | `s.generate(request, call)` | One governed model call through `call` (what `wrapModel` uses) |
 | `s.run`, `s.runId`, `s.envelope`, `s.trace` | The run's context, id, envelope and trace |
 
-Errors are the same taxonomy as Python, exported from `@harnessweaver/core`: `RunBlocked`, `RunEscalated` (both `RunInterrupted`), `ValidationFailed`, `BudgetExceeded`, `SpecError` and its subclasses, `ProviderError`, and the rest, each with the same stable `code`.
+Errors are the same taxonomy as Python, exported from `@harnessweaver/core`: `RunBlocked` (and `ModelRefusal`, the `RunBlocked` for a model that declined), `RunEscalated` (both `RunInterrupted`), `ValidationFailed`, `BudgetExceeded`, `SpecError` and its subclasses, `ProviderError`, and the rest, each with the same stable `code`.
 
 ## Models
 
@@ -113,6 +113,15 @@ Every call through the wrapped model:
 - for `streamText`, fires `stream.chunk` for every text delta (with the text before it), so stream guards can redact a chunk or cut the stream, and closes the call on the stream's finish. A `Retry` at `model.after` can't re-ask a model whose words were already sent, so it blocks.
 
 The model's own errors pass through unchanged, so the AI SDK's retries still work; the session's `run.end` records the failure.
+
+**A model that declines.** An answer whose finish reason is `content-filter` throws `ModelRefusal`, a `RunBlocked` with the code `model_refusal`, from the call or the stream, and the run ends `blocked` with its usage and cost counted. `@ai-sdk/anthropic` reports Claude's refusals that way, and a content filter that cut an answer short looks the same, so its partial text is dropped. `model.after` doesn't fire. Two cases need an option, because the signal is late or missing:
+
+| Case | What happens by default | Option |
+| --- | --- | --- |
+| The signal comes with the stream's finish, after text has been streamed | The stream errors, but those parts have already been delivered | `holdStream: true` delivers a stream's parts only once it has finished. Output is no longer live |
+| A provider drops the refusal, as `@ai-sdk/openai` 4 does with OpenAI's `refusal` field | An empty answer that completes normally | `blockEmptyAnswers: true`. Off by default, because a model may also end a tool loop with nothing to add |
+
+A refusal sent as ordinary text carries no marker: check for its wording with a `regex.deny` output guard and `s.validate("output", text)`.
 
 **Offline.** The TypeScript core has no `scripted` provider. [Example 04's `offline.ts`](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/examples/04_polyglot_typescript/src/offline.ts) shows an AI SDK model that answers from a spec's offline `models.rules` and `models.replies`, so the same overlay works in both languages; in tests, the AI SDK's `MockLanguageModelV4` (`ai/test`) works well.
 

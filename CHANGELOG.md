@@ -22,6 +22,7 @@ Below are the changes that belong to the repository rather than to one package: 
 
 ### Added
 
+- The docs compare `openai.chat` and `anthropic.messages`: what Claude loses through Chat Completions, and that `instrument()` follows the client, not `models.provider` (`docs/reference/providers.md`).
 - The `Release` workflow (`.github/workflows/release.yml`) runs the checks, builds the tagged packages, attests their provenance and SBOMs (RULES S5) and publishes those same files with trusted publishing. `scripts/release.py upload` uploads an earlier build unchanged. The `@harnessweaver` packages name their repository, which npm's provenance requires.
 
 ### Changed

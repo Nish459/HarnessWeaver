@@ -75,7 +75,7 @@ Common block codes:
 | `validation_failed` | The output is still invalid after the last repair |
 | `middleware_error`, `middleware_timeout` | A closed middleware raised or timed out |
 | `model_not_allowed` | A model alias outside `models.allowed_aliases` |
-| `model_refusal` | The model declined (`anthropic.messages`) |
+| `model_refusal` | The model declined, or a content filter cut its answer short (`openai.chat`, `anthropic.messages`, `wrapModel`) |
 | `guard_blocked` | A guard's `block`; the trace note names the guard (`guardrails.input[pii]`) and its findings |
 | `tool_not_offered` | The model of a `direct` task called a registered tool the task doesn't offer |
 | Governor codes | `tool_unknown`, `manifest_required`, `tool_disabled`, `tool_not_enabled`, `digest_mismatch` (step 1), `schema_invalid` (2), `policy_denied` (3), `trifecta` (4), `rate_limited` (5), `judge_blocked` (6), `approval_rejected` (7); see [Tools](../advanced/governor.md) |
@@ -95,7 +95,7 @@ Only taxonomy errors cross a public boundary (RULES C5). Each has a stable code 
 | `expression_error` | `ExpressionSyntaxError`, `ExpressionEvalError` | no |
 | `spec_invalid` | `SpecError` and its load-time subclasses: `LockViolation`, `BoundViolation`, `LevelTooLow`, `UnreachableHook`, `IncompatibleContract`, `UnknownProvider`, `PluginConflict`, `PluginNotAllowed` | no |
 | `not_found` | `NotFound`: an unknown task, run or approval | no |
-| `blocked`, `escalated`, `suspended` | `RunBlocked`, `RunEscalated`, `RunSuspended`, all `RunInterrupted`. `details` holds the `hook` and the block's `code` | no |
+| `blocked`, `escalated`, `suspended` | `RunBlocked`, `RunEscalated`, `RunSuspended`, all `RunInterrupted`. `details` holds the `hook` and the block's `code`. `ModelRefusal` is the `RunBlocked` a provider raises when the model declines; its `response` holds what the call used | no |
 | `internal` | `InternalError`: anything unexpected | no |
 
 All are in `harnessweaver.errors` (and `@harnessweaver/core` exports the same names). `errors.classify(exc)` turns any exception into the taxonomy, defaulting to `InternalError`.

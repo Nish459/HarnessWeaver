@@ -70,7 +70,7 @@ Every model call goes through the same steps: one made by a runner, by your own 
 2. The budget is checked before the call: call count, tokens and cost so far, and whether the input fits ([Budgets and deadlines](budgets.md)).
 3. `model.before` middleware runs, and may change the request. A redaction made here is what the provider receives.
 4. The provider is called. When streaming, each chunk fires `stream.chunk`.
-5. Usage and cost are recorded (the `harness.budget` note you saw in the trace), and `model.after` middleware runs.
+5. Usage and cost are recorded (the `harness.budget` note you saw in the trace), and `model.after` middleware runs. A request the model declines is recorded too, then ends the run `blocked` with the code `model_refusal`, before `model.after`.
 6. Going over `max_tokens` or `max_usd` after the call blocks the run.
 
 A provider that fails raises a `ProviderError`, code `provider_error`, which is retryable. Retries belong to the gateway, so `openai.chat` makes none of its own (RULES R5).
@@ -81,9 +81,9 @@ A provider that fails raises a `ProviderError`, code `provider_error`, which is 
 | --- | --- | --- |
 | `scripted` | The core | Tests and offline runs: answers from rules and a list of replies |
 | `openai.chat` | `harnessweaver-openai` | Any OpenAI-compatible endpoint: LiteLLM Proxy, OpenAI, vLLM, Ollama |
-| `anthropic.messages` | `harnessweaver-anthropic` | Claude, through the Messages API, for teams without a gateway |
+| `anthropic.messages` | `harnessweaver-anthropic` | Claude, through the Messages API, with its thinking, `effort` and refusal fallbacks |
 
-Each provider's own settings sit next to `provider` in the `models` section. [Providers](../reference/providers.md#models) lists them all.
+Each provider's own settings sit next to `provider` in the `models` section. [Providers](../reference/providers.md#models) lists them all, and [Choosing a model provider](../reference/providers.md#choosing-a-model-provider) says what Claude loses through `openai.chat`.
 
 ## Recap
 

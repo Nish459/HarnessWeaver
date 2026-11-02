@@ -37,11 +37,12 @@ The app's call is unchanged. The PII guard redacted the customer's details befor
 
 ## What instrument does
 
-- `harness.instrument(client)` finds an adapter from the client's type: it loads the plugin whose namespace is the client's top-level package (`openai`, `anthropic`) and asks it for an adapter. `adapter=` names one explicitly.
+- `harness.instrument(client)` finds an adapter from the client's type: it loads the plugin whose namespace is the client's top-level package (`openai`, `anthropic`) and asks it for an adapter. `adapter=` names one explicitly. The adapter follows the client, not `models.provider`, so an app using the Anthropic SDK needs `harnessweaver-anthropic` whichever provider its spec names.
 - It governs `chat.completions.create` on `openai.OpenAI` and `AsyncOpenAI`, and `messages.create` on `anthropic.Anthropic` and `AsyncAnthropic`. Other methods pass through.
 - **Outside a run**, each call becomes a small run of its own: `run.start`, `input.before` on the message texts, `model.before`, `model.after`, `output.before` on the answer, `run.end`. So the budget, the guards and the trace apply per call.
 - **Inside a run or session**, a call is one governed model call of that run.
 - Redactions are written back: the API receives the redacted request, and the app gets the answer as the output guards left it.
+- A request the model declines raises `RunBlocked` with the code `model_refusal`, rather than returning an answer the app must inspect.
 - If the baseline or the budget needs a hook the adapter can't reach, `instrument()` fails instead of running ungoverned (RULES R4).
 - Streaming through an instrumented client is *planned*. Until then it raises, rather than running ungoverned.
 
