@@ -6,6 +6,7 @@
  * never hold raw prompts, outputs or tool arguments (R9).
  */
 
+import type { ModelResponse } from "./contracts.js";
 import type { JsonValue } from "./json.js";
 
 /** Stable, language-neutral error codes. */
@@ -102,6 +103,22 @@ export class RunInterrupted extends HarnessError {}
 /** A hook refused the step; `details.code` holds the Block code. */
 export class RunBlocked extends RunInterrupted {
   override code: ErrorCode = "blocked";
+}
+
+/**
+ * The model declined the request, or a content filter cut its answer short.
+ *
+ * A declined call still costs tokens, so `response` carries its usage and cost for the
+ * run to count, without its text (R9). The message is never the model's own words.
+ */
+export class ModelRefusal extends RunBlocked {
+  constructor(
+    message = "the model declined the request",
+    readonly response: ModelResponse = {},
+    details: Record<string, JsonValue> = {},
+  ) {
+    super(message, { code: "model_refusal", ...details });
+  }
 }
 
 /** A hook handed the run to a human queue. */

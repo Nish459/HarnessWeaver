@@ -24,7 +24,7 @@ import type {
 } from "./contracts.js";
 import type { RunScope } from "./current.js";
 import { withLabels, type Envelope } from "./envelope.js";
-import { DeadlineExceeded, RunBlocked, RunEscalated, SpecError, type RunInterrupted } from "./errors.js";
+import { DeadlineExceeded, ModelRefusal, RunBlocked, RunEscalated, SpecError, type RunInterrupted } from "./errors.js";
 import type { EventOf, HookPoint } from "./hooks.js";
 import type { JsonObject, JsonValue } from "./json.js";
 import type { Outcome, Retry } from "./outcomes.js";
@@ -283,6 +283,28 @@ export class RunContext implements RunScope {
     return before.event.request;
   }
 
+  /** Cost (ADR-0012) and usage against the budget, noted on the trace. Returns any limit passed. */
+  private countModelCall(sent: ModelRequest, response: ModelResponse): Limit | undefined {
+    const [cost, source] = resolveCost(response, sent, this.parts.prices);
+    const over = this.meter.recordModelCall(response.usage ?? {}, cost);
+    const usage: JsonObject = { input_tokens: response.usage?.input_tokens ?? 0, output_tokens: response.usage?.output_tokens ?? 0, cost_source: source };
+    if (cost !== null) usage.cost_usd = cost;
+    this.trace.note("harness.budget", "model usage", { hook: "model.after", details: usage });
+    return over;
+  }
+
+  /**
+   * Close a call the model declined: it still cost tokens, so it is counted, and the refusal
+   * is noted on the trace (R13). `model.after` doesn't fire, as there is no answer to pass on.
+   *
+   * @returns `refusal`, for the caller to throw.
+   */
+  refuseModelCall(sent: ModelRequest, refusal: ModelRefusal): ModelRefusal {
+    this.countModelCall(sent, refusal.response);
+    this.trace.note("harness.models", refusal.message, { hook: "model.after", code: "model_refusal" });
+    return refusal;
+  }
+
   /**
    * The second half: cost (ADR-0012), usage against the budget, and `model.after`.
    * Returns the response as the middleware left it, and whether it asked for a retry.
@@ -290,11 +312,7 @@ export class RunContext implements RunScope {
    * @throws RunInterrupted when a hook or a budget halts the run.
    */
   async finishModelCall(sent: ModelRequest, response: ModelResponse): Promise<[ModelResponse, Retry | undefined]> {
-    const [cost, source] = resolveCost(response, sent, this.parts.prices);
-    const over = this.meter.recordModelCall(response.usage ?? {}, cost);
-    const usage: JsonObject = { input_tokens: response.usage?.input_tokens ?? 0, output_tokens: response.usage?.output_tokens ?? 0, cost_source: source };
-    if (cost !== null) usage.cost_usd = cost;
-    this.trace.note("harness.budget", "model usage", { hook: "model.after", details: usage });
+    const over = this.countModelCall(sent, response);
     const after = await this.emit("model.after", { hook: "model.after", request: sent, response });
     if (over !== undefined) this.budgetStop("model.after", over);
     if (after.outcome.kind === "retry") return [after.event.response, after.outcome];
@@ -312,7 +330,10 @@ export class RunContext implements RunScope {
     if (call === undefined) throw new SpecError("the TypeScript core has no model of its own; pass the call (wrapModel does)");
     for (let retries = 0; ; retries++) {
       const sent = await this.startModelCall(request);
-      const [response, retry] = await this.finishModelCall(sent, await call(sent));
+      const answer = await call(sent).catch((error: unknown) => {
+        throw error instanceof ModelRefusal ? this.refuseModelCall(sent, error) : error;
+      });
+      const [response, retry] = await this.finishModelCall(sent, answer);
       if (retry === undefined) return response;
       if (retries >= MODEL_RETRIES) throw this.interrupt("model.after", { kind: "block", reason: `model retries exhausted: ${retry.reason}`, code: "retry_exhausted" });
       this.trace.note("harness", `re-asking the model: ${retry.reason}`, { hook: "model.after" });

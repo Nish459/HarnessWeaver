@@ -4,6 +4,10 @@ All notable changes to the TypeScript core. The format follows [Keep a Changelog
 
 ## [Unreleased]
 
+### Added
+
+- `ModelRefusal`, a `RunBlocked` with code `model_refusal` for a model that declined. Its `response` carries what the call used. `run.generate` counts it and notes it on the trace (RULES R13), and `run.refuseModelCall` does the same for a call made outside `generate`, such as a stream. Neither runs `model.after`.
+
 ## 0.4.1 - 2026-11-01
 
 The first version published to npm.
