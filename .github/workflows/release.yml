@@ -137,4 +137,12 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           # Trusted publishing adds provenance by itself; a token needs asking for it.
           NPM_CONFIG_PROVENANCE: "true"
-        run: uv run --locked --package harnessweaver python scripts/release.py upload $PACKAGES
+          # PyPI holds one pending publisher per repository, workflow and environment, so it
+          # creates one new project per release at most. A release that creates more needs an
+          # account-wide token in this secret; delete it once each project trusts this workflow.
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        # uv takes an empty UV_PUBLISH_TOKEN as a token and skips trusted publishing, so it is
+        # set only when the secret is.
+        run: |
+          if [ -n "$PYPI_TOKEN" ]; then export UV_PUBLISH_TOKEN="$PYPI_TOKEN"; fi
+          uv run --locked --package harnessweaver python scripts/release.py upload $PACKAGES

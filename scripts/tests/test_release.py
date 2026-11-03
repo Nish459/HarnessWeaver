@@ -2,10 +2,12 @@
 
 import json
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
 import release
+import yaml
 from release import ROOT, Package, is_semver, packages, releases
 
 CORE = Package("harnessweaver", "0.2.0", ROOT / "python/harnessweaver/pyproject.toml")
@@ -88,6 +90,27 @@ def test_every_workflow_action_is_pinned_by_commit() -> None:
     for workflow in (ROOT / ".github/workflows").glob("*.yml"):
         for used in re.findall(r"uses:\s*(\S+)", workflow.read_text()):
             assert re.fullmatch(r"[\w.-]+/[\w./-]+@[0-9a-f]{40}", used), (workflow.name, used)
+
+
+@pytest.mark.parametrize(("secret", "seen"), [("", "unset"), ("pypi-test", "pypi-test")])
+def test_the_pypi_token_reaches_uv_only_when_its_secret_is_set(
+    tmp_path: Path, secret: str, seen: str
+) -> None:
+    # uv takes an empty UV_PUBLISH_TOKEN as a token and skips trusted publishing, so the
+    # upload step must leave it unset when the release environment has no PYPI_TOKEN.
+    workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
+    step = next(s for s in workflow["jobs"]["publish"]["steps"] if "env" in s)
+    assert step["env"]["PYPI_TOKEN"] == "${{ secrets.PYPI_TOKEN }}"
+    assert "UV_PUBLISH_TOKEN" not in step["env"]
+    # Run the step's script with a uv that only reports the token it was given.
+    fake_uv = tmp_path / "uv"
+    fake_uv.write_text('#!/bin/sh\necho "${UV_PUBLISH_TOKEN-unset}"\n')
+    fake_uv.chmod(0o755)
+    env = {"PATH": f"{tmp_path}:/usr/bin:/bin", "PYPI_TOKEN": secret, "PACKAGES": ""}
+    done = subprocess.run(
+        ["bash", "-e", "-c", step["run"]], env=env, capture_output=True, text=True, check=True
+    )
+    assert done.stdout == f"{seen}\n"
 
 
 def test_every_package_ships_the_license() -> None:

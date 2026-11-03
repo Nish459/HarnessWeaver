@@ -121,8 +121,8 @@ The setup only the repository's owner can do, once:
 
 1. Make the repository public. GitHub only offers attestations to private repositories on Enterprise Cloud, and npm refuses provenance from a private one.
 2. Create a GitHub environment named `release`, with yourself as a required reviewer.
-3. On PyPI, add a trusted publisher for each Python package (a *pending* publisher for one that doesn't exist yet): this repository, workflow `release.yml`, environment `release`.
-4. On npm, create the `harnessweaver` organization. A package must exist before npm can trust a publisher for it, so add a granular access token that can publish as the `NPM_TOKEN` secret of the `release` environment for the first release. Then add a trusted publisher to each package (workflow `release.yml`, environment `release`) and delete the secret.
+3. On PyPI, give each Python package a trusted publisher: this repository, workflow `release.yml`, environment `release`. PyPI holds only one *pending* publisher (for a project that doesn't exist yet) per repository, workflow and environment, so a release that creates more than one project needs a PyPI API token scoped to your whole account, as the `PYPI_TOKEN` secret of the `release` environment. After that release, add the trusted publisher to each new project (*Manage*, then *Publishing*) and delete the secret.
+4. On npm, create the `harnessweaver` organization. A package must exist before npm can trust a publisher for it, so for a first release add a granular access token that can publish, with *Bypass 2FA*, as the `NPM_TOKEN` secret of the `release` environment. Then add a trusted publisher to each package (workflow `release.yml`, environment `release`) and delete the secret. npm plans to take direct publishing away from such tokens in January 2027.
 
 To check a package you downloaded, using the file itself:
 
