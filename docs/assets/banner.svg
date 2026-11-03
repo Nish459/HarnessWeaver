@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="548" viewBox="0 0 1280 548" role="img" aria-label="HarnessWeaver: the composable AI harness framework. Weave your own AI harness. Bring your models. Choose your plugins. Define your execution.">
+  <title>HarnessWeaver - the composable AI harness framework</title>
+  <!--
+    The README hero. It uses the docs' dark palette (docs/stylesheets/brand.css): the
+    page navy behind, the logo badge (a copy of logo.svg's shapes, since an SVG shown
+    through <img> cannot load another file) with two strands weaving into it from each
+    side at the heights of its crossbars, then the title in the docs' heading gradient,
+    the hero line, the caption and a row of feature chips. GitHub shows SVGs without web
+    fonts, so the text falls back through a system font stack and is centered, which
+    keeps it balanced whatever font the viewer gets.
+  -->
+  <defs>
+    <linearGradient id="title" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f3faff"/>
+      <stop offset="0.55" stop-color="#ac4bff"/>
+      <stop offset="1" stop-color="#3080ff"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="640" cy="108" r="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ac4bff" stop-opacity="0.22"/>
+      <stop offset="0.5" stop-color="#3080ff" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#3080ff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Fades the strands out toward the banner's edges. -->
+    <linearGradient id="fade" x1="0" y1="0" x2="1280" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0.04" stop-color="#000"/>
+      <stop offset="0.4" stop-color="#fff"/>
+      <stop offset="0.6" stop-color="#fff"/>
+      <stop offset="0.96" stop-color="#000"/>
+    </linearGradient>
+    <mask id="strands-fade">
+      <rect width="1280" height="548" fill="url(#fade)"/>
+    </mask>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="1279" height="547" rx="24" fill="#000211" stroke="#13244a"/>
+  <rect x="0.5" y="0.5" width="1279" height="547" rx="24" fill="url(#glow)"/>
+
+  <!--
+    Two strands per side in opposite phase, so they cross every 40px. Their peaks sit
+    at y=100 and y=116, the heights of the badge's crossbars.
+  -->
+  <g mask="url(#strands-fade)" fill="none" stroke-width="4" stroke-linecap="round">
+    <path stroke="#ac4bff" d="M88 108 Q108 92 128 108 T168 108 T208 108 T248 108 T288 108 T328 108 T368 108 T408 108 T448 108 T488 108 T528 108 T568 108"/>
+    <path stroke="#3080ff" d="M88 108 Q108 124 128 108 T168 108 T208 108 T248 108 T288 108 T328 108 T368 108 T408 108 T448 108 T488 108 T528 108 T568 108"/>
+    <path stroke="#ac4bff" d="M712 108 Q732 92 752 108 T792 108 T832 108 T872 108 T912 108 T952 108 T992 108 T1032 108 T1072 108 T1112 108 T1152 108 T1192 108"/>
+    <path stroke="#3080ff" d="M712 108 Q732 124 752 108 T792 108 T832 108 T872 108 T912 108 T952 108 T992 108 T1032 108 T1072 108 T1112 108 T1152 108 T1192 108"/>
+  </g>
+
+  <!-- The logo badge (logo.svg), 112px square, centered. -->
+  <g transform="translate(584 52) scale(1.12)">
+    <rect width="100" height="100" rx="22" fill="#010a20" stroke="#1d3566" stroke-width="1"/>
+    <g transform="translate(10 10) scale(0.8)" stroke-linecap="round">
+      <line x1="30" y1="41" x2="84" y2="41" stroke="#ac4bff" stroke-width="10"/>
+      <line x1="70" y1="59" x2="16" y2="59" stroke="#3080ff" stroke-width="10"/>
+      <line x1="70" y1="31" x2="70" y2="51" stroke="#010a20" stroke-width="22" stroke-linecap="butt"/>
+      <line x1="70" y1="14" x2="70" y2="86" stroke="#3080ff" stroke-width="12"/>
+      <line x1="30" y1="49" x2="30" y2="69" stroke="#010a20" stroke-width="22" stroke-linecap="butt"/>
+      <line x1="30" y1="14" x2="30" y2="86" stroke="#ac4bff" stroke-width="12"/>
+      <circle cx="84" cy="41" r="2.6" fill="#f3faff"/>
+      <circle cx="16" cy="59" r="2.6" fill="#f3faff"/>
+    </g>
+  </g>
+
+  <g font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="middle">
+    <text x="640" y="222" font-size="17" font-weight="600" letter-spacing="4" fill="#8d9fbe">THE COMPOSABLE AI HARNESS FRAMEWORK</text>
+    <text x="640" y="308" font-size="96" font-weight="800" letter-spacing="-2" fill="url(#title)">HarnessWeaver</text>
+    <text x="640" y="372" font-size="40" font-weight="700" fill="#f3faff">Weave your own AI harness.</text>
+    <text x="640" y="418" font-size="24" fill="#8d9fbe">Bring your models. Choose your plugins. Define your execution.</text>
+
+    <!-- Feature chips: fixed-width pills with centered labels, 14px apart. -->
+    <g font-size="19" font-weight="500" fill="#c8d4ea">
+      <g fill="#08152c" stroke="#13244a">
+        <rect x="215" y="456" width="186" height="42" rx="21"/>
+        <rect x="415" y="456" width="226" height="42" rx="21"/>
+        <rect x="655" y="456" width="166" height="42" rx="21"/>
+        <rect x="835" y="456" width="230" height="42" rx="21"/>
+      </g>
+      <text x="308" y="483">13 hook points</text>
+      <text x="528" y="483">Locked org baseline</text>
+      <text x="738" y="483">Any executor</text>
+      <text x="950" y="483">Python + TypeScript</text>
+    </g>
+  </g>
+</svg>

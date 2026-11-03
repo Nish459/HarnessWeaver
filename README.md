@@ -1,12 +1,8 @@
 <div align="center">
 
-# HarnessWeaver
+<img src="docs/assets/banner.svg" alt="HarnessWeaver: the composable AI harness framework. Weave your own AI harness. Bring your models. Choose your plugins. Define your execution." width="100%">
 
-**The composable AI harness framework**
-
-*Weave your own AI harness. Bring your models. Choose your plugins. Define your execution.*
-
-`Python 3.12+`, `TypeScript`, `Apache-2.0`, **pre-1.0**
+`Python 3.12+`, `TypeScript`, `Apache-2.0`
 
 </div>
 

@@ -14,7 +14,6 @@
   <img src="https://img.shields.io/badge/python-3.12%2B-3080ff" alt="Python 3.12+">
   <img src="https://img.shields.io/badge/typescript-node%2022%2B-3080ff" alt="Node 22+">
   <img src="https://img.shields.io/badge/license-Apache--2.0-ac4bff" alt="License: Apache-2.0">
-  <img src="https://img.shields.io/badge/status-pre--1.0-ac4bff" alt="Status: pre-1.0">
 </p>
 
 ---
