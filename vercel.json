@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "installCommand": "python3 -m pip install uv==0.13.6",
-  "buildCommand": "python3 -m uv run --locked --only-group docs mkdocs build --strict",
+  "installCommand": "python3 -m venv /tmp/uv && /tmp/uv/bin/pip install uv==0.13.6",
+  "buildCommand": "/tmp/uv/bin/uv run --locked --only-group docs mkdocs build --strict",
   "outputDirectory": "site",
   "trailingSlash": true
 }

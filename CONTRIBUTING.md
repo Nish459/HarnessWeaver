@@ -134,7 +134,7 @@ Add `--predicate-type https://cyclonedx.org/bom` to check its SBOM attestation i
 
 ## Publishing the website
 
-`vercel.json` deploys the website on Vercel from the GitHub repository. It installs uv, builds the site from the `docs` dependency group alone (`uv run --locked --only-group docs mkdocs build --strict`, which also copies the landing page) and serves `site/`, with `/docs` redirected to `/docs/`. Once the Vercel project is connected, every push to `main` updates the production site and every pull request gets a preview deployment.
+`vercel.json` deploys the website on Vercel from the GitHub repository. It installs uv into a virtual environment of its own (the build image's `python3` is externally managed, PEP 668, so pip can't install into it), builds the site from the `docs` dependency group alone (`uv run --locked --only-group docs mkdocs build --strict`, which also copies the landing page) and serves `site/`, with `/docs` redirected to `/docs/`. Once the Vercel project is connected, every push to `main` updates the production site and every pull request gets a preview deployment.
 
 The setup only the repository's owner can do, once:
 

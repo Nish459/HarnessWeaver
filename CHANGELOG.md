@@ -30,6 +30,10 @@ Below are the changes that belong to the repository rather than to one package: 
 
 - `make release` publishes TypeScript packages with `npm publish` instead of `pnpm publish`, because pnpm only warns when trusted publishing fails. It needs an npm login, not a pnpm one.
 
+### Fixed
+
+- The Vercel build installs uv 0.13.6 into a virtual environment of its own. The build image's `python3` is now managed by uv and marked externally managed (PEP 668), so `pip install` into it failed and no deployment could build.
+
 ## 2026-11-01
 
 ### Added
