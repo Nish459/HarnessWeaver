@@ -1,7 +1,7 @@
 # Common development tasks. `make check` is what CI runs (RULES G5).
 UV ?= uv
 
-.PHONY: sync check ascii lint fmt fmt-check typecheck test conformance cov schemas schemas-check docs docs-serve build release clean distclean
+.PHONY: sync check ascii lint fmt fmt-check typecheck test conformance cov schemas schemas-check docs docs-serve site-serve build release clean distclean
 
 sync:
 	$(UV) sync --all-packages
@@ -48,13 +48,20 @@ schemas-check:
 	$(UV) run python -c "$(CONTRACTS_MAIN)" --check contracts/schemas
 	$(UV) run python -m harnessweaver_sidecar.openapi --check contracts/openapi
 
-# The docs site (ADR-0041). --strict turns every warning, such as a broken link or
-# anchor, into an error; the site is written to site/.
+# The website (ADR-0041, ADR-0046). --strict turns every warning, such as a broken link
+# or anchor, into an error. The docs are written to site/docs/ and the landing page in
+# website/ to site/, which is what Vercel serves; `make docs-serve` serves the docs alone.
 docs:
 	$(UV) run --group docs mkdocs build --strict
 
 docs-serve:
 	$(UV) run --group docs mkdocs serve
+
+# Builds the website and serves site/ as Vercel does, with site/404.html for a missing
+# path, at http://127.0.0.1:8000/ (PORT=8001 for another port).
+PORT ?= 8000
+site-serve: docs
+	$(UV) run python scripts/serve_site.py $(PORT)
 
 # Releases (RULES V1): each tag on HEAD, <package>@<version> such as harnessweaver@0.2.0
 # or @harnessweaver/core@0.2.0, names one package to release, and its pyproject.toml or

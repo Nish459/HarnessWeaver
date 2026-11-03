@@ -65,7 +65,7 @@ Hook points, outcomes, actions, the spec format and wire payloads are contracts.
 ## Docs
 
 - User docs live in `docs/` and build with `make docs`, which fails on a broken link, anchor or a page missing from `mkdocs.yml`'s navigation.
-- `vercel.json` deploys the site on Vercel from the GitHub repository: it builds the site from the `docs` dependency group alone (`uv run --locked --only-group docs mkdocs build --strict`) and serves `site/`. Once the Vercel project is connected, every push to `main` updates the production site and every pull request gets a preview deployment.
+- The website is the landing page in `website/` at `/` and the docs under `/docs/` (ADR-0046). `make docs` writes the docs to `site/docs/` and copies `website/` to `site/`; `make docs-serve` serves the docs alone, with live reload. To see the whole website, run `make site-serve` and open `http://127.0.0.1:8000/`: it builds the site and serves `site/` as Vercel does, with the site's 404 page for a missing path and `/docs` redirected to `/docs/`. The landing page is plain HTML and CSS: edit it directly, and keep its links into the docs relative (`docs/tutorial/`).
 - Diagrams are Mermaid, next to the text they explain (D2).
 - Code in docs is a tested example or short enough to check by eye; an API that doesn't exist yet is marked *planned* (D3). The tutorial's code lives in `docs_src/` and is run by `docs_src/tests`.
 - `QUICKSTART.md`, `CONTRIBUTING.md`, `SECURITY.md` and every `CHANGELOG.md` are included in the site, so links in them are absolute.
@@ -131,6 +131,23 @@ gh attestation verify harnessweaver-0.2.0-py3-none-any.whl --repo Wise-DreamerZ/
 ```
 
 Add `--predicate-type https://cyclonedx.org/bom` to check its SBOM attestation instead. `uv publish` makes no PyPI attestations of its own, so PyPI's page shows none; these are GitHub's, and npm's provenance shows on the npm page.
+
+## Publishing the website
+
+`vercel.json` deploys the website on Vercel from the GitHub repository. It installs uv, builds the site from the `docs` dependency group alone (`uv run --locked --only-group docs mkdocs build --strict`, which also copies the landing page) and serves `site/`, with `/docs` redirected to `/docs/`. Once the Vercel project is connected, every push to `main` updates the production site and every pull request gets a preview deployment.
+
+The setup only the repository's owner can do, once:
+
+1. On Vercel, choose *Add New*, then *Project*, and import this repository. Leave the framework preset at *Other*, the root directory at the repository's root and the build settings empty: `vercel.json` sets them. Choose *Deploy*.
+2. To serve it on your own domain, add the domain under the project's *Settings*, then *Domains*, and create the DNS record Vercel shows.
+
+Deploy from Git, not with `vercel deploy` from a working tree: the CLI would upload what Git ignores, such as `.env` files and `site/`. To check a deployment:
+
+```bash
+curl -sI https://<deployment>/docs | grep -i -e '^HTTP' -e '^location'
+```
+
+It should answer `308` with `location: /docs/`, and `https://<deployment>/` should show the landing page.
 
 ## Security issues
 

@@ -53,3 +53,4 @@ Each architecture decision record (ADR) states a decision HarnessWeaver made, wh
 | [ADR-0043](0043-profile-ownership.md) | Profiles an app's team can write merge after the platform's | Accepted |
 | [ADR-0044](0044-answers-claim-the-approval.md) | An answer claims the approval before it resumes the run | Accepted |
 | [ADR-0045](0045-what-an-approval-covers.md) | What an approval covers: one execution, by the role that step needs | Accepted |
+| [ADR-0046](0046-landing-page.md) | The website: a landing page at the root, the docs under /docs/ | Accepted |

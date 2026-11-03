@@ -3,5 +3,6 @@
   "framework": null,
   "installCommand": "python3 -m pip install uv==0.13.6",
   "buildCommand": "python3 -m uv run --locked --only-group docs mkdocs build --strict",
-  "outputDirectory": "site"
+  "outputDirectory": "site",
+  "trailingSlash": true
 }

@@ -1,0 +1,38 @@
+<!doctype html>
+<!--
+  The website's "page not found" page (ADR-0046). Vercel serves it for any missing
+  path, under /docs/ too, so its links start at the site's root.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Page not found - HarnessWeaver</title>
+    <meta name="theme-color" content="#000211">
+    <link rel="icon" href="/docs/assets/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap">
+    <link rel="stylesheet" href="/site.css">
+  </head>
+  <body>
+    <header class="nav">
+      <div class="wrap">
+        <a class="brand" href="/"><img src="/docs/assets/logo.svg" alt=""> HarnessWeaver</a>
+        <a href="https://github.com/Wise-DreamerZ/HarnessWeaver">GitHub</a>
+        <a class="button primary" href="/docs/">Docs</a>
+      </div>
+    </header>
+    <main class="not-found">
+      <div class="wrap">
+        <p class="eyebrow">Page not found</p>
+        <h1><span class="gradient-text">404</span></h1>
+        <p class="lead">This page doesn't exist, or it has moved. The docs have a search box that may find it.</p>
+        <div class="actions">
+          <a class="button primary" href="/docs/">Go to the docs</a>
+          <a class="button" href="/">Back to the home page</a>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

@@ -11,6 +11,9 @@ edit_uri: edit/main/docs/
 copyright: HarnessWeaver is licensed under Apache-2.0.
 
 docs_dir: docs
+# The website has the landing page in website/ at its root and the docs under /docs/
+# (ADR-0046): the docs build into site/docs/, and the hook copies website/ to site/.
+site_dir: site/docs
 # The design guide is the source document and is never edited (RULES D4); the site
 # links to it on GitHub instead of rendering it.
 exclude_docs: |
@@ -61,6 +64,8 @@ extra_javascript:
   - javascripts/terminals.js
 
 extra:
+  # The header's logo leads to the landing page, one level above the docs.
+  homepage: ../
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/Wise-DreamerZ/HarnessWeaver
@@ -263,6 +268,7 @@ nav:
           - "ADR-0043: Profiles an app's team can write merge after the platform's": adr/0043-profile-ownership.md
           - "ADR-0044: An answer claims the approval before it resumes the run": adr/0044-answers-claim-the-approval.md
           - "ADR-0045: What an approval covers: one execution, by the role that step needs": adr/0045-what-an-approval-covers.md
+          - "ADR-0046: The website: a landing page at the root, the docs under /docs/": adr/0046-landing-page.md
   - Release Notes:
       - release-notes/index.md
       - harnessweaver: release-notes/harnessweaver.md

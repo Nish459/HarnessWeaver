@@ -1291,6 +1291,7 @@ Each ADR records a decision, the reason for it, and its status, in its own file 
 | [0043](docs/adr/0043-profile-ownership.md) | Profiles an app's team can write merge after the platform's | Accepted |
 | [0044](docs/adr/0044-answers-claim-the-approval.md) | An answer claims the approval before it resumes the run | Accepted |
 | [0045](docs/adr/0045-what-an-approval-covers.md) | What an approval covers: one execution, by the role that step needs | Accepted |
+| [0046](docs/adr/0046-landing-page.md) | The website: a landing page at the root, the docs under /docs/ | Accepted |
 
 ## 29. Deviations from the design guide
 

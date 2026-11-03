@@ -1,0 +1,286 @@
+<!doctype html>
+<!--
+  The HarnessWeaver landing page (ADR-0046): the website's home at /, with the docs at
+  /docs/. It is plain HTML and CSS, with no build step: `mkdocs build` writes the docs
+  to site/docs/ and copies this folder to site/ (scripts/docs_hooks.py). Links into the
+  docs are relative, so the page also works when site/ is served from anywhere.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HarnessWeaver - the composable AI harness framework</title>
+    <meta name="description" content="HarnessWeaver is the composable AI harness framework. Weave your own AI harness: bring your models, choose your plugins, define your execution.">
+    <meta name="theme-color" content="#000211">
+    <meta property="og:title" content="HarnessWeaver - the composable AI harness framework">
+    <meta property="og:description" content="Weave your own AI harness: bring your models, choose your plugins, define your execution.">
+    <link rel="icon" href="docs/assets/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap">
+    <link rel="stylesheet" href="site.css">
+  </head>
+  <body>
+    <header class="nav">
+      <div class="wrap">
+        <a class="brand" href="./"><img src="docs/assets/logo.svg" alt=""> HarnessWeaver</a>
+        <a class="optional" href="docs/learn/quickstart/">Quickstart</a>
+        <a class="optional" href="docs/tutorial/">Tutorial</a>
+        <a class="optional" href="docs/reference/">Reference</a>
+        <a href="https://github.com/Wise-DreamerZ/HarnessWeaver">GitHub</a>
+        <a class="button primary" href="docs/">Docs</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <!-- The two strands weave into the logo at the heights of its crossbars. -->
+        <div class="hero-mark">
+          <svg class="strands" viewBox="0 0 1440 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <g fill="none" stroke-width="4" stroke-linecap="round">
+              <path stroke="#ac4bff" d="M-80 60 Q-60 44 -40 60 T0 60 T40 60 T80 60 T120 60 T160 60 T200 60 T240 60 T280 60 T320 60 T360 60 T400 60 T440 60 T480 60 T520 60 T560 60 T600 60 T640 60 T680 60 T720 60 T760 60 T800 60 T840 60 T880 60 T920 60 T960 60 T1000 60 T1040 60 T1080 60 T1120 60 T1160 60 T1200 60 T1240 60 T1280 60 T1320 60 T1360 60 T1400 60 T1440 60 T1480 60 T1520 60 T1560 60 T1600 60"/>
+              <path stroke="#3080ff" d="M-80 60 Q-60 76 -40 60 T0 60 T40 60 T80 60 T120 60 T160 60 T200 60 T240 60 T280 60 T320 60 T360 60 T400 60 T440 60 T480 60 T520 60 T560 60 T600 60 T640 60 T680 60 T720 60 T760 60 T800 60 T840 60 T880 60 T920 60 T960 60 T1000 60 T1040 60 T1080 60 T1120 60 T1160 60 T1200 60 T1240 60 T1280 60 T1320 60 T1360 60 T1400 60 T1440 60 T1480 60 T1520 60 T1560 60 T1600 60"/>
+            </g>
+          </svg>
+          <img class="hero-logo" src="docs/assets/logo.svg" alt="HarnessWeaver">
+        </div>
+        <div class="wrap">
+          <p class="eyebrow">The composable AI harness framework</p>
+          <h1><span class="gradient-text">Weave your own AI harness.</span></h1>
+          <p class="lead">Bring your models. Choose your plugins. Define your execution. HarnessWeaver puts tracing, budgets, guardrails, typed output, tool governance, policy and approvals around the executor you already use, declared in one <code>harness.yaml</code>.</p>
+          <div class="actions">
+            <a class="button primary" href="docs/learn/quickstart/">Get started</a>
+            <a class="button" href="docs/tutorial/">Read the tutorial</a>
+          </div>
+          <div class="install">
+            <div class="install-line"><span>Python</span><code id="install-python">uv add "harnessweaver[openai]"</code><button class="copy" type="button" data-copy="install-python">Copy</button></div>
+            <div class="install-line"><span>TypeScript</span><code id="install-typescript">npm install @harnessweaver/core</code><button class="copy" type="button" data-copy="install-typescript">Copy</button></div>
+          </div>
+          <p class="badges">Python 3.12+ / Node 22+ / Apache-2.0</p>
+        </div>
+      </section>
+
+      <section id="spec">
+        <div class="wrap split">
+          <div>
+            <p class="eyebrow">One spec</p>
+            <h2>Declare the controls. Keep the code one call.</h2>
+            <p class="lead">Typed output, guards, business rules and a budget live in the spec. The app still calls <code>harness.run("triage", ticket)</code>.</p>
+            <ul class="checks">
+              <li><strong>Typed output</strong> parsed into a Pydantic model and checked against it.</li>
+              <li><strong>Repair</strong> sends a bad answer back to the model once, with the reason, then escalates.</li>
+              <li><strong>Guards</strong> redact PII from the input and block secrets in the output.</li>
+              <li><strong>A budget</strong> of three model calls, one cent and thirty seconds, checked before every call.</li>
+              <li><strong>A trace</strong> of every decision, with no content in it.</li>
+            </ul>
+          </div>
+          <div class="code">
+            <div class="code-title"><i></i><i></i><i></i> harness.yaml</div>
+<pre><code><span class="k">apiVersion</span>: harnessweaver/v1
+<span class="k">kind</span>: Harness
+<span class="k">metadata</span>:
+  <span class="k">name</span>: support-desk
+  <span class="k">owner</span>: support-team
+<span class="k">extends</span>: [<span class="s">"profile://extraction"</span>]   <span class="c"># PII and secrets guards</span>
+
+<span class="k">models</span>:
+  <span class="k">provider</span>: openai.chat
+  <span class="k">base_url</span>: http://localhost:4000
+  <span class="k">api_key_env</span>: LITELLM_API_KEY
+  <span class="k">default</span>: fast
+  <span class="k">aliases</span>: { <span class="k">fast</span>: fast-chat }
+
+<span class="k">tasks</span>:
+  <span class="k">triage</span>:
+    <span class="k">runner</span>: direct
+    <span class="k">prompt</span>: triage@2
+    <span class="k">input</span>: helpdesk.models:Ticket
+    <span class="k">output</span>: helpdesk.models:Triage
+    <span class="k">budget</span>: { <span class="k">max_model_calls</span>: <span class="n">3</span>, <span class="k">max_usd</span>: <span class="n">0.01</span>, <span class="k">deadline</span>: <span class="n">30s</span> }
+
+<span class="k">validation</span>:
+  <span class="k">rules</span>:
+    - <span class="k">id</span>: bugs-are-urgent
+      <span class="k">when</span>: <span class="s">"output.category == 'bug' &amp;&amp; output.priority &gt; 2"</span>
+      <span class="k">message</span>: <span class="s">"a bug is priority 1 or 2"</span></code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="how" id="how">
+        <div class="wrap">
+          <p class="eyebrow">How it works</p>
+          <h2>A spec, thirteen hook points, and one rule for every decision.</h2>
+          <p class="lead">Modules install middleware on fixed hook points. Every model call, tool call and output passes them, whatever executor runs the task.</p>
+          <div class="how-grid">
+            <div class="panel">
+              <span class="step">01 / layers</span>
+              <h3>The spec is layered</h3>
+              <p>Later layers extend earlier ones. The org baseline's locks and bounds are enforced at load: an app can't remove a control, and a value out of bounds is an error, never clamped.</p>
+              <ul class="chips">
+                <li>defaults</li><li>profile</li><li>org baseline</li><li>app spec</li><li>env overlay</li><li>per-run</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <span class="step">02 / hook points</span>
+              <h3>Thirteen fixed hook points</h3>
+              <p>Middleware runs in bands, baseline, platform, app and task: inbound hooks outermost first, outbound hooks innermost first.</p>
+              <ul class="chips">
+                <li>run.start</li><li>input.before</li><li>route.decide</li><li>context.after</li><li>model.before</li><li>model.after</li><li>stream.chunk</li><li>tool.before</li><li>tool.after</li><li>output.before</li><li>approval.resolved</li><li>run.error</li><li>run.end</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <span class="step">03 / outcomes</span>
+              <h3>The most severe outcome wins</h3>
+              <p>Middleware returns an outcome instead of raising. A classifier or LLM judge may tighten a decision, but never grant one.</p>
+              <ul class="chips outcomes">
+                <li>Block</li><li>Suspend</li><li>Escalate</li><li>Retry</li><li>Continue(modified)</li><li>Continue</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features">
+        <div class="wrap">
+          <p class="eyebrow">Why HarnessWeaver</p>
+          <h2>The controls every AI app needs, built once.</h2>
+          <div class="bento">
+            <article class="card wide">
+              <div class="glyph">{ }</div>
+              <h3>Declarative</h3>
+              <p>Tracing, cost, budgets, guardrails, typed output, tool governance, policy, approvals, routing, retrieval governance and evals, all in one spec. Your code stays one call.</p>
+            </article>
+            <article class="card">
+              <div class="glyph">&lt;/&gt;</div>
+              <h3>Non-invasive</h3>
+              <p>Keep raw SDK calls, Pydantic AI, the Vercel AI SDK or your own pipeline. Govern an existing client in three lines.</p>
+            </article>
+            <article class="card">
+              <div class="glyph">!</div>
+              <h3>Safe by default</h3>
+              <p>The org baseline can't be removed by an app, controls fail closed, and nothing reaches a log or span unredacted.</p>
+            </article>
+            <article class="card">
+              <div class="glyph">+</div>
+              <h3>Composable</h3>
+              <p>Every capability is a module behind a port, with providers you swap and plugins anyone can write in their own repository.</p>
+            </article>
+            <article class="card">
+              <div class="glyph">*</div>
+              <h3>Polyglot</h3>
+              <p>One spec serves Python, TypeScript, and any language through the harnessd sidecar.</p>
+            </article>
+            <article class="card wide">
+              <div class="glyph">ok</div>
+              <h3>Testable</h3>
+              <p>Everything runs offline against fakes, with no network and no model spend, and every decision is in a trace your tests can check.</p>
+            </article>
+            <article class="card">
+              <div class="glyph">#</div>
+              <h3>Standards-based</h3>
+              <p>OpenTelemetry GenAI conventions, JSON Schema contracts, an OpenAPI sidecar and a CEL subset for rules.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="controls">
+        <div class="wrap">
+          <p class="eyebrow">In the box</p>
+          <h2>Everything around the model, nothing inside it.</h2>
+          <dl class="controls">
+            <div><dt>Tracing and cost</dt><dd>Every run, model call, tool call and decision traced with the OpenTelemetry GenAI conventions, and costed.</dd></div>
+            <div><dt>Budgets and deadlines</dt><dd>Per-run limits on cost, tokens, model and tool calls and time, checked before each call.</dd></div>
+            <div><dt>Guardrails</dt><dd>PII, secrets, prompt injection, topics, citations and LLM judges. New guards start in shadow mode.</dd></div>
+            <div><dt>Typed output</dt><dd>Pydantic validation with bounded repair, plus cel-lite business rules.</dd></div>
+            <div><dt>Tool governance</dt><dd>No tool runs without a manifest. A nine-step governor checks schema, policy, the lethal trifecta, rate limits and approvals.</dd></div>
+            <div><dt>Policy and approvals</dt><dd>Deterministic rules decide, a person approves what they require, and runs suspend durably and resume.</dd></div>
+            <div><dt>Routing and retrieval</dt><dd>Routing cascades from rules to LLMs, with ACLs re-checked on every retrieved item.</dd></div>
+            <div><dt>Evals</dt><dd>Golden and red-team sets with baselines in CI, shadow-guard reports and online sampling.</dd></div>
+            <div><dt>An org baseline</dt><dd>Locks, bounds and a required adoption level by risk tier, enforced when an app loads.</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="how statement">
+        <div class="wrap">
+          <p class="eyebrow">Not an agent framework</p>
+          <h2>HarnessWeaver never does the reasoning. <span class="gradient-text">It governs the tools that do.</span></h2>
+          <p class="lead">No planner, no memory model, no prompt template language, no vector store. Integrate your agent framework through an adapter, and put the same controls around it.</p>
+          <div class="actions">
+            <a class="button" href="docs/how-to/wrap-a-client/">Govern an existing client</a>
+            <a class="button" href="docs/about/alternatives/">Alternatives and comparisons</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="packages">
+        <div class="wrap">
+          <p class="eyebrow">Packages</p>
+          <h2>A small core. Everything else is a plugin.</h2>
+          <p class="lead">The core depends only on Pydantic, the OpenTelemetry API, PyYAML, anyio and loguru. Each package has its own version.</p>
+          <div class="packages">
+            <div class="panel">
+              <h3>Python, on PyPI</h3>
+              <ul>
+                <li><a href="https://pypi.org/project/harnessweaver/">harnessweaver</a><span>The core: spec, hook bus and modules</span></li>
+                <li><a href="https://pypi.org/project/harnessweaver-cli/">harnessweaver-cli</a><span>The harnessweaver command</span></li>
+                <li><a href="https://pypi.org/project/harnessweaver-sidecar/">harnessweaver-sidecar</a><span>harnessd, for any language</span></li>
+                <li><a href="https://pypi.org/project/harnessweaver-openai/">harnessweaver-openai</a><span>OpenAI-compatible endpoints</span></li>
+                <li><a href="https://pypi.org/project/harnessweaver-anthropic/">harnessweaver-anthropic</a><span>Claude, through the Messages API</span></li>
+                <li><a href="https://pypi.org/project/harnessweaver-pydantic-ai/">harnessweaver-pydantic-ai</a><span>Pydantic AI agents</span></li>
+                <li><a href="https://pypi.org/project/harnessweaver-otel/">harnessweaver-otel</a><span>OpenTelemetry SDK and export</span></li>
+                <li><a href="https://pypi.org/project/harnessweaver-cel/">harnessweaver-cel</a><span>Full CEL for policy rules</span></li>
+                <li><a href="https://pypi.org/project/harnessweaver-monty/">harnessweaver-monty</a><span>A sandbox for code tools</span></li>
+              </ul>
+            </div>
+            <div class="panel">
+              <h3>TypeScript, on npm</h3>
+              <ul>
+                <li><a href="https://www.npmjs.com/package/@harnessweaver/core">@harnessweaver/core</a><span>The TypeScript SDK</span></li>
+                <li><a href="https://www.npmjs.com/package/@harnessweaver/ai-sdk">@harnessweaver/ai-sdk</a><span>Vercel AI SDK middleware</span></li>
+              </ul>
+              <p>Or run <code>harnessd</code> and call it over HTTP from any language: one spec, the same controls.</p>
+              <a class="button" href="docs/advanced/typescript/">TypeScript guide</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap cta">
+          <h2>Weave your first harness in fifteen minutes.</h2>
+          <p class="lead">The quickstart runs offline: no API keys, no network calls to a model, no spend.</p>
+          <div class="actions">
+            <a class="button primary" href="docs/learn/quickstart/">Start the quickstart</a>
+            <a class="button" href="docs/">Browse the docs</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <a class="brand" href="./"><img src="docs/assets/logo.svg" alt=""> HarnessWeaver</a>
+        <a href="docs/">Docs</a>
+        <a href="docs/tutorial/">Tutorial</a>
+        <a href="docs/reference/">Reference</a>
+        <a href="docs/release-notes/">Release notes</a>
+        <a href="https://github.com/Wise-DreamerZ/HarnessWeaver">GitHub</a>
+        <span>Apache-2.0</span>
+      </div>
+    </footer>
+
+    <script>
+      // Copies an install command to the clipboard and says so on the button for a moment.
+      for (const button of document.querySelectorAll("[data-copy]")) {
+        button.addEventListener("click", async () => {
+          await navigator.clipboard.writeText(document.getElementById(button.dataset.copy).textContent);
+          button.textContent = "Copied";
+          setTimeout(() => (button.textContent = "Copy"), 1500);
+        });
+      }
+    </script>
+  </body>
+</html>
