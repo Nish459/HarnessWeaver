@@ -1,10 +1,10 @@
-# Help HarnessWeaver - Get Help
+# Get help
 
-Do you like HarnessWeaver? Would you like to help it, other people, and yourself? Here's how.
+How to ask a question, report a bug or a vulnerability, and help the project.
 
 ## Star the repository
 
-Star [HarnessWeaver on GitHub](https://github.com/Wise-DreamerZ/HarnessWeaver). It helps other people find it, and shows the project is useful. Watch it, with "Releases only" if you like, to hear when a version is published.
+Star [HarnessWeaver on GitHub](https://github.com/Wise-DreamerZ/HarnessWeaver) so other people can find it. Watch it, with "Releases only" if you like, to hear when a version is published.
 
 ## Ask a question, or report a bug
 

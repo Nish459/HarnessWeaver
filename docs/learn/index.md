@@ -1,15 +1,13 @@
 # Learn
 
-Here are the introductory sections and the tutorials to learn HarnessWeaver.
-
-You could consider this a book, a course: the official and recommended way to learn HarnessWeaver.
+Start here: the concepts, the quickstart, and a tutorial that builds one app chapter by chapter.
 
 ## Where to start
 
 | If you | Read |
 | --- | --- |
 | Have fifteen minutes and want to see it work | The [Quickstart](quickstart.md): a governed, traced and tested project from a template, offline |
-| Want to learn it properly | The [Tutorial - User Guide](../tutorial/index.md): one app, built chapter by chapter, every feature, tested code |
+| Want to learn it properly | The [Tutorial](../tutorial/index.md): one app, built chapter by chapter, every feature, tested code |
 | Want the mental model first | [Concepts](../concepts/index.md), then [Lifecycle and hook points](../concepts/lifecycle.md) |
 | Already have an app calling a model | [Govern an existing client](../how-to/wrap-a-client.md): three lines |
 | Are on the platform or security team | [Profiles and the org baseline](../tutorial/profiles.md), then [Write an org baseline](../how-to/org-baseline.md) and [Security](../deployment/security.md) |
@@ -30,6 +28,6 @@ Background that the tutorial assumes, and explains again as it goes:
 
 ## After the tutorial
 
-- The [Advanced User Guide](../advanced/index.md) covers layering in depth, the tool governor, approvals in depth, TypeScript, the sidecar, and writing plugins.
+- The [Advanced guide](../advanced/index.md) covers layering in depth, the tool governor, approvals in depth, TypeScript, the sidecar, and writing plugins.
 - The [HarnessWeaver CLI](../cli.md) reference.
-- [Deployment](../deployment/index.md) and [How To - Recipes](../how-to/index.md).
+- [Deployment](../deployment/index.md) and [Recipes](../how-to/index.md).

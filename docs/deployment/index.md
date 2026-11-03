@@ -13,7 +13,7 @@ The short version:
 
 | Page | Covers |
 | --- | --- |
-| [About versions](versions.md) | How contracts, packages and profiles are versioned, and how to upgrade safely |
+| [Versioning](versions.md) | How contracts, packages and profiles are versioned, and how to upgrade safely |
 | [Configuration](configuration.md) | Environment variables, overlays per environment, files the harness reads and writes |
 | [Gateways and the dev stack](gateways.md) | LiteLLM and MCP gateway configs generated from the spec, and a local stack |
 | [Security](security.md) | The threat model and its controls, the invariants an operator can rely on, and hardening |

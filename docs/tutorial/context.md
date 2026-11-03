@@ -74,7 +74,7 @@ Acme never sees Globex's contract terms. The provider returned the article, and 
 
 ## How retrieval is governed
 
-Every item, fetched or passed in, is governed **inside** the context call, before any `context.after` middleware sees it, so no middleware order can let a bad item through ([ADR-0030](../adr/0030-context-governance.md)):
+Every item, fetched or passed in, is governed **inside** the context call, before any `context.after` middleware sees it, so no middleware order can let a bad item through:
 
 1. **ACL re-check.** An item whose ACL excludes the run's tenant or principal is dropped, even when its provider returned it. With `require_acl: true`, an item with no ACL is dropped too.
 2. **Labels.** The item's `source` becomes the source's name, and it is **untrusted** unless the source is `label: trusted` (RULES S3).
@@ -116,7 +116,7 @@ await s.memory.put("last_order", "A-1002", ttl=timedelta(hours=1))
 order = await s.memory.get("last_order")   # None once expired or absent
 ```
 
-The harness picks the namespace, so no tenant or principal reads another's entries ([ADR-0031](../adr/0031-namespaced-memory.md)). Entries expire after `ttl`, or the spec's `memory.default_ttl`. It is a store, not a memory model: what an agent remembers, and when, is your app's business (RULES R12).
+The harness picks the namespace, so no tenant or principal reads another's entries. Entries expire after `ttl`, or the spec's `memory.default_ttl`. It is a store, not a memory model: what an agent remembers, and when, is your app's business (RULES R12).
 
 ## Recap
 

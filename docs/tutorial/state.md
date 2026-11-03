@@ -49,7 +49,7 @@ same: run run_e7c1838939a447d4bc45a1a4a0a4fe88 (orders) ended completed; the rep
   model answers used: 2 of 2
 ```
 
-Change a prompt, a rule or a guard, and replay real runs before you ship it: the report says whether each run's status or output changed, which decisions in its trace differ (a guard that fires now, a rule that no longer does), and how many model requests changed. The command exits 1 when the status or output changed, so it can run in CI over a sample of recorded runs. In code, `await harness.replay(run_id)` returns the same `ReplayReport` ([ADR-0035](../adr/0035-record-and-replay.md)).
+Change a prompt, a rule or a guard, and replay real runs before you ship it: the report says whether each run's status or output changed, which decisions in its trace differ (a guard that fires now, a rule that no longer does), and how many model requests changed. The command exits 1 when the status or output changed, so it can run in CI over a sample of recorded runs. In code, `await harness.replay(run_id)` returns the same `ReplayReport`.
 
 ## What the store keeps
 

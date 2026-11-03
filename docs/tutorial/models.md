@@ -39,7 +39,7 @@ The scripted model estimates tokens from the text (one per four characters). A r
 2. The spec's `models.prices`, by the response's model, then the request's model, then the alias.
 3. Otherwise the cost is **unknown**. The trace flags it (`cost_source: unknown`), `result.cost_known` is `False`, and nothing is guessed.
 
-There is no built-in price table, because hard-coded prices go stale and mislead ([ADR-0012](../adr/0012-no-price-table.md)).
+There is no built-in price table, because hard-coded prices go stale and mislead.
 
 !!! warning
     A `max_usd` budget can't count what it can't price. If you rely on one, run behind a gateway that reports cost, or give prices.

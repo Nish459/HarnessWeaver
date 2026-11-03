@@ -13,7 +13,7 @@ A typed output can still be wrong for your business: a crash reported as low pri
 - Each rule has an `id`, a `when` expression and a `message` for the model.
 
 !!! warning "A rule's `when` describes a violation"
-    `when` is true when the output **breaks** the rule, the way a policy rule's `when` says when it applies. `output.category == 'bug' && output.priority > 2` reads as "a bug marked priority 3 or 4 is wrong" ([ADR-0023](../adr/0023-validation-rule-when.md)).
+    `when` is true when the output **breaks** the rule, the way a policy rule's `when` says when it applies. `output.category == 'bug' && output.priority > 2` reads as "a bug marked priority 3 or 4 is wrong".
 
 The expressions are [cel-lite](../reference/expressions.md), a small, safe subset of CEL that runs the same in Python and TypeScript. They can read `output`, `input` and `task`. They are compiled when the spec loads, so a typo fails at start-up, not in the middle of a run.
 

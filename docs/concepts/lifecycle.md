@@ -106,7 +106,7 @@ The neutral model contracts are:
 | `Message` | `role` (`system`, `user`, `assistant`, `tool`), `content`, `tool_calls`, `tool_call_id`, `name`, `extensions` |
 | `ModelResponse` | `model`, `text`, `tool_calls`, `output`, `usage` (`input_tokens`, `output_tokens`), `cost_usd`, `finish_reason`, `extensions` |
 
-`extensions` carries a provider's own per-turn data (such as Claude's thinking blocks) that the harness keeps opaque and replays unchanged ([ADR-0022](../adr/0022-provider-extensions.md)).
+`extensions` carries a provider's own per-turn data (such as Claude's thinking blocks) that the harness keeps opaque and replays unchanged.
 
 ## Run statuses
 

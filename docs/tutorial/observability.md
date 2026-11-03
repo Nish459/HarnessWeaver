@@ -45,7 +45,7 @@ The trace holds ids, codes, names and numbers, never content (RULES R9). It powe
 
 ## Send it to OpenTelemetry
 
-The core uses only the OpenTelemetry **API** ([ADR-0010](../adr/0010-otel-api-only.md)). If your app already sets up OpenTelemetry, do nothing: the harness's spans join your traces. If it doesn't, install `harnessweaver-otel` and let the harness set it up. That belongs in production's overlay:
+The core uses only the OpenTelemetry **API**. If your app already sets up OpenTelemetry, do nothing: the harness's spans join your traces. If it doesn't, install `harnessweaver-otel` and let the harness set it up. That belongs in production's overlay:
 
 ```yaml title="harness.prod.yaml"
 --8<-- "docs_src/tutorial/observability/harness.prod.yaml"

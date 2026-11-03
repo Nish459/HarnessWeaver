@@ -54,7 +54,7 @@ client = harness.instrument(AsyncOpenAI(base_url=GATEWAY), tenant="acme", task="
 
 ## Agent frameworks
 
-`harness.wrap(agent, task=...)` does the same for an agent from another framework. For Pydantic AI it governs every model request, tool call and the final output ([ADR-0037](../adr/0037-framework-adapters.md)). A call that needs approval escalates, because the harness can't resume the app's code. To get approvals that suspend and resume, run the agent as a task with the `pydantic_ai.agent` runner instead ([Runners, deciders and adapters](../advanced/runners-and-adapters.md#agent-frameworks)).
+`harness.wrap(agent, task=...)` does the same for an agent from another framework. For Pydantic AI it governs every model request, tool call and the final output. A call that needs approval escalates, because the harness can't resume the app's code. To get approvals that suspend and resume, run the agent as a task with the `pydantic_ai.agent` runner instead ([Runners, deciders and adapters](../advanced/runners-and-adapters.md#agent-frameworks)).
 
 ## Next steps
 

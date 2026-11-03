@@ -1,6 +1,6 @@
 # Gateways and the dev stack
 
-Some apps call models and tools straight through a gateway, with no HarnessWeaver SDK. They can still get controls from the same spec: `harnessweaver gateway litellm` writes a [LiteLLM Proxy](https://docs.litellm.ai/docs/simple_proxy) config, and `harnessweaver gateway mcp` writes a neutral tool allow-list for an MCP gateway ([ADR-0039](../adr/0039-gateways-and-dev-stack.md)). `harnessweaver dev` writes a whole local stack around them.
+Some apps call models and tools straight through a gateway, with no HarnessWeaver SDK. They can still get controls from the same spec: `harnessweaver gateway litellm` writes a [LiteLLM Proxy](https://docs.litellm.ai/docs/simple_proxy) config, and `harnessweaver gateway mcp` writes a neutral tool allow-list for an MCP gateway. `harnessweaver dev` writes a whole local stack around them.
 
 ```bash
 uv run harnessweaver gateway litellm harness.yaml -o gateway/litellm.yaml

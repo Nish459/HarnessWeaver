@@ -101,7 +101,7 @@ reply = await client.chat.completions.create(model="fast-chat", messages=message
 
 The same spec also serves [TypeScript](docs/advanced/typescript.md) apps, and any language through the [harnessd sidecar](docs/advanced/sidecar.md).
 
-## Why a framework, not a harness
+## A framework for building harnesses
 
 | | A central harness | HarnessWeaver |
 | --- | --- | --- |
@@ -141,7 +141,7 @@ uv run harnessweaver test ../my-app     # its tests, offline
 | `@harnessweaver/core` | TypeScript core: the same spec, hook bus, guards, governor and routing, in sessions ([typescript/](typescript/README.md)) |
 | `@harnessweaver/ai-sdk` | `wrapModel` for Vercel AI SDK models |
 
-**Plugins are defined by design, not by name.** Any package that exposes an `hw.Plugin` through the `harnessweaver.plugins` entry point is a plugin, so you can build one in your own repository, publish it under any name, and use it from `harness.yaml` (`use: acme.pii`). See [Extending](docs/extending/index.md).
+**Plugins are defined by design, not by name.** Any package that exposes an `hw.Plugin` through the `harnessweaver.plugins` entry point is a plugin, so you can build one in your own repository, publish it under any name, and use it from `harness.yaml` (`use: acme.pii`). See [Extending HarnessWeaver](docs/advanced/index.md#extending-harnessweaver).
 
 ## Adoption levels
 
@@ -160,13 +160,13 @@ The user documentation is a site built from [`docs/`](docs/index.md) (`make docs
 | Doc | For |
 | --- | --- |
 | [QUICKSTART.md](QUICKSTART.md) | Your first governed task, offline |
-| [Tutorial - User Guide](docs/tutorial/index.md) | One app, a support desk, built chapter by chapter with every feature; its code is tested |
+| [Tutorial](docs/tutorial/index.md) | One app, a support desk, built chapter by chapter with every feature; its code is tested |
 | [Concepts](docs/concepts/index.md) | Hook points, the hook bus, outcomes, the envelope, the spec, integration styles, adoption levels |
-| [Advanced User Guide](docs/advanced/index.md) | Layers and locks in depth, the tool governor, approvals, TypeScript, the harnessd sidecar, writing plugins |
+| [Advanced guide](docs/advanced/index.md) | Layers and locks in depth, the tool governor, approvals, TypeScript, the harnessd sidecar, writing plugins |
 | [Reference](docs/reference/index.md) | Every spec section, provider setting, profile and manifest field, the Python API, contracts |
 | [CLI](docs/cli.md) | Every `harnessweaver` command |
-| [Deployment](docs/deployment/index.md) and [How To](docs/how-to/index.md) | Installing, configuring, securing and versioning; recipes and troubleshooting |
-| [DESIGNS.md](DESIGNS.md) and [the ADRs](docs/adr/index.md) | Architecture and decisions |
+| [Deployment](docs/deployment/index.md) and [Recipes](docs/how-to/index.md) | Installing, configuring, securing and versioning; recipes and troubleshooting |
+| [DESIGNS.md](DESIGNS.md) and [the ADRs](docs/adr/index.md) | Architecture and the decisions behind it, for contributors |
 | [RULES.md](RULES.md) | Engineering rules and invariants |
 | [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) | Contributing, by hand or with AI coding agents |
 | [SECURITY.md](SECURITY.md) | Reporting a vulnerability |

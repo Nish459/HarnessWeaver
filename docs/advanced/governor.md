@@ -25,7 +25,7 @@ flowchart TD
     S9 --> Z([tool.after middleware])
 ```
 
-Steps 1 to 7 run **inside** the governed tool call, after the `tool.before` middleware and on the arguments it leaves, so no middleware can rewrite arguments past the checks ([ADR-0025](../adr/0025-governor-placement.md)). Step 9 runs before the `tool.after` middleware. Every decision is a `harness.governor` trace note with its step, code and reason, never the argument values (RULES R9, R13).
+Steps 1 to 7 run **inside** the governed tool call, after the `tool.before` middleware and on the arguments it leaves, so no middleware can rewrite arguments past the checks. Step 9 runs before the `tool.after` middleware. Every decision is a `harness.governor` trace note with its step, code and reason, never the argument values (RULES R9, R13).
 
 | Step | Checks | Block codes |
 | --- | --- | --- |
@@ -52,7 +52,7 @@ Step 4 then stops a tool with `egress` from running unattended. The default, `to
 
 ## Schema validation
 
-Tool arguments are validated against each manifest's `input_schema` by a small JSON Schema 2020-12 validator in the core: types, `enum` and `const`, object, array, string and number keywords, `allOf`, `anyOf`, `oneOf`, `not`, and `$ref` to `#/$defs`. Annotations are ignored. Any other keyword fails the manifest when it loads, so a schema never checks less than it says ([ADR-0026](../adr/0026-json-schema-subset.md)). Problems name locations and rules, never values.
+Tool arguments are validated against each manifest's `input_schema` by a small JSON Schema 2020-12 validator in the core: types, `enum` and `const`, object, array, string and number keywords, `allOf`, `anyOf`, `oneOf`, `not`, and `$ref` to `#/$defs`. Annotations are ignored. Any other keyword fails the manifest when it loads, so a schema never checks less than it says. Problems name locations and rules, never values.
 
 ## Idempotency
 
@@ -60,11 +60,11 @@ Every call gets a key that stays the same when a resumed run repeats it: `<run_i
 
 ## Dry runs
 
-`harness.authorize(tool, args, principal=..., tenant=..., task=..., labels=...)` runs steps 1 to 7 for a call that never executes ([ADR-0036](../adr/0036-dry-runs-and-guard-notes.md)): a rate-limit place taken is given back, and nothing is approved. It returns a `ToolVerdict` with `decision` (`allow`, `require_approval` or `block`), `step`, `code`, `reason` and `approver_role`, the role a real run's approval request would name: the step that asked, else the task's `approvals.approver_role`, else the spec's. `harnessweaver policy test` is built on it ([Policy](../tutorial/policy.md#test-the-policy)), and harnessd serves it as `POST /v1/tools/{name}/authorize`.
+`harness.authorize(tool, args, principal=..., tenant=..., task=..., labels=...)` runs steps 1 to 7 for a call that never executes: a rate-limit place taken is given back, and nothing is approved. It returns a `ToolVerdict` with `decision` (`allow`, `require_approval` or `block`), `step`, `code`, `reason` and `approver_role`, the role a real run's approval request would name: the step that asked, else the task's `approvals.approver_role`, else the spec's. `harnessweaver policy test` is built on it ([Policy](../tutorial/policy.md#test-the-policy)), and harnessd serves it as `POST /v1/tools/{name}/authorize`.
 
 ## Sandboxed code
 
-A `code` tool runs the code in one of its arguments in the `Sandbox` its manifest names, never in the host process (RULES S4, [ADR-0027](../adr/0027-code-transport.md)). With `harnessweaver-monty`:
+A `code` tool runs the code in one of its arguments in the `Sandbox` its manifest names, never in the host process (RULES S4). With `harnessweaver-monty`:
 
 ```yaml
 apiVersion: harnessweaver/v1

@@ -1,6 +1,6 @@
 # ADR-0046: The website: a landing page at the root, the docs under /docs/
 
-**Status:** Accepted
+**Status:** Accepted. Amended by [ADR-0047](0047-docs-for-users.md).
 
 ## Decision
 
@@ -10,4 +10,4 @@ The docs header's logo leads to the landing page (`extra.homepage: ../`). `verce
 
 ## Why
 
-A landing page introduces the framework to a reader who hasn't yet decided to read the docs; the docs' home page, written like FastAPI's (ADR-0042), is for one who has. Plain HTML adds no dependency (C10) and needs no toolchain to edit. A Material template override would tie the page's layout to the theme's internals, which MkDocs 2.0 is expected to break (ADR-0041). Building the landing page from `mkdocs build` keeps one command for CI, Vercel and contributors, and keeps `vercel.json`'s build command unchanged.
+A landing page introduces the framework to a reader who hasn't yet decided to read the docs; the docs' home page (ADR-0042) is for one who has. Plain HTML adds no dependency (C10) and needs no toolchain to edit. A Material template override would tie the page's layout to the theme's internals, which MkDocs 2.0 is expected to break (ADR-0041). Building the landing page from `mkdocs build` keeps one command for CI, Vercel and contributors, and keeps `vercel.json`'s build command unchanged.

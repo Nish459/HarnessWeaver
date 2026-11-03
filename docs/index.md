@@ -129,7 +129,7 @@ With a few lines of YAML, and no change to how the app calls the harness, the ta
 
 And the same spec, extended by your org's baseline, can't have its required controls switched off.
 
-The [Tutorial - User Guide](tutorial/index.md) builds a complete support desk this way, with routing, retrieval, tools, policy, approvals, state, observability, tests and evals.
+The [Tutorial](tutorial/index.md) builds a complete support desk this way, with routing, retrieval, tools, policy, approvals, state, observability, tests and evals.
 
 ## Already have an app?
 
@@ -144,7 +144,7 @@ See [Govern an existing client](how-to/wrap-a-client.md).
 
 ## Not an agent framework
 
-HarnessWeaver is **not** an agent framework, a prompt library, a vector database or a model host. It never does the reasoning (RULES R12). It governs the tools that do. [Alternatives and comparisons](about/alternatives.md) explains where it fits.
+HarnessWeaver isn't an agent framework, a prompt library, a vector database or a model host, and it never does the reasoning itself (RULES R12). It puts controls around the executor your app already uses. [Alternatives and comparisons](about/alternatives.md) compares it with the tools around it.
 
 ## Dependencies
 

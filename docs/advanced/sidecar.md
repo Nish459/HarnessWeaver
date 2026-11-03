@@ -1,6 +1,6 @@
 # harnessd sidecar
 
-`harnessd` (package `harnessweaver-sidecar`) serves one `harness.yaml` over HTTP/JSON, so apps in any language get the same guards, routing, policy, tool governance, approvals and evals as a Python app, decided by the same core ([ADR-0038](../adr/0038-harnessd.md)). It loads the spec exactly as an app does: layers, locks, plugins and tasks.
+`harnessd` (package `harnessweaver-sidecar`) serves one `harness.yaml` over HTTP/JSON, so apps in any language get the same guards, routing, policy, tool governance, approvals and evals as a Python app, decided by the same core. It loads the spec exactly as an app does: layers, locks, plugins and tasks.
 
 ```bash
 export HARNESSD_TOKEN=sk-test-change-me     # required: harnessd never runs without a token (RULES S6)
@@ -127,7 +127,7 @@ The image is built from `uv.lock` on digest-pinned bases (RULES S5) and runs as 
 ## Security
 
 - harnessd binds `127.0.0.1` unless told otherwise, refuses to start without a token, and compares tokens in constant time (RULES S6).
-- The token is checked before any of the body is read, so a peer without it can't make harnessd buffer or parse anything. Everything except `GET /v1/health` answers 401 without the token, including unknown paths and FastAPI's `/docs`, `/redoc` and `/openapi.json`; the API's description is the checked-in OpenAPI document.
+- The token is checked before any of the body is read, so a peer without it can't make harnessd buffer or parse anything. Everything except `GET /v1/health` answers 401 without the token, including unknown paths and the generated `/docs`, `/redoc` and `/openapi.json` pages; the API's description is the checked-in OpenAPI document.
 - A token holder's body is capped too, by the bytes that arrive, so a chunked upload counts. Raise `--max-body-bytes` if your requests carry large eval datasets or inputs.
 - Treat the token like any credential: generate it per environment, keep it in a secret store, rotate it.
 - Put harnessd next to the app (a sidecar container in the same pod, or the same host), not on a shared network.

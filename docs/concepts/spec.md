@@ -59,7 +59,7 @@ Everything else has a safe default from the framework's `defaults` profile: no t
 
 ## YAML rules
 
-Specs are read as **YAML 1.2 with the core schema**, the same way in every language ([ADR-0017](../adr/0017-yaml-1-2.md)):
+Specs are read as **YAML 1.2 with the core schema**, the same way in every language:
 
 - Only `true` and `false` are booleans: `yes`, `no`, `on` and `off` stay strings.
 - There are no implicit dates or sexagesimal numbers: `2026-01-05` and `1:30` stay strings.

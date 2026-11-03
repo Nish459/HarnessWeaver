@@ -1,6 +1,6 @@
 # cel-lite expressions
 
-Policy rules, business rules, routing rules and manifest approval rules are written in **cel-lite**, a subset of Google's [Common Expression Language](https://cel.dev) built into the core ([ADR-0004](../adr/0004-cel-lite.md)). It is small, side-effect free, and behaves identically in Python and TypeScript: both pass the same `expr` fixtures. Full CEL is available for policy rules as `policy: { use: cel.policy }` from `harnessweaver-cel`.
+Policy rules, business rules, routing rules and manifest approval rules are written in **cel-lite**, a subset of Google's [Common Expression Language](https://cel.dev) built into the core. It is small, side-effect free, and behaves identically in Python and TypeScript: both pass the same `expr` fixtures. Full CEL is available for policy rules as `policy: { use: cel.policy }` from `harnessweaver-cel`.
 
 ```yaml
 policy:

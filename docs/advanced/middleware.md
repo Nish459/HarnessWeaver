@@ -19,7 +19,7 @@ async def no_weekend_refunds(event: hw.ToolCallEvent, env: hw.Envelope) -> hw.Ou
 | Argument | Meaning |
 | --- | --- |
 | `hooks` | The hook points it attaches to (`"tool.before"`, or `hw.HookPoint` values) |
-| `fail_mode` | Required: `closed` turns a raise or timeout into `Block` (`middleware_error`, `middleware_timeout`); `open` records it and continues ([ADR-0014](../adr/0014-required-fail-mode.md)) |
+| `fail_mode` | Required: `closed` turns a raise or timeout into `Block` (`middleware_error`, `middleware_timeout`); `open` records it and continues |
 | `band` | The default band (`app`); the spec item decides, and only profiles may use `baseline` |
 | `timeout` | A duration or seconds; none by default |
 | `name` | Defaults to the function's name, or a class's name in snake case; lowercase words and `_` |

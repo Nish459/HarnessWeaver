@@ -1,8 +1,8 @@
-# Tutorial - User Guide
+# Tutorial
 
-This tutorial shows you how to use HarnessWeaver with most of its features, step by step.
+This tutorial builds one app with HarnessWeaver, a feature per chapter.
 
-Each chapter builds on the previous one, but each is also written to stand on its own, so you can come back to the one you need later, as a reference.
+Each chapter builds on the one before, and each also reads on its own, so you can come back to the one you need later.
 
 ## What you'll build
 
@@ -81,8 +81,8 @@ support-desk/
   .harness/baselines/       eval baselines
 ```
 
-## Advanced User Guide
+## Advanced guide
 
-After this tutorial there is an [Advanced User Guide](../advanced/index.md). It covers what this tutorial leaves out: how specs layer and merge, the tool governor in depth, writing your own plugins, providers and middleware, TypeScript, and the harnessd sidecar.
+After this tutorial comes the [Advanced guide](../advanced/index.md). It covers what this tutorial leaves out: how specs layer and merge, the tool governor in depth, writing your own plugins, providers and middleware, TypeScript, and the harnessd sidecar.
 
 Read the tutorial first. It's enough to build a complete, governed app, and the advanced guide builds on it.

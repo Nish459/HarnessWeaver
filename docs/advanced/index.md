@@ -1,6 +1,6 @@
-# Advanced User Guide
+# Advanced guide
 
-The [Tutorial - User Guide](../tutorial/index.md) is enough to build a complete, governed app. This guide covers the rest: how specs merge in detail, the tool governor and approvals in depth, other languages, and extending HarnessWeaver with your own plugins.
+The [Tutorial](../tutorial/index.md) is enough to build a complete, governed app. This guide covers the rest: how specs merge in detail, the tool governor and approvals in depth, other languages, and extending HarnessWeaver with your own plugins.
 
 !!! tip
     Read the tutorial first. These pages build on it and assume you know its words: spec, overlay, task, runner, session, guard, hook point.
@@ -24,7 +24,7 @@ The [Tutorial - User Guide](../tutorial/index.md) is enough to build a complete,
 
 > **A module becomes a plugin by how it is designed, not by what it is called.**
 
-HarnessWeaver ships the plugins most apps need: model providers, the Pydantic AI adapter, a sandbox, OpenTelemetry export and full CEL. Anyone can build more, **in their own repository, under any package name**, and use them with no change to HarnessWeaver. First-party and third-party plugins use exactly the same contract. The plugins in this repository get no private hooks into the core, and the core registers its own built-in providers through that contract too ([ADR-0015](../adr/0015-plugins-by-design.md)).
+HarnessWeaver ships the plugins most apps need: model providers, the Pydantic AI adapter, a sandbox, OpenTelemetry export and full CEL. Anyone can build more, **in their own repository, under any package name**, and use them with no change to HarnessWeaver. First-party and third-party plugins use exactly the same contract. The plugins in this repository get no private hooks into the core, and the core registers its own built-in providers through that contract too.
 
 ### What you can add
 

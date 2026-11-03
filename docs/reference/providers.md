@@ -99,7 +99,7 @@ models:
 | `base_url`, `api_key_env` | SDK defaults | Client settings. Credentials follow the SDK's own resolution unless `api_key_env` names a variable |
 | `hold_stream` | `false` | Deliver a streamed answer's chunks only once it has finished, so nothing from a declined answer reaches the app. Output is no longer live |
 
-A request the model still declines after fallbacks ends the run `blocked` with the code `model_refusal`, and its tokens still count. Each answer's content blocks, thinking included, are replayed unchanged on the next request of a tool loop, so reasoning carries over ([ADR-0022](../adr/0022-provider-extensions.md)).
+A request the model still declines after fallbacks ends the run `blocked` with the code `model_refusal`, and its tokens still count. Each answer's content blocks, thinking included, are replayed unchanged on the next request of a tool loop, so reasoning carries over.
 
 ### Choosing a model provider
 
@@ -190,7 +190,7 @@ Proposes `block`. Stages: `input`, `output`.
 
 ### grounded.citations
 
-Checks that the output's sentences (ending at `.`, `!` or `?` and a space, or a line break) of at least `min_words` words cite a context item in square brackets, like `[help-refunds]`, and that each citation names an item the run actually retrieved ([ADR-0032](../adr/0032-grounded-citations.md)). Proposes `repair` (the model is asked to cite). Set `action: escalate` to send uncited answers to a person instead.
+Checks that the output's sentences (ending at `.`, `!` or `?` and a space, or a line break) of at least `min_words` words cite a context item in square brackets, like `[help-refunds]`, and that each citation names an item the run actually retrieved. Proposes `repair` (the model is asked to cite). Set `action: escalate` to send uncited answers to a person instead.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |

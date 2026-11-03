@@ -12,7 +12,7 @@ contracts/
 
 ## Schemas
 
-The schemas are generated from the Pydantic contract models in the Python core ([ADR-0005](../adr/0005-contracts-from-pydantic.md)) and checked in, so reviewers and other languages read the contract directly. A test fails if a checked-in schema drifts from its model. Every schema has the `$id` `urn:harnessweaver:v1:<name>`.
+The schemas are generated from the Pydantic contract models in the Python core and checked in, so reviewers and other languages read the contract directly. A test fails if a checked-in schema drifts from its model. Every schema has the `$id` `urn:harnessweaver:v1:<name>`.
 
 | Schema | Contract |
 | --- | --- |
@@ -45,7 +45,7 @@ uv run harnessweaver contracts export DIR [--check]
 
 ## The sidecar's API
 
-[`openapi/harnessd.openapi.json`](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/contracts/openapi/harnessd.openapi.json) describes every `/v1` route of harnessd ([ADR-0038](../adr/0038-harnessd.md)). It is generated from the routes and the request models in `harnessweaver.core.sidecar`, so `make schemas` writes it and `make schemas-check` reports drift. `proto/harnessweaver/v1/harnessd.proto` mirrors the same routes in its `google.api.http` options for gRPC serving later; a test fails if a route is in one and not the other. Generate a client from the OpenAPI document for any language; see [harnessd](../advanced/sidecar.md).
+[`openapi/harnessd.openapi.json`](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/contracts/openapi/harnessd.openapi.json) describes every `/v1` route of harnessd. It is generated from the routes and the request models in `harnessweaver.core.sidecar`, so `make schemas` writes it and `make schemas-check` reports drift. `proto/harnessweaver/v1/harnessd.proto` mirrors the same routes in its `google.api.http` options for gRPC serving later; a test fails if a route is in one and not the other. Generate a client from the OpenAPI document for any language; see [harnessd](../advanced/sidecar.md).
 
 ## Conformance fixtures
 

@@ -121,14 +121,14 @@ class GovernedClient:
 
 ### Agent frameworks
 
-For an agent framework, one adapter object sends each of the framework's model requests through `RunContext.generate(request, provider=...)` and each tool call through `RunContext.call_tool(call, backend=...)` ([ADR-0037](../adr/0037-framework-adapters.md)), so budgets, cost, telemetry, recording and the governor apply as they do to the harness's own runners:
+For an agent framework, one adapter object sends each of the framework's model requests through `RunContext.generate(request, provider=...)` and each tool call through `RunContext.call_tool(call, backend=...)`, so budgets, cost, telemetry, recording and the governor apply as they do to the harness's own runners:
 
 | `RunContext` method | Use |
 | --- | --- |
 | `generate(request, *, provider=None)` | One governed model call through the framework's own model |
 | `call_tool(call, *, backend=None)` | One governed tool call through the framework's own tool |
 | `approval_needed(call, reason, *, tool=None, approver_role=None)` | Turns an approval the framework asks for into the harness's own: returns the error that pauses the run (or escalates where it can't), matched to the call by name and arguments |
-| `settle_grants()` | For a runner that runs interrupted work again: says the work so far won't run again, so the approvals it spent are gone for good ([ADR-0045](../adr/0045-what-an-approval-covers.md)). A `resumable` runner needn't call it |
+| `settle_grants()` | For a runner that runs interrupted work again: says the work so far won't run again, so the approvals it spent are gone for good. A `resumable` runner needn't call it |
 | `replaying` | True during a replay. `generate` and `call_tool` then answer from the recording by themselves, ignoring `provider` and `backend`, so a replay never reaches the framework's own model or tools |
 
 `harnessweaver-pydantic-ai` is the reference: its `HarnessCapability` does this for Pydantic AI, and its runner suspends and resumes agents with Pydantic AI's deferred tools. Read its [source](https://github.com/Wise-DreamerZ/HarnessWeaver/tree/main/python/plugins/pydantic-ai) before writing another.

@@ -27,7 +27,7 @@ The invariants that protect the framework's promises to the teams that adopt it 
 | R13 | Every decision is observable |
 | R14 | Everything runs offline |
 
-Every decision with a reason a future contributor would otherwise have to rediscover is an [architecture decision record](../adr/index.md).
+Every decision with a reason a future contributor would otherwise have to rediscover is an architecture decision record, indexed in [DESIGNS.md No. 28](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/DESIGNS.md#28-architecture-decision-records).
 
 ## Future
 

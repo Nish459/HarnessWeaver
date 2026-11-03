@@ -49,8 +49,9 @@ Each architecture decision record (ADR) states a decision HarnessWeaver made, wh
 | [ADR-0039](0039-gateways-and-dev-stack.md) | Gateway configs and the local dev stack | Accepted |
 | [ADR-0040](0040-typescript-sdk.md) | The TypeScript SDK | Accepted |
 | [ADR-0041](0041-docs-site.md) | The docs site: MkDocs and Material | Accepted |
-| [ADR-0042](0042-docs-structure.md) | The docs follow FastAPI's structure, with tested tutorial code | Accepted |
+| [ADR-0042](0042-docs-structure.md) | The docs' structure, with tested tutorial code | Accepted; amended by ADR-0047 |
 | [ADR-0043](0043-profile-ownership.md) | Profiles an app's team can write merge after the platform's | Accepted |
 | [ADR-0044](0044-answers-claim-the-approval.md) | An answer claims the approval before it resumes the run | Accepted |
 | [ADR-0045](0045-what-an-approval-covers.md) | What an approval covers: one execution, by the role that step needs | Accepted |
-| [ADR-0046](0046-landing-page.md) | The website: a landing page at the root, the docs under /docs/ | Accepted |
+| [ADR-0046](0046-landing-page.md) | The website: a landing page at the root, the docs under /docs/ | Accepted; amended by ADR-0047 |
+| [ADR-0047](0047-docs-for-users.md) | The docs site leaves out the ADRs and outside inspirations | Accepted |

@@ -1,6 +1,6 @@
 # TypeScript
 
-`@harnessweaver/core` is a native TypeScript port of the core: it loads the same `harness.yaml` (layers, locks, bounds, built-in and org profiles, overlays, levels) and runs the same hook bus, budgets and cost, guards, cel-lite policy and rules, routing, tool governor, context governance, prompts and eval graders, held to the same language-neutral fixtures as Python (RULES R11, [ADR-0040](../adr/0040-typescript-sdk.md)). `@harnessweaver/ai-sdk` governs Vercel AI SDK (v7) models with it.
+`@harnessweaver/core` is a native TypeScript port of the core: it loads the same `harness.yaml` (layers, locks, bounds, built-in and org profiles, overlays, levels) and runs the same hook bus, budgets and cost, guards, cel-lite policy and rules, routing, tool governor, context governance, prompts and eval graders, held to the same language-neutral fixtures as Python (RULES R11). `@harnessweaver/ai-sdk` governs Vercel AI SDK (v7) models with it.
 
 TypeScript runs the **Session** style: your code owns the flow, and the harness governs each step. Model calls are your AI SDK model's, wrapped with `wrapModel`.
 

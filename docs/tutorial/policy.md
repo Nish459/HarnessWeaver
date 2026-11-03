@@ -48,7 +48,7 @@ The $900 refund never reached the tool: the governor stopped it at step 3, and t
 
 ## How rules combine
 
-Every policy engine combines the rules the same way ([ADR-0025](../adr/0025-governor-placement.md)):
+Every policy engine combines the rules the same way:
 
 1. Take the rules whose `when` is true.
 2. `deny` beats `require_approval`, which beats `allow`. Among rules with the same effect, the first one decides, and its `id` and `reason` are reported.

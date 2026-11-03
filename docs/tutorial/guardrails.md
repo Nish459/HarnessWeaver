@@ -75,7 +75,7 @@ added guardrails.input[injection-heuristic] (injection.heuristic) in shadow mode
   promote it with mode: enforce once the eval shadow report backs it (R8)
 ```
 
-[Evals](evals.md) shows the evidence: how often each shadow guard would fire, with its false positives and misses. Guards you write in a spec yourself enforce by default, so a baseline enforces exactly what it says ([ADR-0008](../adr/0008-guard-modes.md)).
+[Evals](evals.md) shows the evidence: how often each shadow guard would fire, with its false positives and misses. Guards you write in a spec yourself enforce by default, so a baseline enforces exactly what it says.
 
 ## How the guards run
 

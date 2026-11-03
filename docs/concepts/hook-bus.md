@@ -86,7 +86,7 @@ async def no_weekend_refunds(event: hw.ToolCallEvent, env: hw.Envelope) -> hw.Ou
 | Argument | Meaning |
 | --- | --- |
 | `hooks` | The hook points it attaches to. A spec item can narrow them, never widen them |
-| `fail_mode` | Required: `closed` (a raise or timeout blocks) or `open` (it is recorded and the run continues) (ADR-0014) |
+| `fail_mode` | Required: `closed` (a raise or timeout blocks) or `open` (it is recorded and the run continues) |
 | `band` | The default band; the spec item decides |
 | `timeout` | A duration (`"2s"`, `"250ms"`) or seconds; none by default |
 | `name` | Defaults to the function's name, or the class name in snake case |

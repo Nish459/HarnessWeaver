@@ -43,7 +43,7 @@ spec:
 | --- | --- | --- | --- |
 | `transport` | `native`, `http`, `code`, `mcp` | `native` | How the tool is reached (below) |
 | `description` | string | `""` | What the model is told the tool does |
-| `input_schema` | JSON Schema | `{type: object}` | The arguments, checked at governor step 2. The subset in [ADR-0026](../adr/0026-json-schema-subset.md) |
+| `input_schema` | JSON Schema | `{type: object}` | The arguments, checked at governor step 2. The subset in [Schema validation](../advanced/governor.md#schema-validation) |
 | `definition_digest` | `sha256:<hex>` | none | Pins `{name, description, input_schema}`; a mismatch blocks every call (rug-pull defense) |
 | `handler` | import path | none | `native`: the function to call; required in a manifest file |
 | `url` | URL | none | `http`: where the arguments are POSTed; required for `http` |
@@ -78,14 +78,14 @@ spec:
 | --- | --- | --- |
 | `native` | `handler`, imported when the harness loads, sync or async, with the arguments as keyword arguments | A handler that takes an `idempotency_key` argument receives the call's key |
 | `http` | POSTs the arguments as JSON to `url` | Headers from `headers_env`; an `Idempotency-Key` header; refuses to call out in test mode (R14) |
-| `code` | Runs the code in `code_arg` in the named `Sandbox`, with the other arguments as globals, never in the host process | Needs a sandbox plugin such as `harnessweaver-monty` ([ADR-0027](../adr/0027-code-transport.md)) |
+| `code` | Runs the code in `code_arg` in the named `Sandbox`, with the other arguments as globals, never in the host process | Needs a sandbox plugin such as `harnessweaver-monty` |
 | `mcp` | *Planned* | The harness refuses to load an `mcp` tool for now; `harnessweaver gateway mcp` already lists it for an MCP gateway |
 
 ## Digests
 
 `definition_digest` is `sha256:` followed by the hex SHA-256 of the canonical JSON of `{name, description, input_schema}`: keys sorted, no spaces, non-ASCII characters escaped, integral numbers written as integers (fixtures suite `governor`, so Python and TypeScript agree).
 
-- A manifest whose pin doesn't match its definition still loads, and **every call to it is blocked** with `digest_mismatch`, so a tool changed without review can't run ([ADR-0028](../adr/0028-manifests-for-code-tools.md)).
+- A manifest whose pin doesn't match its definition still loads, and **every call to it is blocked** with `digest_mismatch`, so a tool changed without review can't run.
 - `harnessweaver doctor` fails a mismatched pin and warns about unpinned manifests, printing the digest to pin.
 - `harnessweaver tools pin` writes each manifest's current digest into it, keeping comments; `--tool NAME` pins one.
 - `hw.definition_digest(name, description, input_schema)` computes it in code.

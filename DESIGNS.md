@@ -63,8 +63,6 @@ HarnessWeaver is a **framework that produces harnesses**. It is not one central 
 - **The platform or security team ships:** an org baseline profile (mandatory controls, locked values, bounds) and approved plugins.
 - **Each app team writes:** a `harness.yaml`, its prompts, its tools and any app-specific plugins. It keeps whatever executor it already uses: raw SDK calls, Pydantic AI, LangGraph or a custom loop.
 
-The closest analogies are **OpenTelemetry** (a tiny stable API, swappable implementations, contributed integrations) and **Spring Boot** (starters and opinionated defaults that work with zero config and can be overridden piece by piece).
-
 ## 2. Brand, names and packages
 
 The design guide used the working name `harnesskit`. That name is taken on PyPI and npm by unrelated projects, so the framework ships as **HarnessWeaver** (ADR-0001).
@@ -1204,7 +1202,7 @@ flowchart BT
     side -. exports openapi .-> contracts
 ```
 
-The repository is a **uv workspace** (Python) plus a **pnpm workspace** (TypeScript, rooted in `typescript/`, which also holds Example 04), sharing one `contracts/` directory. The docs site is built from `docs/` and `mkdocs.yml`, with its tools in the uv workspace's `docs` dependency group (ADR-0041); it follows FastAPI's structure, and the code its tutorial shows lives in `docs_src/`, run by the tests (ADR-0042). The core declares extras that pull in first-party plugins (`harnessweaver[openai]`, `harnessweaver[all]`). Plugins built outside this repository need nothing from it except the public extension surface (No. 13).
+The repository is a **uv workspace** (Python) plus a **pnpm workspace** (TypeScript, rooted in `typescript/`, which also holds Example 04), sharing one `contracts/` directory. The docs site is built from `docs/` and `mkdocs.yml`, with its tools in the uv workspace's `docs` dependency group (ADR-0041); the code its tutorial shows lives in `docs_src/`, run by the tests (ADR-0042). The core declares extras that pull in first-party plugins (`harnessweaver[openai]`, `harnessweaver[all]`). Plugins built outside this repository need nothing from it except the public extension surface (No. 13).
 
 ```
 python/harnessweaver/                 python/plugins/<name>/   (harnessweaver-<name>)
@@ -1242,7 +1240,7 @@ Each package is released on its own, from a Git tag `<package>@<version>` (`harn
 
 ## 28. Architecture decision records
 
-Each ADR records a decision, the reason for it, and its status, in its own file under [`docs/adr/`](docs/adr/) (also part of the docs site). This table indexes them. A new decision adds a file and a row here; a changed decision adds a new ADR that supersedes the old one, whose status then says so.
+Each ADR records a decision, the reason for it, and its status, in its own file under [`docs/adr/`](docs/adr/), which the docs site leaves out (ADR-0047). This table indexes them. A new decision adds a file and a row here; a changed decision adds a new ADR that supersedes the old one, whose status then says so.
 
 | ADR | Decision | Status |
 | --- | --- | --- |
@@ -1287,11 +1285,12 @@ Each ADR records a decision, the reason for it, and its status, in its own file 
 | [0039](docs/adr/0039-gateways-and-dev-stack.md) | Gateway configs and the local dev stack | Accepted |
 | [0040](docs/adr/0040-typescript-sdk.md) | The TypeScript SDK | Accepted |
 | [0041](docs/adr/0041-docs-site.md) | The docs site: MkDocs and Material | Accepted |
-| [0042](docs/adr/0042-docs-structure.md) | The docs follow FastAPI's structure, with tested tutorial code | Accepted |
+| [0042](docs/adr/0042-docs-structure.md) | The docs' structure, with tested tutorial code | Accepted; amended by 0047 |
 | [0043](docs/adr/0043-profile-ownership.md) | Profiles an app's team can write merge after the platform's | Accepted |
 | [0044](docs/adr/0044-answers-claim-the-approval.md) | An answer claims the approval before it resumes the run | Accepted |
 | [0045](docs/adr/0045-what-an-approval-covers.md) | What an approval covers: one execution, by the role that step needs | Accepted |
-| [0046](docs/adr/0046-landing-page.md) | The website: a landing page at the root, the docs under /docs/ | Accepted |
+| [0046](docs/adr/0046-landing-page.md) | The website: a landing page at the root, the docs under /docs/ | Accepted; amended by 0047 |
+| [0047](docs/adr/0047-docs-for-users.md) | The docs site leaves out the ADRs and outside inspirations | Accepted |
 
 ## 29. Deviations from the design guide
 

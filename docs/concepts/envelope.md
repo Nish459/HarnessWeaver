@@ -86,7 +86,7 @@ A runner or adapter must reach `model.before` and `model.after` when a model lim
 
 ### Cost
 
-There is no built-in price table, because hard-coded prices go stale and mislead ([ADR-0012](../adr/0012-no-price-table.md)). A call's cost is resolved in this order:
+There is no built-in price table, because hard-coded prices go stale and mislead. A call's cost is resolved in this order:
 
 1. The cost the provider reports, such as LiteLLM's `x-litellm-response-cost` header (read by `openai.chat`).
 2. The spec's `models.prices`, per model, in USD per million tokens:

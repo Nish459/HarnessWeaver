@@ -234,8 +234,8 @@ client = harness.instrument(AsyncOpenAI(base_url=GATEWAY))    # 3
 
 ## Where next
 
-- [Tutorial - User Guide](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/tutorial/index.md): one app built chapter by chapter, with every feature.
+- [Tutorial](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/tutorial/index.md): one app built chapter by chapter, with every feature.
 - [Concepts](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/concepts/index.md): hook points, the hook bus, outcomes, the envelope and the integration styles.
 - [The spec](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/concepts/spec.md): every section of `harness.yaml`, layering, locks and bounds.
 - [Examples](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/resources/examples.md): a RAG support assistant, a tool-using agent with approvals, and the same spec from TypeScript and over HTTP.
-- [Advanced User Guide](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/advanced/index.md): your own guards, middleware and plugins.
+- [Advanced guide](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/advanced/index.md): your own guards, middleware and plugins.

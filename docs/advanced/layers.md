@@ -36,7 +36,7 @@ flowchart TD
 
 A profile is **app-owned** when the app's team can write it: it's in `.harness/profiles/` next to the app spec, or it's a file named by the app spec or by another app-owned profile. Everything else belongs to the platform: a directory on `--profile-dir` or `HARNESSWEAVER_PROFILE_PATH`, a plugin's profile, and a file a platform profile names.
 
-**App-owned profiles merge after the platform's**, whatever order `extends` lists them in, so the platform's locks bind them ([ADR-0043](../adr/0043-profile-ownership.md)). This protects a baseline that reaches the app through the platform's channels. A baseline in the app's own repository, or one the app names by file path, has no boundary to protect, because its team can edit it.
+**App-owned profiles merge after the platform's**, whatever order `extends` lists them in, so the platform's locks bind them. This protects a baseline that reaches the app through the platform's channels. A baseline in the app's own repository, or one the app names by file path, has no boundary to protect, because its team can edit it.
 
 ## Profiles
 
@@ -98,7 +98,7 @@ locks:
 | A keyed list `path` | The list can't change or grow |
 | Wildcards | `*` matches any map key (`tasks.*.budget`), `[*]` any item. They cover items and keys added later, so `guardrails.input[*]` stops apps adding to that list, and `tasks.*.budget` stops apps setting a budget on a new task. Use exact ids to lock only the baseline's own items |
 
-A lock forbids *changing* a value, not restating it: an app may repeat a locked value for readability ([ADR-0018](../adr/0018-locks-and-bounds.md)). A layer's own locks bind only the layers after it. Breaking a lock fails loading with `LockViolation`, naming the path and the layer that tried.
+A lock forbids *changing* a value, not restating it: an app may repeat a locked value for readability. A layer's own locks bind only the layers after it. Breaking a lock fails loading with `LockViolation`, naming the path and the layer that tried.
 
 A locked guard declared `where: sidecar` also needs a lock covering `sidecar.url`, or loading fails: otherwise a later layer could point the guard at a server that allows everything.
 

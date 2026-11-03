@@ -75,11 +75,11 @@ Settings arrive validated: the spec item's keys that HarnessWeaver doesn't own (
 The method signatures are in `harnessweaver.ports`, typed; check whether each is sync or async there. A few notes per port:
 
 - **Guardrail.** Return `GuardResult.allow()`, `redact(content, findings=...)`, `block(reason, findings=...)`, `repair(...)`, `escalate(...)` or `require_approval(...)`. Mark personal data findings `private=True`, so the run's `private_seen` label is set (S3). Reasons and findings name types, never the content (R9). See [Guardrails](providers.md#example-a-guard).
-- **ContextProvider.** Return only what the envelope's tenant and principal may see; the harness re-checks ACLs anyway ([ADR-0030](../adr/0030-context-governance.md)).
-- **ModelProvider.** Take and return only neutral contracts (R7); put a provider's own per-turn data in `ModelResponse.extensions` ([ADR-0022](../adr/0022-provider-extensions.md)); turn client errors into `ProviderError`; refuse the network in test mode (`harnessweaver.ports.network_allowed()`); report cost in `cost_usd` when the API gives it; build clients with retries off when a gateway owns them (R5).
+- **ContextProvider.** Return only what the envelope's tenant and principal may see; the harness re-checks ACLs anyway.
+- **ModelProvider.** Take and return only neutral contracts (R7); put a provider's own per-turn data in `ModelResponse.extensions`; turn client errors into `ProviderError`; refuse the network in test mode (`harnessweaver.ports.network_allowed()`); report cost in `cost_usd` when the API gives it; build clients with retries off when a gateway owns them (R5).
 - **PolicyEngine.** Combine `policy.rules` exactly as `decide_by_rules` does ([Policy](../tutorial/policy.md#how-rules-combine)); declare `deterministic=True`.
 - **Evaluator.** Score 1 or 0 for a deterministic grader. Give the config model a `SHORTHAND: ClassVar[str | None]` naming the field a single value fills, so `{field_equals: total}` works like `{field_equals: {field: total}}`.
-- **StateStore.** Pass the conformance suite's round-trip contract; `claim_idempotency` and `claim_approval` must be atomic, across processes for a store they share ([ADR-0044](../adr/0044-answers-claim-the-approval.md)).
+- **StateStore.** Pass the conformance suite's round-trip contract; `claim_idempotency` and `claim_approval` must be atomic, across processes for a store they share.
 
 ## Functions as providers
 

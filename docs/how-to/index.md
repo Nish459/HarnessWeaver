@@ -1,6 +1,6 @@
-# How To - Recipes
+# Recipes
 
-Short, focused recipes for specific jobs. Each assumes you know the [Tutorial - User Guide](../tutorial/index.md).
+Short recipes for specific jobs. Each assumes you know the [Tutorial](../tutorial/index.md).
 
 | Recipe | For |
 | --- | --- |

@@ -51,7 +51,7 @@ See [Guardrails](../tutorial/guardrails.md).
 | `Suspend` | `status == "awaiting_approval"`, `RunResult.approval` holds the request | `RunEscalated` (a session can't be resumed) |
 | A failed repair | `blocked` or `escalated`, as `validation.on_failure` says, code `validation_failed` | `s.generate(output=...)` repairs by itself, then raises `RunBlocked` or `RunEscalated`; `s.validate(...)` raises `ValidationFailed` at the first repair request, for your code to handle |
 
-`RunBlocked`, `RunEscalated` and `RunSuspended` all derive from `RunInterrupted`, so a session can catch one class ([ADR-0020](../adr/0020-halting-errors.md)):
+`RunBlocked`, `RunEscalated` and `RunSuspended` all derive from `RunInterrupted`, so a session can catch one class:
 
 ```python
 from harnessweaver.errors import RunInterrupted

@@ -131,7 +131,7 @@ Each rule:
 | Field | Type | Default | Meaning |
 | --- | --- | --- | --- |
 | `id` | string | `rule#<n>` | Names the rule (`validation.rules[<id>]`) |
-| `when` | expression | required | Over `output`, `input` and `task`. **True means the output breaks the rule**; an expression that can't be evaluated counts as broken ([ADR-0023](../adr/0023-validation-rule-when.md)) |
+| `when` | expression | required | Over `output`, `input` and `task`. **True means the output breaks the rule**; an expression that can't be evaluated counts as broken |
 | `message` | string | required | Sent to the model with the repair request |
 
 ## tools
@@ -308,7 +308,7 @@ Prompt files are named `<name>@<version>.md` (or `.txt`), or `<name>.md` without
 | `support_answer@4` | The file named `support_answer@4.md`, or else the highest `4.x.y` |
 | `support_answer` | The highest version, or the unversioned `support_answer.md` |
 
-Placeholders are `{name}`, filled with `str.format_map` semantics; `{{` and `}}` are literal braces. There is no template language ([ADR-0013](../adr/0013-prompts-without-templates.md)); a missing variable is an error. Render one with `s.prompt("support_answer@4", question=...)`, or name it in a task's `prompt`.
+Placeholders are `{name}`, filled with `str.format_map` semantics; `{{` and `}}` are literal braces. There is no template language; a missing variable is an error. Render one with `s.prompt("support_answer@4", question=...)`, or name it in a task's `prompt`.
 
 ## sidecar
 

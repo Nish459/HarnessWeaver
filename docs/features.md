@@ -12,7 +12,7 @@ HarnessWeaver gives you the controls every AI application needs around its model
 - A safe subset of [**CEL**](https://cel.dev/) for every rule, the same in Python and TypeScript.
 - **YAML 1.2** with the core schema, so `yes` and `2026-01-05` mean the same thing in every language.
 
-### Declare the controls, not the plumbing
+### Controls in the spec
 
 | Control | How it works | Read more |
 | --- | --- | --- |
@@ -59,9 +59,9 @@ Every spec section is a JSON Schema, so the YAML language server autocompletes a
 
 Everything runs offline, against fakes, with no network and no model spend. Test mode makes live providers refuse to call out, so a test can never spend money. The test kit gives you scripted models, fake tools, trace assertions, leak checks and cassettes ([Testing](tutorial/testing.md)), and every plugin can run the conformance suite the first-party plugins pass.
 
-### Unlimited plugins
+### Plugins
 
-A module becomes a plugin by how it is designed, not by what it is called. Anyone can write providers, middleware, routing stages, runners, adapters, profiles and templates in their own repository, under any package name, with exactly the contract the first-party plugins use ([Extending](advanced/index.md#extending-harnessweaver)).
+Anyone can write providers, middleware, routing stages, runners, adapters, profiles and templates in their own repository, under any package name, with exactly the contract the first-party plugins use ([Extending](advanced/index.md#extending-harnessweaver)).
 
 ### A small core
 

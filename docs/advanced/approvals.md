@@ -27,7 +27,7 @@ state: { use: sqlite }              # so waiting runs survive a restart
 
 ## Grants
 
-An approval becomes a **grant** that matches the call by tool name and arguments, or the output by its content. When the resumed run repeats that call, it carries the approval into `tool.before` as `event.approval`, so middleware doesn't ask again (but still sees edited arguments). ([ADR-0045](../adr/0045-what-an-approval-covers.md)) An approved output carries it into `output.before`, where it answers guards that ask for approval: the guard lets it through and adds a `guard_approved` note naming the guard and the approver (R13).
+An approval becomes a **grant** that matches the call by tool name and arguments, or the output by its content. When the resumed run repeats that call, it carries the approval into `tool.before` as `event.approval`, so middleware doesn't ask again (but still sees edited arguments). An approved output carries it into `output.before`, where it answers guards that ask for approval: the guard lets it through and adds a `guard_approved` note naming the guard and the approver (R13).
 
 One approval answers every request for approval at that step, and nothing else. It never turns a block, an escalation or a repair into an allow, redactions still chain, and shadow guards still record. A rejection is never a grant.
 
@@ -48,11 +48,9 @@ If the first approver edited the arguments, the second request shows the edited 
 
 ### Concurrent answers
 
-One answer wins ([ADR-0044](../adr/0044-answers-claim-the-approval.md)). If two answers to one request race, from a double submit, a relay's retry or two approvers, even in separate processes on one state file, exactly one resumes the run. The other gets `NotFound` (HTTP 404 from harnessd) and leaves nothing behind, and the run's stored status matches the winner. An answer that arrives while this process is still suspending the run gets `NotFound` too, and can be sent again.
+One answer wins. If two answers to one request race, from a double submit, a relay's retry or two approvers, even in separate processes on one state file, exactly one resumes the run. The other gets `NotFound` (HTTP 404 from harnessd) and leaves nothing behind, and the run's stored status matches the winner. An answer that arrives while this process is still suspending the run gets `NotFound` too, and can be sent again.
 
 ## How runs resume
-
-([ADR-0021](../adr/0021-resuming-approved-steps.md))
 
 | Runner | Resumes |
 | --- | --- |

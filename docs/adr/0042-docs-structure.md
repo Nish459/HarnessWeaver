@@ -1,10 +1,10 @@
-# ADR-0042: The docs follow FastAPI's structure, with tested tutorial code
+# ADR-0042: The docs' structure, with tested tutorial code
 
-**Status:** Accepted
+**Status:** Accepted. Amended by [ADR-0047](0047-docs-for-users.md).
 
 ## Decision
 
-The docs site keeps MkDocs and Material ([ADR-0041](0041-docs-site.md)) and takes its structure from the FastAPI documentation:
+The docs site keeps MkDocs and Material ([ADR-0041](0041-docs-site.md)) and has this structure:
 
 - **Top-level tabs:** Home, Features, Learn, Reference, Resources, About and Release Notes. Learn holds the concepts, a step-by-step **Tutorial - User Guide**, an **Advanced User Guide**, the CLI, **Deployment** and **How To - Recipes**.
 - **One running example.** The tutorial builds one app, a support desk, chapter by chapter. Each chapter ends with a Recap. The code each chapter shows lives in `docs_src/tutorial/`: a folder per chapter holds the project as it stands at the end of that chapter (its specs, prompts, manifests and datasets), and the shared Python package `helpdesk` holds its code. The pages include these files with `pymdownx.snippets`, and `docs_src/tests/` runs each chapter offline, so the code in the tutorial is tested code (RULES D3, T6).
@@ -15,8 +15,8 @@ The docs site keeps MkDocs and Material ([ADR-0041](0041-docs-site.md)) and take
 
 ## Why
 
-A reader of FastAPI's docs learns by building one app in small steps, finds every detail in a reference, and finds the background, deployment and project pages in predictable places. The user asked for the same structure. A tutorial whose code is run by the test suite can't drift from the framework, which hand-written snippets do.
+A reader learns by building one app in small steps, finds every detail in a reference, and finds the background, deployment and project pages in predictable places. A tutorial whose code is run by the test suite can't drift from the framework, which hand-written snippets do.
 
-mkdocstrings is the standard way to document a Python API from its docstrings in MkDocs, and FastAPI uses it for its own Reference. Every module already has Google-style docstrings (RULES C9), so the reference costs no extra writing and can't drift from the code. It lives in the `docs` dependency group, like Material, so no published package depends on it (R6, C10).
+mkdocstrings is the standard way to document a Python API from its docstrings in MkDocs. Every module already has Google-style docstrings (RULES C9), so the reference costs no extra writing and can't drift from the code. It lives in the `docs` dependency group, like Material, so no published package depends on it (R6, C10).
 
-termynal is a single small script and stylesheet with no dependencies of its own. Vendoring it avoids a JavaScript build step for the docs. Loading it from a CDN would make the site depend on a third party at runtime. FastAPI uses the same library.
+termynal is a single small script and stylesheet with no dependencies of its own. Vendoring it avoids a JavaScript build step for the docs. Loading it from a CDN would make the site depend on a third party at runtime.

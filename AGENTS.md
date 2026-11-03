@@ -56,10 +56,10 @@ This file is for AI coding agents (and humans) working **on** the HarnessWeaver 
 |-- .github/                        # CI and release workflows, pull request template
 |-- docs_src/                       # the code the docs show, run by docs_src/tests (ADR-0042): tutorial/<chapter>/
 |                                   #   is the tutorial's project at the end of each chapter, home/ the home page example
-`-- docs/                           # the docs site, structured like FastAPI's (ADR-0042): tutorial/, advanced/, concepts/,
-                                    #   reference/ (with python/, the generated API), deployment/, how-to/, resources/,
-                                    #   about/, adr/ (one file per ADR); its theme (stylesheets/, javascripts/ with the
-                                    #   vendored termynal, assets/logo.svg), the design guide and assets
+`-- docs/                           # the docs site (ADR-0042): tutorial/, advanced/, concepts/, reference/ (with
+                                    #   python/, the generated API), deployment/, how-to/, resources/, about/; its theme
+                                    #   (stylesheets/, javascripts/ with the vendored termynal, assets/logo.svg) and assets.
+                                    #   Also adr/ (one file per ADR) and the design guide, both left out of the site
 ```
 
 ## Setup and commands
@@ -158,7 +158,7 @@ flowchart LR
 5. Update DESIGNS.md, the docs page and the changed packages' `CHANGELOG.md` files.
 
 ### Add a module (new port)
-Platform-level decision. Write an ADR first (a file in `docs/adr/`, a row in DESIGNS.md No. 28 and an entry in `mkdocs.yml`'s `nav`), covering the port, default provider, hook points, config schema, failure modes, telemetry and tests. Then give the module a tutorial chapter (`docs/tutorial/`, its code tested in `docs_src/tutorial/`), its settings in `docs/reference/providers.md`, and a row in `docs/reference/modules.md`.
+Platform-level decision. Write an ADR first (a file in `docs/adr/` and a row in DESIGNS.md No. 28), covering the port, default provider, hook points, config schema, failure modes, telemetry and tests. Then give the module a tutorial chapter (`docs/tutorial/`, its code tested in `docs_src/tutorial/`), its settings in `docs/reference/providers.md`, and a row in `docs/reference/modules.md`.
 
 ### Add a plugin
 A plugin is defined by its design, not its name (DESIGNS No. 13, ADR-0015). First-party plugins use exactly the contract that third-party plugins use; never give them private access to core internals.
@@ -185,7 +185,8 @@ A plugin is defined by its design, not its name (DESIGNS No. 13, ADR-0015). Firs
 
 - Diagrams are Mermaid, next to the text (D2), and use only keyboard characters (D5). Never document an API that doesn't exist without marking it *planned* (D3).
 - `make docs` builds the site strictly: a broken link or anchor, or a page missing from `mkdocs.yml`'s `nav`, fails it. `QUICKSTART.md`, `CONTRIBUTING.md`, `SECURITY.md` and every `CHANGELOG.md` are included in the site, so links in them must be absolute URLs.
-- A new ADR is a file `docs/adr/NNNN-slug.md` plus a row in DESIGNS.md No. 28 and an entry in `mkdocs.yml`'s `nav`.
+- A new ADR is a file `docs/adr/NNNN-slug.md` plus a row in DESIGNS.md No. 28. ADRs stay out of the docs site, and site pages don't link to them (ADR-0047).
+- Don't name another product as a model or an inspiration for HarnessWeaver or its docs. Alternatives and competitors are named on `docs/about/alternatives.md`, with how HarnessWeaver differs from each. Elsewhere, name a product only where HarnessWeaver works with it: a plugin, an adapter, a generated config, something the reader installs or configures, or a *planned* integration (ADR-0047).
 - The tutorial's code lives in `docs_src/tutorial/<chapter>/` and pages include it with `--8<--` snippets, so it is never copied by hand. Change the code there, run `uv run pytest docs_src/tests`, and paste any changed output into the page: the tests check that each chapter prints what its page shows.
 - The Python API reference (`docs/reference/python/`) is generated from docstrings by mkdocstrings, so a public function's docstring is its documentation.
 - Every public change updates the relevant doc and the `CHANGELOG.md` of each package it changes (D1). A new package gets its own, and a page under `docs/release-notes/` in `mkdocs.yml`'s `nav`.

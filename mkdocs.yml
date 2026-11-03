@@ -15,9 +15,11 @@ docs_dir: docs
 # (ADR-0046): the docs build into site/docs/, and the hook copies website/ to site/.
 site_dir: site/docs
 # The design guide is the source document and is never edited (RULES D4); the site
-# links to it on GitHub instead of rendering it.
+# links to it on GitHub instead of rendering it. The ADRs are for contributors and
+# stay out of the site too (ADR-0047); DESIGNS.md No. 28 indexes them.
 exclude_docs: |
   AI Harness Framework Design and Build Guide.*
+  /adr/
   /assets/roadmap.png
   .claude/
 
@@ -145,7 +147,7 @@ nav:
       - Envelope, labels and budgets: concepts/envelope.md
       - Integration styles: concepts/integration-styles.md
       - Adoption levels: concepts/adoption-levels.md
-      - Tutorial - User Guide:
+      - Tutorial:
           - tutorial/index.md
           - First steps: tutorial/first-steps.md
           - Models and environments: tutorial/models.md
@@ -166,7 +168,7 @@ nav:
           - Testing: tutorial/testing.md
           - Evals: tutorial/evals.md
           - Debugging: tutorial/debugging.md
-      - Advanced User Guide:
+      - Advanced guide:
           - advanced/index.md
           - Layers, locks and bounds: advanced/layers.md
           - The tool governor: advanced/governor.md
@@ -181,11 +183,11 @@ nav:
       - HarnessWeaver CLI: cli.md
       - Deployment:
           - deployment/index.md
-          - About versions: deployment/versions.md
+          - Versioning: deployment/versions.md
           - Configuration: deployment/configuration.md
           - Gateways and the dev stack: deployment/gateways.md
           - Security: deployment/security.md
-      - How To - Recipes:
+      - Recipes:
           - how-to/index.md
           - Govern an existing client: how-to/wrap-a-client.md
           - Write an org baseline: how-to/org-baseline.md
@@ -212,63 +214,15 @@ nav:
           - Testing: reference/python/testing.md
   - Resources:
       - resources/index.md
-      - Help HarnessWeaver - Get Help: resources/help.md
+      - Get help: resources/help.md
       - Examples: resources/examples.md
       - Project templates: resources/templates.md
       - Contributing: resources/contributing.md
       - Security policy: resources/security.md
   - About:
       - about/index.md
-      - Alternatives, inspiration and comparisons: about/alternatives.md
+      - Alternatives and comparisons: about/alternatives.md
       - History, design and future: about/design.md
-      - Architecture decisions:
-          - adr/index.md
-          - "ADR-0001: Ship as HarnessWeaver": adr/0001-ship-as-harnessweaver.md
-          - "ADR-0002: Support Python 3.12 and later": adr/0002-python-312.md
-          - "ADR-0003: The core's dependencies": adr/0003-core-dependencies.md
-          - "ADR-0004: cel-lite, the built-in expression language": adr/0004-cel-lite.md
-          - "ADR-0005: Contracts are Pydantic models; schemas are generated": adr/0005-contracts-from-pydantic.md
-          - "ADR-0006: One uv workspace of separate packages": adr/0006-workspace-packages.md
-          - "ADR-0007: The sidecar speaks HTTP/JSON first": adr/0007-sidecar-http-first.md
-          - "ADR-0008: Spec guards enforce by default; the CLI scaffolds shadow guards": adr/0008-guard-modes.md
-          - "ADR-0009: Durability starts as state-store checkpoints": adr/0009-durability-checkpoints.md
-          - "ADR-0010: The core uses only the OpenTelemetry API": adr/0010-otel-api-only.md
-          - "ADR-0011: The direct runner's bounded tool loop": adr/0011-bounded-tool-loop.md
-          - "ADR-0012: No built-in price table": adr/0012-no-price-table.md
-          - "ADR-0013: Versioned prompts without a template language": adr/0013-prompts-without-templates.md
-          - "ADR-0014: A middleware's fail_mode is required": adr/0014-required-fail-mode.md
-          - "ADR-0015: Plugins are defined by design, not by name": adr/0015-plugins-by-design.md
-          - "ADR-0016: Dependencies outside the core": adr/0016-non-core-dependencies.md
-          - "ADR-0017: Specs are YAML 1.2 (core schema)": adr/0017-yaml-1-2.md
-          - "ADR-0018: Locks forbid changes, not restatements; bounds accumulate": adr/0018-locks-and-bounds.md
-          - "ADR-0019: One models section": adr/0019-one-models-section.md
-          - "ADR-0020: Halting outcomes raise RunInterrupted errors": adr/0020-halting-errors.md
-          - "ADR-0021: How approved steps resume": adr/0021-resuming-approved-steps.md
-          - "ADR-0022: Provider extensions on messages and responses": adr/0022-provider-extensions.md
-          - "ADR-0023: A validation rule's when describes a violation": adr/0023-validation-rule-when.md
-          - "ADR-0024: Logging through loguru": adr/0024-loguru.md
-          - "ADR-0025: Where the governor runs, and one way to combine policy rules": adr/0025-governor-placement.md
-          - "ADR-0026: A JSON Schema subset validator in the core": adr/0026-json-schema-subset.md
-          - "ADR-0027: Code-executing tools use transport: code": adr/0027-code-transport.md
-          - "ADR-0028: Tools given in code carry manifests; stale pins block calls": adr/0028-manifests-for-code-tools.md
-          - "ADR-0029: Routing cascades and shared text scoring": adr/0029-routing-cascade.md
-          - "ADR-0030: Context governance runs before context.after": adr/0030-context-governance.md
-          - "ADR-0031: A namespaced memory store, not a memory model": adr/0031-namespaced-memory.md
-          - "ADR-0032: The grounded.citations guard": adr/0032-grounded-citations.md
-          - "ADR-0033: Eval datasets and graders": adr/0033-eval-datasets.md
-          - "ADR-0034: Eval baselines, exit codes and online sampling": adr/0034-baselines-and-online-evals.md
-          - "ADR-0035: Recording and replaying runs": adr/0035-record-and-replay.md
-          - "ADR-0036: Governor dry runs and guard firing notes": adr/0036-dry-runs-and-guard-notes.md
-          - "ADR-0037: One adapter object per agent framework": adr/0037-framework-adapters.md
-          - "ADR-0038: harnessd serves one spec over /v1": adr/0038-harnessd.md
-          - "ADR-0039: Gateway configs and the local dev stack": adr/0039-gateways-and-dev-stack.md
-          - "ADR-0040: The TypeScript SDK": adr/0040-typescript-sdk.md
-          - "ADR-0041: The docs site: MkDocs and Material": adr/0041-docs-site.md
-          - "ADR-0042: The docs follow FastAPI's structure, with tested tutorial code": adr/0042-docs-structure.md
-          - "ADR-0043: Profiles an app's team can write merge after the platform's": adr/0043-profile-ownership.md
-          - "ADR-0044: An answer claims the approval before it resumes the run": adr/0044-answers-claim-the-approval.md
-          - "ADR-0045: What an approval covers: one execution, by the role that step needs": adr/0045-what-an-approval-covers.md
-          - "ADR-0046: The website: a landing page at the root, the docs under /docs/": adr/0046-landing-page.md
   - Release Notes:
       - release-notes/index.md
       - harnessweaver: release-notes/harnessweaver.md

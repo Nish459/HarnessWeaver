@@ -38,7 +38,7 @@ reply = await client.chat.completions.create(model="fast", messages=[...])   # u
 - **Outside a run**, each call becomes a small run of its own: `run.start`, `input.before` on the message texts, `model.before`, `model.after`, `output.before` on the answer, `run.end`. So the budget, guards and trace apply per call.
 - **Inside a run or session**, a call is one governed model call of that run.
 - Redactions are written back: the API receives the redacted request, and the app gets the answer as the output guards left it.
-- `harness.wrap(agent, task=...)` does the same for an agent from another framework. For Pydantic AI it governs every model request, tool call and the final output ([ADR-0037](../adr/0037-framework-adapters.md)). A call that needs approval escalates, because the harness can't resume the app's code.
+- `harness.wrap(agent, task=...)` does the same for an agent from another framework. For Pydantic AI it governs every model request, tool call and the final output. A call that needs approval escalates, because the harness can't resume the app's code.
 - The adapter's `reaches` is checked when you wrap: if the baseline or the budget needs a hook the adapter can't reach, `instrument()` fails instead of running ungoverned (RULES R4).
 - Streaming through an instrumented client or a wrapped agent is *planned*; until then it raises rather than running ungoverned.
 
@@ -100,7 +100,7 @@ These methods are all `async` (`harness.stream` is an async iterator).
 
 | Runner | What it executes |
 | --- | --- |
-| `direct` | One typed `generate` from the task's prompt and input, with a **bounded** governed tool loop over the task's `tools` (`max_steps`, default 8). No planning, memory or templating ([ADR-0011](../adr/0011-bounded-tool-loop.md)) |
+| `direct` | One typed `generate` from the task's prompt and input, with a **bounded** governed tool loop over the task's `tools` (`max_steps`, default 8). No planning, memory or templating |
 | `session` | Your function `handler(session, input) -> output`; the harness owns the run around it |
 | `workflow` | A fixed graph of your functions: steps run when what they `need` has finished, ready steps run in parallel, and a step with an `evaluator` loops up to `max_rounds` |
 | `pydantic_ai.agent` (plugin) | A Pydantic AI agent, governed end to end; approvals suspend and resume it |

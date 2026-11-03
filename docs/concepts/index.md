@@ -1,6 +1,6 @@
 # Concepts
 
-HarnessWeaver is a **framework that produces harnesses**, not one harness that every app is routed through. Each app team assembles its own harness from a small core plus swappable parts, and the platform team's org baseline applies to every app and can't be removed.
+HarnessWeaver is a **framework that produces harnesses**. Each app team assembles its own harness from a small core plus swappable parts, and the platform team's org baseline applies to every app and can't be removed.
 
 ## Who writes what
 
@@ -10,11 +10,9 @@ HarnessWeaver is a **framework that produces harnesses**, not one harness that e
 | The platform or security team | An org baseline profile (mandatory controls, locked values, bounds) and the list of approved plugins | `org://acme-baseline@^1` |
 | Each app team | A `harness.yaml`, its prompts, its tools and any app-specific plugins. It keeps whatever executor it already uses | Raw SDK calls, Pydantic AI, the Vercel AI SDK, a custom loop |
 
-The closest analogies are **OpenTelemetry** (a tiny stable API, swappable implementations, contributed integrations) and **Spring Boot** (starters and opinionated defaults that work with no configuration and can be overridden piece by piece).
-
 ## The layers
 
-App teams touch only the top layer and their spec. Everything below it ships with HarnessWeaver or comes from the platform team. The core is deliberately small: it owns lifecycle and policy, and delegates all reasoning to whatever runner the app chose.
+App teams touch only the top layer and their spec. Everything below it ships with HarnessWeaver or comes from the platform team. The core is small: it owns lifecycle and policy, and delegates all reasoning to whatever runner the app chose.
 
 ```mermaid
 flowchart TB
@@ -52,7 +50,7 @@ Everything else is an implementation detail of a module.
 | **Runner** | What executes a task: `direct`, `session`, `workflow`, `pydantic_ai.agent`, or your own. Runners don't implement controls; hook points do | HarnessWeaver, plugins | `@hw.runner` |
 | **Plugin** | A package or module that contributes providers, middleware, routing stages, runners, adapters, profiles or templates, through one contract, whatever its name | HarnessWeaver, third parties, apps | `hw.Plugin` |
 
-**The key relationship:** a **spec** selects **modules**. Each module configures a **provider** behind its **port** and installs **middleware** on **hook points**. The **runner** (or your own code, in a session) emits hook events as the work happens, and every event carries the **envelope**.
+**How they connect:** a **spec** selects **modules**. Each module configures a **provider** behind its **port** and installs **middleware** on **hook points**. The **runner** (or your own code, in a session) emits hook events as the work happens, and every event carries the **envelope**.
 
 ```mermaid
 flowchart LR
@@ -80,7 +78,7 @@ Every feature is tested against these goals, in this order. When two conflict, t
 9. **Stable extension surface.** Hook points, ports and the spec are versioned and change slowly. Internals can change freely.
 10. **Observable.** Every decision HarnessWeaver makes (a route chosen, a guard fired, a tool denied, a budget hit) is a traced event.
 
-**Non-goals.** HarnessWeaver is not an agent framework, a prompt library, a vector database, a model host or a hosted platform. It doesn't pick an app's model, prompt, retrieval method or workflow. It governs the tools that do.
+**Non-goals.** HarnessWeaver is not an agent framework, a prompt library, a vector database, a model host or a hosted platform. It doesn't pick an app's model, prompt, retrieval method or workflow.
 
 ## Read next
 

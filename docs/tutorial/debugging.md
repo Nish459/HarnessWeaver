@@ -98,4 +98,4 @@ Logs carry ids and error types, never content, so they are safe to keep on in pr
 - `spec validate` and `doctor` catch problems before anything runs. `hooks`, `spec explain` and `spec diff` show what the spec really says.
 - A run that doesn't complete says why in `result.error.details["code"]`, and its trace shows where.
 
-That's the end of the tutorial. Your support desk is typed, guarded, budgeted, routed, grounded, policy-checked, approved by people where it matters, durable, observable, tested and evaluated, and its own code is still small. The [Advanced User Guide](../advanced/index.md) goes deeper.
+That's the end of the tutorial. Your support desk is typed, guarded, budgeted, routed, grounded, policy-checked, approved by people where it matters, durable, observable, tested and evaluated, and its own code is still small. The [Advanced guide](../advanced/index.md) goes deeper.

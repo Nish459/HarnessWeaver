@@ -78,7 +78,7 @@ That is the evidence for promoting it. The one-line, reviewed change is `mode: l
 | `status` | The run ended with one of the listed statuses |
 | `llm_judge` | A model scores the output against a `rubric`, at or above `threshold` |
 
-All but `llm_judge` are deterministic. [Providers](../reference/providers.md#graders) has every grader's settings, and the dataset format is in [ADR-0033](../adr/0033-eval-datasets.md).
+All but `llm_judge` are deterministic. [Providers](../reference/providers.md#graders) has every grader's settings and how results label them.
 
 ## Online sampling
 

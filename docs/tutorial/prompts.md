@@ -47,7 +47,7 @@ A prompt can hold placeholders in braces, such as `{text}`. For a task, they are
 Summarize this message from a {plan} customer: {text}
 ```
 
-Placeholders follow Python's `str.format_map`: `{{` and `}}` are literal braces, and a missing value is an error, not an empty string. That's all there is. HarnessWeaver has no template language with loops or conditions, on purpose ([ADR-0013](../adr/0013-prompts-without-templates.md)). Build any text that needs logic in your code, and pass it in as a value.
+Placeholders follow Python's `str.format_map`: `{{` and `}}` are literal braces, and a missing value is an error, not an empty string. HarnessWeaver has no template language with loops or conditions. Build any text that needs logic in your code, and pass it in as a value.
 
 ## Recap
 

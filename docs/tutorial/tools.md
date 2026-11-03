@@ -44,7 +44,7 @@ Point the spec at the manifests, and add the `orders` task:
 --8<-- "docs_src/tutorial/tools/prompts/orders@1.md"
 ```
 
-The `direct` runner offers the task's `tools` to the model and runs a **bounded** loop: each call the model asks for is governed and executed, and its result goes back to the model, up to `max_steps` model calls (8 by default). A registered tool the task doesn't offer is refused and the run blocks with code `tool_not_offered`. There is no planning and no open-ended agent loop ([ADR-0011](../adr/0011-bounded-tool-loop.md)). `max_tool_calls` in the budget caps the calls too.
+The `direct` runner offers the task's `tools` to the model and runs a **bounded** loop: each call the model asks for is governed and executed, and its result goes back to the model, up to `max_steps` model calls (8 by default). A registered tool the task doesn't offer is refused and the run blocks with code `tool_not_offered`. There is no planning and no open-ended agent loop. `max_tool_calls` in the budget caps the calls too.
 
 ## Run it
 
@@ -84,7 +84,7 @@ Every tool call passes the same checks, whoever makes it: a runner's tool loop, 
 | 8. Execute | Runs the tool through its transport, with its timeout | A `ToolError` when the tool fails |
 | 9. Output | Sanitizes, truncates to `max_bytes`, and labels the result untrusted | - |
 
-Steps 1 to 7 run on the arguments as the `tool.before` middleware left them, so no middleware can rewrite arguments past the checks ([ADR-0025](../adr/0025-governor-placement.md)). [The tool governor](../advanced/governor.md) explains each step in depth: the lethal trifecta, rate limits, idempotency keys and sandboxed code.
+Steps 1 to 7 run on the arguments as the `tool.before` middleware left them, so no middleware can rewrite arguments past the checks. [The tool governor](../advanced/governor.md) explains each step in depth: the lethal trifecta, rate limits, idempotency keys and sandboxed code.
 
 ## Pin the definition
 
@@ -97,7 +97,7 @@ $ uv run harnessweaver tools pin harness.yaml
 pinned  lookup_order: sha256:13e081247828f80f05a59db148e00a7baeba40e0cb79d28befe87c3fd372c3df
 ```
 
-From then on, if anyone changes the tool's description or schema without pinning again, the manifest still loads, but **every call to it is blocked** with `digest_mismatch`, until someone reviews the change and runs `tools pin` again ([ADR-0028](../adr/0028-manifests-for-code-tools.md)).
+From then on, if anyone changes the tool's description or schema without pinning again, the manifest still loads, but **every call to it is blocked** with `digest_mismatch`, until someone reviews the change and runs `tools pin` again.
 
 ## Calling a tool from your own steps
 
