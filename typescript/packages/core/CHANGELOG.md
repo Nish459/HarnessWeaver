@@ -1,18 +1,18 @@
 # Changelog: @harnessweaver/core
 
-All notable changes to the TypeScript core. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/) on its own (RULES V1). Versions before 0.4.1 were never published; their Git tags (`@harnessweaver/core@<version>`) mark the commit where each one landed.
+All notable changes to the TypeScript core. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/) on its own (RULES V1). Versions before 0.5.0 were never published; their Git tags (`@harnessweaver/core@<version>`) mark the commit where each one landed.
 
 ## [Unreleased]
 
 ## 0.5.0 - 2026-11-02
+
+The first version published to npm.
 
 ### Added
 
 - `ModelRefusal`, a `RunBlocked` with code `model_refusal` for a model that declined. Its `response` carries what the call used. `run.generate` counts it and notes it on the trace (RULES R13), and `run.refuseModelCall` does the same for a call made outside `generate`, such as a stream. Neither runs `model.after`.
 
 ## 0.4.1 - 2026-11-01
-
-The first version published to npm.
 
 ### Added
 

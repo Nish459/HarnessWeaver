@@ -1,10 +1,12 @@
 # Changelog: harnessweaver
 
-All notable changes to the core package. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/) on its own (RULES V1). Versions before 0.17.1 were never published; their Git tags (`harnessweaver@<version>`) mark the commit where each one landed.
+All notable changes to the core package. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/) on its own (RULES V1). Versions before 0.18.0 were never published; their Git tags (`harnessweaver@<version>`) mark the commit where each one landed.
 
 ## [Unreleased]
 
 ## 0.18.0 - 2026-11-02
+
+The first version published to PyPI.
 
 ### Added
 
@@ -15,8 +17,6 @@ All notable changes to the core package. The format follows [Keep a Changelog](h
 - A governed model call counts the usage and cost of a request the model declined, and notes the refusal on the trace (RULES R13), before it ends the run. It doesn't run `model.after`.
 
 ## 0.17.1 - 2026-11-01
-
-The first version published to PyPI.
 
 ### Added
 

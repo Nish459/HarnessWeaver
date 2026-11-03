@@ -4,17 +4,17 @@ Each package keeps its own changelog, with a section for every version:
 
 | Package | Changelog | First published version |
 | --- | --- | --- |
-| `harnessweaver` | [python/harnessweaver](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/harnessweaver/CHANGELOG.md) | 0.17.1 |
+| `harnessweaver` | [python/harnessweaver](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/harnessweaver/CHANGELOG.md) | 0.18.0 |
 | `harnessweaver-cli` | [python/harnessweaver-cli](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/harnessweaver-cli/CHANGELOG.md) | 0.7.1 |
 | `harnessweaver-sidecar` | [python/harnessweaver-sidecar](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/harnessweaver-sidecar/CHANGELOG.md) | 0.2.1 |
-| `harnessweaver-openai` | [python/plugins/openai](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/plugins/openai/CHANGELOG.md) | 0.1.2 |
-| `harnessweaver-anthropic` | [python/plugins/anthropic](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/plugins/anthropic/CHANGELOG.md) | 0.1.2 |
+| `harnessweaver-openai` | [python/plugins/openai](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/plugins/openai/CHANGELOG.md) | 0.2.0 |
+| `harnessweaver-anthropic` | [python/plugins/anthropic](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/plugins/anthropic/CHANGELOG.md) | 0.2.0 |
 | `harnessweaver-otel` | [python/plugins/otel](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/plugins/otel/CHANGELOG.md) | 0.2.1 |
 | `harnessweaver-pydantic-ai` | [python/plugins/pydantic-ai](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/plugins/pydantic-ai/CHANGELOG.md) | 0.1.2 |
 | `harnessweaver-monty` | [python/plugins/monty](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/plugins/monty/CHANGELOG.md) | 0.2.1 |
 | `harnessweaver-cel` | [python/plugins/cel](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/python/plugins/cel/CHANGELOG.md) | 0.1.1 |
-| `@harnessweaver/core` | [typescript/packages/core](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/typescript/packages/core/CHANGELOG.md) | 0.4.1 |
-| `@harnessweaver/ai-sdk` | [typescript/packages/ai-sdk](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/typescript/packages/ai-sdk/CHANGELOG.md) | 0.1.1 |
+| `@harnessweaver/core` | [typescript/packages/core](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/typescript/packages/core/CHANGELOG.md) | 0.5.0 |
+| `@harnessweaver/ai-sdk` | [typescript/packages/ai-sdk](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/typescript/packages/ai-sdk/CHANGELOG.md) | 0.2.0 |
 
 Below are the changes that belong to the repository rather than to one package: the examples, the docs site, CI and the release tooling. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 

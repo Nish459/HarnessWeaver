@@ -1,10 +1,12 @@
 # Changelog: harnessweaver-anthropic
 
-All notable changes to this plugin. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/) on its own (RULES V1). Versions before 0.1.2 were never published; their Git tags (`harnessweaver-anthropic@<version>`) mark the commit where each one landed.
+All notable changes to this plugin. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/) on its own (RULES V1). Versions before 0.2.0 were never published; their Git tags (`harnessweaver-anthropic@<version>`) mark the commit where each one landed.
 
 ## [Unreleased]
 
 ## 0.2.0 - 2026-11-02
+
+The first version published to PyPI.
 
 ### Added
 
@@ -15,8 +17,6 @@ All notable changes to this plugin. The format follows [Keep a Changelog](https:
 - A request the model declines still counts its usage and cost in the run, and the refusal is noted on the trace (RULES R13). It raises `ModelRefusal`, still a `RunBlocked` with code `model_refusal`. Needs `harnessweaver` 0.18.0.
 
 ## 0.1.2 - 2026-11-01
-
-The first version published to PyPI.
 
 ### Added
 

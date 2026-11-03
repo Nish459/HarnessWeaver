@@ -1,10 +1,12 @@
 # Changelog: @harnessweaver/ai-sdk
 
-All notable changes to this package. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/) on its own (RULES V1). Version 0.1.0 was never published; its Git tag (`@harnessweaver/ai-sdk@0.1.0`) marks the commit where it landed.
+All notable changes to this package. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/) on its own (RULES V1). Versions before 0.2.0 were never published; their Git tags (`@harnessweaver/ai-sdk@<version>`) mark the commit where each one landed.
 
 ## [Unreleased]
 
 ## 0.2.0 - 2026-11-02
+
+The first version published to npm.
 
 ### Added
 
@@ -16,8 +18,6 @@ All notable changes to this package. The format follows [Keep a Changelog](https
 - An answer with the finish reason `content-filter` now throws `ModelRefusal`, from the call or the stream, and the run ends `blocked` with code `model_refusal` and its usage and cost counted. It used to pass as an ordinary answer. Needs `@harnessweaver/core` 0.5.0.
 
 ## 0.1.1 - 2026-11-01
-
-The first version published to npm.
 
 ### Added
 

@@ -1,10 +1,12 @@
 # Changelog: harnessweaver-openai
 
-All notable changes to this plugin. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/) on its own (RULES V1). Versions before 0.1.2 were never published; their Git tags (`harnessweaver-openai@<version>`) mark the commit where each one landed.
+All notable changes to this plugin. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/) on its own (RULES V1). Versions before 0.2.0 were never published; their Git tags (`harnessweaver-openai@<version>`) mark the commit where each one landed.
 
 ## [Unreleased]
 
 ## 0.2.0 - 2026-11-02
+
+The first version published to PyPI.
 
 ### Added
 
@@ -17,8 +19,6 @@ All notable changes to this plugin. The format follows [Keep a Changelog](https:
 - A request the model declines (the message's `refusal` field, also under `provider_specific_fields` where LiteLLM moves it, or the finish reason `content_filter`) now ends the run `blocked` with code `model_refusal`, in `openai.chat` and through `harness.instrument(client)`, and its usage and cost still count. It used to pass as an ordinary answer, often empty. An app that reads `message.refusal` on an instrumented client now gets `RunBlocked` instead. Needs `harnessweaver` 0.18.0.
 
 ## 0.1.2 - 2026-11-01
-
-The first version published to PyPI.
 
 ### Added
 
