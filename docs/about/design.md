@@ -31,7 +31,7 @@ Every decision with a reason a future contributor would otherwise have to redisc
 
 ## Future
 
-HarnessWeaver is early, and before 1.0. These are planned, and marked *planned* where the docs mention them:
+These are planned, and marked *planned* where the docs mention them:
 
 - **Models:** Bedrock and Vertex through LiteLLM. Streaming through an instrumented client or a wrapped agent.
 - **Guards:** Presidio, Llama Guard and Prompt Guard providers.

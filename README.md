@@ -8,8 +8,6 @@
 
 ---
 
-> **Status: early.** The packages are on PyPI and npm, each with its own version, and the public API may still change before 1.0. Anything marked *planned* in these docs doesn't exist yet.
-
 ## What is HarnessWeaver?
 
 Every AI application needs the same cross-cutting controls around its models: tracing and cost, budgets and deadlines, PII redaction and injection checks, validated output, governed tool calls, human approvals, routing and evals. Most teams rebuild these controls inside each app, differently every time.
