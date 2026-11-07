@@ -34,6 +34,42 @@ jobs:
       - name: Lint, format, types, tests
         run: make check
 
+  # The README's coverage badge reads coverage.json from the `badges` branch. Only a push to
+  # main writes it, once the Python jobs pass, so pull requests never get a write token.
+  coverage:
+    name: Coverage
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: python
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          enable-cache: true
+      - name: Install workspace
+        run: uv sync --all-packages --locked
+      - name: Measure coverage
+        run: make cov
+      # A shields.io endpoint file, colored by the RULES T7 floors. The branch holds one
+      # commit that each run replaces, so it never grows.
+      - name: Publish the coverage badge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pct=$(uv run coverage report --format=total)
+          if [ "$pct" -ge 90 ]; then color=brightgreen; elif [ "$pct" -ge 80 ]; then color=yellow; else color=red; fi
+          mkdir "$RUNNER_TEMP/badges" && cd "$RUNNER_TEMP/badges"
+          printf '{"schemaVersion":1,"label":"coverage","message":"%s%%","color":"%s"}\n' "$pct" "$color" > coverage.json
+          git init -q -b badges
+          git add coverage.json
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -q -m "chore: coverage ${pct}%"
+          git push -f -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" badges
+
   typescript:
     name: TypeScript (Node ${{ matrix.node }})
     runs-on: ubuntu-latest

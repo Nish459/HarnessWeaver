@@ -2,7 +2,14 @@
 
 <img src="docs/assets/banner.svg" alt="HarnessWeaver: the composable AI harness framework. Weave your own AI harness. Bring your models. Choose your plugins. Define your execution." width="100%">
 
-`Python 3.12+`, `TypeScript`, `Apache-2.0`
+[![CI](https://img.shields.io/github/actions/workflow/status/Wise-DreamerZ/HarnessWeaver/ci.yml?branch=main&label=CI)](https://github.com/Wise-DreamerZ/HarnessWeaver/actions/workflows/ci.yml?query=branch%3Amain)
+[![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FWise-DreamerZ%2FHarnessWeaver%2Fbadges%2Fcoverage.json)](https://github.com/Wise-DreamerZ/HarnessWeaver/actions/workflows/ci.yml?query=branch%3Amain)
+[![PyPI](https://img.shields.io/pypi/v/harnessweaver)](https://pypi.org/project/harnessweaver/)
+[![Python versions](https://img.shields.io/pypi/pyversions/harnessweaver)](https://pypi.org/project/harnessweaver/)
+[![npm](https://img.shields.io/npm/v/@harnessweaver/core)](https://www.npmjs.com/package/@harnessweaver/core)
+[![Node version](https://img.shields.io/node/v/@harnessweaver/core)](https://www.npmjs.com/package/@harnessweaver/core)
+[![License](https://img.shields.io/github/license/Wise-DreamerZ/HarnessWeaver)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-harnessweaver.wisedreamerz.com-3080ff)](https://harnessweaver.wisedreamerz.com/docs/)
 
 </div>
 

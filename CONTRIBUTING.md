@@ -17,6 +17,7 @@ pnpm -C typescript install                   # the TypeScript workspace
 | --- | --- |
 | Everything CI runs for Python (ASCII check, lint, format check, types, tests, conformance) | `make check` |
 | One test | `uv run pytest python/harnessweaver/tests/test_bus.py -q` |
+| Coverage (the README badge shows the number CI measures on `main`) | `make cov` |
 | Lint and format | `make fmt` |
 | Regenerate contract schemas and the OpenAPI document | `make schemas` (`make schemas-check` reports drift) |
 | TypeScript tests, types and build | `pnpm -C typescript test`, `pnpm -C typescript typecheck`, `pnpm -C typescript build` |
