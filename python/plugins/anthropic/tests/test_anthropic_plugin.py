@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import httpx2
@@ -399,6 +400,72 @@ async def test_test_mode_and_credentials(monkeypatch: pytest.MonkeyPatch) -> Non
     client = chat._get_client()
     assert client.max_retries == 0
     assert str(client.base_url).startswith("http://127.0.0.1:9")
+
+
+CREDENTIAL_ENV = (
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_AUTH_TOKEN",
+    "ANTHROPIC_PROFILE",
+    "ANTHROPIC_CONFIG_DIR",
+    "ANTHROPIC_IDENTITY_TOKEN",
+    "ANTHROPIC_IDENTITY_TOKEN_FILE",
+    "ANTHROPIC_FEDERATION_RULE_ID",
+    "ANTHROPIC_ORGANIZATION_ID",
+    "ANTHROPIC_SERVICE_ACCOUNT_ID",
+)
+"""The variables the SDK reads credentials from, besides the profiles in its config directory."""
+
+
+def no_credentials(home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Take away every credential the SDK could find: its variables, and profiles on disk."""
+    for name in CREDENTIAL_ENV:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("HOME", str(home))  # the config directory is ~/.config/anthropic
+    monkeypatch.setenv("APPDATA", str(home))  # or %APPDATA%\Anthropic on Windows
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("streaming", [False, True])
+async def test_no_credentials_says_what_to_set(
+    streaming: bool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With nothing to authenticate with, the SDK raises a bare TypeError: say what to set."""
+    no_credentials(tmp_path, monkeypatch)
+    server = Server(ok(message(text("never sent"))))
+    client = AsyncAnthropic(
+        max_retries=0, http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(server))
+    )
+    chat = AnthropicMessages(AnthropicMessagesConfig(), client=client)
+    request = hw.ModelRequest(messages=(hw.Message.user("x"),))
+    call = collect(chat.stream(request, ENV), []) if streaming else chat.generate(request, ENV)
+    with pytest.raises(ProviderError, match="found no credentials: set ANTHROPIC_API_KEY"):
+        await call
+    assert server.requests == []
+
+
+@pytest.mark.anyio
+async def test_a_profile_that_cant_be_loaded_says_why(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    no_credentials(tmp_path, monkeypatch)
+    monkeypatch.setenv("ANTHROPIC_PROFILE", "work")  # named, but there is no such profile
+    monkeypatch.delenv(hw.ports.TEST_MODE_ENV)  # type: ignore[attr-defined]
+    # The client fails as it is built, before any request; the address is a dead end anyway.
+    chat = AnthropicMessages(AnthropicMessagesConfig(base_url="http://127.0.0.1:9"))
+    with pytest.raises(ProviderError, match=r"^anthropic.messages: Config file not found.*'work'"):
+        await chat.generate(hw.ModelRequest(messages=(hw.Message.user("x"),)), ENV)
+
+
+@pytest.mark.anyio
+async def test_other_type_errors_are_left_alone() -> None:
+    async def create(**_: Any) -> Any:
+        raise TypeError("a bug, not missing credentials")
+
+    endpoint = SimpleNamespace(with_raw_response=SimpleNamespace(create=create))
+    client = SimpleNamespace(api_key=FAKE_KEY, beta=SimpleNamespace(messages=endpoint))
+    chat = AnthropicMessages(AnthropicMessagesConfig(), client=client)
+    with pytest.raises(TypeError, match="a bug"):
+        await chat.generate(hw.ModelRequest(messages=(hw.Message.user("x"),)), ENV)
 
 
 # --- through a harness ---------------------------------------------------------------------------

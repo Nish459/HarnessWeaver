@@ -125,14 +125,78 @@ result = await harness.run("triage", "I was charged twice for my Pro plan. Refun
 
 ## Call a real model
 
-When you have a gateway running (or `uv run harnessweaver dev harness.yaml --up` starts a local one with LiteLLM, an OpenTelemetry collector and Langfuse), map `fast` to a model it serves, set the key and run without the overlay:
+The spec calls a gateway, but you don't need one to try a real model: `models` can point at a provider directly. Pick yours, make the `models` section of `harness.yaml` match, and set the key it names.
+
+=== "Gateway"
+
+    Keep the spec as it is. Run [LiteLLM Proxy](https://docs.litellm.ai/docs/simple_proxy) on `localhost:4000` with a model it serves as `fast-chat`, or let `uv run harnessweaver dev harness.yaml --up` start one, with an OpenTelemetry collector and Langfuse (it needs Docker; see [the local dev stack](../deployment/gateways.md#the-local-dev-stack)). The gateway holds the provider keys, owns retries and fallbacks, and reports what each call cost. It is the setup for production.
+
+    ```console
+    $ export LITELLM_API_KEY=your-gateway-key
+    ```
+
+=== "OpenAI"
+
+    ```yaml
+    models:
+      provider: openai.chat                  # no base_url: the OpenAI API itself
+      api_key_env: OPENAI_API_KEY
+      max_retries: 2                         # with no gateway, the SDK retries
+      default: fast
+      aliases: { fast: your-openai-model }   # a model id your account can use
+    ```
+
+    ```console
+    $ export OPENAI_API_KEY=your-key
+    ```
+
+=== "Claude"
+
+    Add the plugin for Claude first:
+
+    ```console
+    $ uv add "harnessweaver[anthropic]"
+    ```
+
+    ```yaml
+    models:
+      provider: anthropic.messages
+      api_key_env: ANTHROPIC_API_KEY
+      default: fast
+      aliases: { fast: claude-haiku-5-5 }
+    ```
+
+    ```console
+    $ export ANTHROPIC_API_KEY=your-key
+    ```
+
+=== "Ollama"
+
+    A model running on your own machine with [Ollama](https://ollama.com): no key, no spend, nothing leaves the machine.
+
+    ```yaml
+    models:
+      provider: openai.chat
+      base_url: http://localhost:11434/v1    # Ollama's OpenAI-compatible API
+      api_key_env: OLLAMA_API_KEY            # Ollama ignores the key, but one must be set
+      default: fast
+      aliases: { fast: your-local-model }    # one you pulled with `ollama pull`
+    ```
+
+    ```console
+    $ export OLLAMA_API_KEY=ollama
+    ```
+
+Then run without the overlay:
 
 ```console
-$ export LITELLM_API_KEY=your-gateway-key
 $ uv run python main.py
 ```
 
-The rest of the tutorial keeps running offline, so you can follow it without a gateway.
+!!! tip "If it prints `failed`"
+    `result.error` says why. Print `result.error.message`: `openai.chat needs $OPENAI_API_KEY` means the variable isn't set, and `openai.chat: APIConnectionError` means nothing answered at `base_url`. [Troubleshooting](../how-to/troubleshooting.md#when-a-run-fails) lists the rest.
+
+A provider called directly doesn't report what a call cost, so the cost is marked unknown until you give prices ([Models and environments](models.md#cost) shows how). The rest of the tutorial keeps running offline, so you can follow it without a gateway or a key.
 
 ## Recap
 

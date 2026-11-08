@@ -8,8 +8,9 @@ A chat assistant whose answers stream to the user, governed by HarnessWeaver.
 - `harness.offline.yaml` swaps the model for a scripted one that streams, so everything runs with no network.
 
 ```bash
-harnessweaver spec validate --env offline     # check the spec
-harnessweaver test                            # run the tests offline
-harnessweaver eval run --env offline          # grade evals/golden.yaml
-HARNESSWEAVER_ENV=offline python -m app.main  # chat in the terminal
+uv sync                                              # install the project and its tools
+uv run harnessweaver spec validate --env offline     # check the spec
+uv run harnessweaver test                            # run the tests offline
+uv run harnessweaver eval run --env offline          # grade evals/golden.yaml
+HARNESSWEAVER_ENV=offline uv run python -m app.main  # chat in the terminal
 ```

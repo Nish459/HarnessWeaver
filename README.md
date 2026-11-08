@@ -104,7 +104,7 @@ client = harness.instrument(AsyncOpenAI(base_url="http://localhost:4000"), tenan
 reply = await client.chat.completions.create(model="fast-chat", messages=messages)   # traced, costed, budgeted, guarded
 ```
 
-The same spec also serves [TypeScript](docs/advanced/typescript.md) apps, and any language through the [harnessd sidecar](docs/advanced/sidecar.md).
+The same spec also serves [TypeScript](https://harnessweaver.wisedreamerz.com/docs/advanced/typescript/) apps, and any language through the [harnessd sidecar](https://harnessweaver.wisedreamerz.com/docs/advanced/sidecar/).
 
 ## A framework for building harnesses
 
@@ -117,15 +117,23 @@ The same spec also serves [TypeScript](docs/advanced/typescript.md) apps, and an
 
 ## Try it
 
+With [uv](https://docs.astral.sh/uv/getting-started/installation/) installed, and nothing else:
+
+```bash
+uvx --from harnessweaver-cli harnessweaver init my-app   # a project; -t rag | agent | workflow | chat for others
+cd my-app
+uv sync                                                  # its dependencies, from PyPI
+HARNESSWEAVER_ENV=offline uv run python -m app.main      # run its task offline: no keys, no spend
+uv run harnessweaver test                                # its tests, offline
+```
+
+[QUICKSTART.md](QUICKSTART.md) walks from here to a governed, traced and tested task of your own, and then to a real model, in about ten minutes. The examples below run from a clone:
+
 ```bash
 git clone https://github.com/Wise-DreamerZ/HarnessWeaver.git && cd HarnessWeaver
 uv sync --all-packages
-HARNESSWEAVER_ENV=offline uv run python examples/01_invoice_extraction/run.py   # offline, no keys
-uv run harnessweaver init ../my-app     # your own project; -t rag | agent | workflow | chat for others
-uv run harnessweaver test ../my-app     # its tests, offline
+HARNESSWEAVER_ENV=offline uv run python examples/01_invoice_extraction/run.py
 ```
-
-[QUICKSTART.md](QUICKSTART.md) walks from here to a governed, traced and tested task of your own in about fifteen minutes.
 
 | Example | Shows |
 | --- | --- |
@@ -146,7 +154,7 @@ uv run harnessweaver test ../my-app     # its tests, offline
 | `@harnessweaver/core` | TypeScript core: the same spec, hook bus, guards, governor and routing, in sessions ([typescript/](typescript/README.md)) |
 | `@harnessweaver/ai-sdk` | `wrapModel` for Vercel AI SDK models |
 
-**Plugins are defined by design, not by name.** Any package that exposes an `hw.Plugin` through the `harnessweaver.plugins` entry point is a plugin, so you can build one in your own repository, publish it under any name, and use it from `harness.yaml` (`use: acme.pii`). See [Extending HarnessWeaver](docs/advanced/index.md#extending-harnessweaver).
+**Plugins are defined by design, not by name.** Any package that exposes an `hw.Plugin` through the `harnessweaver.plugins` entry point is a plugin, so you can build one in your own repository, publish it under any name, and use it from `harness.yaml` (`use: acme.pii`). See [Extending HarnessWeaver](https://harnessweaver.wisedreamerz.com/docs/advanced/#extending-harnessweaver).
 
 ## Adoption levels
 
@@ -160,17 +168,17 @@ uv run harnessweaver test ../my-app     # its tests, offline
 
 ## Documentation
 
-The user documentation is a site built from [`docs/`](docs/index.md) (`make docs` builds it into `site/`, `make docs-serve` serves it locally).
+The user documentation is at [harnessweaver.wisedreamerz.com/docs](https://harnessweaver.wisedreamerz.com/docs/), built from [`docs/`](docs/index.md) (`make docs` builds it into `site/`, `make docs-serve` serves it locally). Read it there: its pages include their code from tested files, which GitHub doesn't show.
 
 | Doc | For |
 | --- | --- |
-| [QUICKSTART.md](QUICKSTART.md) | Your first governed task, offline |
-| [Tutorial](docs/tutorial/index.md) | One app, a support desk, built chapter by chapter with every feature; its code is tested |
-| [Concepts](docs/concepts/index.md) | Hook points, the hook bus, outcomes, the envelope, the spec, integration styles, adoption levels |
-| [Advanced guide](docs/advanced/index.md) | Layers and locks in depth, the tool governor, approvals, TypeScript, the harnessd sidecar, writing plugins |
-| [Reference](docs/reference/index.md) | Every spec section, provider setting, profile and manifest field, the Python API, contracts |
-| [CLI](docs/cli.md) | Every `harnessweaver` command |
-| [Deployment](docs/deployment/index.md) and [Recipes](docs/how-to/index.md) | Installing, configuring, securing and versioning; recipes and troubleshooting |
+| [QUICKSTART.md](QUICKSTART.md) | Your first governed task, offline, then a real model |
+| [Tutorial](https://harnessweaver.wisedreamerz.com/docs/tutorial/) | One app, a support desk, built chapter by chapter with every feature; its code is tested |
+| [Concepts](https://harnessweaver.wisedreamerz.com/docs/concepts/) | Hook points, the hook bus, outcomes, the envelope, the spec, integration styles, adoption levels |
+| [Advanced guide](https://harnessweaver.wisedreamerz.com/docs/advanced/) | Layers and locks in depth, the tool governor, approvals, TypeScript, the harnessd sidecar, writing plugins |
+| [Reference](https://harnessweaver.wisedreamerz.com/docs/reference/) | Every spec section, provider setting, profile and manifest field, the Python API, contracts |
+| [CLI](https://harnessweaver.wisedreamerz.com/docs/cli/) | Every `harnessweaver` command |
+| [Deployment](https://harnessweaver.wisedreamerz.com/docs/deployment/) and [Recipes](https://harnessweaver.wisedreamerz.com/docs/how-to/) | Installing, configuring, securing and versioning; serving a web app, recipes and troubleshooting |
 | [DESIGNS.md](DESIGNS.md) and [the ADRs](docs/adr/index.md) | Architecture and the decisions behind it, for contributors |
 | [RULES.md](RULES.md) | Engineering rules and invariants |
 | [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) | Contributing, by hand or with AI coding agents |

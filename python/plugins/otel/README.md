@@ -1,6 +1,6 @@
 # harnessweaver-otel
 
-A first-party [HarnessWeaver](../../../README.md) plugin that sets up the OpenTelemetry SDK. It is built on the same plugin contract any third-party plugin uses (see DESIGNS.md No. 13).
+A first-party [HarnessWeaver](https://github.com/Wise-DreamerZ/HarnessWeaver) plugin that sets up the OpenTelemetry SDK. It is built on the same plugin contract any third-party plugin uses (see DESIGNS.md No. 13).
 
 ```bash
 uv add harnessweaver-otel          # or: uv add "harnessweaver[otel]"

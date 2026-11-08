@@ -19,6 +19,7 @@ models:
   reject sampling parameters.
 * Credentials: the SDK's own resolution (``ANTHROPIC_API_KEY``, ``ANTHROPIC_AUTH_TOKEN``,
   ``ant auth login`` profiles, workload identity), or ``api_key_env`` to name a variable.
+  When none can be found, the call fails with a ``ProviderError`` that says what to set.
 * With ``HARNESSWEAVER_TEST_MODE=1`` the provider refuses to call out (R14).
 """
 
@@ -37,6 +38,10 @@ __all__ = ["FALLBACK_BETA", "AnthropicMessages", "AnthropicMessagesConfig", "pro
 
 FALLBACK_BETA: Final = "server-side-fallback-2026-07-01"
 DEFAULT_MODEL: Final = "claude-opus-5-5"
+NO_CREDENTIALS: Final = (
+    "anthropic.messages found no credentials: set ANTHROPIC_API_KEY, log in with "
+    "`ant auth login`, or name the key's variable in models.api_key_env"
+)
 
 
 class AnthropicMessagesConfig(BaseModel):
@@ -73,6 +78,26 @@ def provider_error(exc: Exception) -> hw.errors.ProviderError:
     status = getattr(exc, "status_code", None)
     detail = f" (HTTP {status})" if status is not None else ""
     return hw.errors.ProviderError(f"anthropic.messages: {type(exc).__name__}{detail}")
+
+
+def _credentials_error(exc: Exception, client: Any) -> hw.errors.ProviderError | None:
+    """A clear error for ``exc`` when the SDK couldn't find credentials, else ``None``.
+
+    The SDK raises ``CredentialsError`` when a profile or identity token it was
+    pointed at can't be loaded. Its message names the file or variable and never
+    holds a secret or any content (R9), so it is kept. It raises a bare ``TypeError``
+    when it builds a request with nothing to authenticate it: no key, no token and
+    no credentials provider. A ``TypeError`` from a client that has one of those is
+    some other fault, and is left alone.
+    """
+    from anthropic import CredentialsError
+
+    if isinstance(exc, CredentialsError):
+        return hw.errors.ProviderError(f"anthropic.messages: {exc}")
+    found = (getattr(client, name, None) for name in ("api_key", "auth_token", "credentials"))
+    if client is None or any(value is not None for value in found):
+        return None
+    return hw.errors.ProviderError(NO_CREDENTIALS)
 
 
 def _cost(headers: Any, name: str) -> float | None:
@@ -142,7 +167,7 @@ class AnthropicMessages:
         return client.beta.messages if "betas" in kwargs else client.messages
 
     async def generate(self, request: hw.ModelRequest, env: hw.Envelope) -> hw.ModelResponse:
-        from anthropic import APIError
+        from anthropic import APIError, CredentialsError
 
         kwargs = self._kwargs(request, stream=False)
         try:
@@ -150,12 +175,16 @@ class AnthropicMessages:
             message = await raw.parse()
         except APIError as exc:
             raise provider_error(exc) from exc
+        except (CredentialsError, TypeError) as exc:
+            if (clear := _credentials_error(exc, self._client)) is None:
+                raise
+            raise clear from exc
         return from_message(message, _cost(raw.headers, self.config.cost_header))
 
     async def stream(
         self, request: hw.ModelRequest, env: hw.Envelope
     ) -> AsyncIterator[hw.StreamChunk | hw.ModelResponse]:
-        from anthropic import APIError
+        from anthropic import APIError, CredentialsError
 
         kwargs = self._kwargs(request, stream=True)
         index = 0
@@ -177,6 +206,10 @@ class AnthropicMessages:
                 message = await stream.get_final_message()
         except APIError as exc:
             raise provider_error(exc) from exc
+        except (CredentialsError, TypeError) as exc:
+            if (clear := _credentials_error(exc, self._client)) is None:
+                raise
+            raise clear from exc
         response = from_message(message, None)  # raises if the model declined
         for piece in held:
             yield piece

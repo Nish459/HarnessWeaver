@@ -40,4 +40,4 @@ result = await harness.run("extract_invoice", doc, principal=user)
 
 The test kit is `harnessweaver.testing`, and installing the package adds the plugin conformance suite to pytest (`pytest --harnessweaver-conformance=<namespace>`).
 
-Documentation: [the docs](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/index.md), from [Concepts](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/concepts/index.md) to the [spec reference](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/reference/spec.md).
+Documentation: [the docs](https://harnessweaver.wisedreamerz.com/docs/), from the [Quickstart](https://harnessweaver.wisedreamerz.com/docs/learn/quickstart/) and the [Tutorial](https://harnessweaver.wisedreamerz.com/docs/tutorial/) to the [spec reference](https://harnessweaver.wisedreamerz.com/docs/reference/spec/).

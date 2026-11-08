@@ -1,6 +1,6 @@
 # harnessweaver-anthropic
 
-A first-party [HarnessWeaver](../../../README.md) plugin for Claude models. It is built on the same plugin contract any third-party plugin uses: one `hw.Plugin` object, published through the `harnessweaver.plugins` entry point under the namespace `anthropic` (see DESIGNS.md No. 13).
+A first-party [HarnessWeaver](https://github.com/Wise-DreamerZ/HarnessWeaver) plugin for Claude models. It is built on the same plugin contract any third-party plugin uses: one `hw.Plugin` object, published through the `harnessweaver.plugins` entry point under the namespace `anthropic` (see DESIGNS.md No. 13).
 
 ```bash
 uv add harnessweaver-anthropic     # or: uv add "harnessweaver[anthropic]"

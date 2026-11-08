@@ -98,10 +98,30 @@ The run's `RunResult.error.details.code` (or the `RunBlocked` error's `details["
 | `middleware_error`, `middleware_timeout` | A closed middleware raised or timed out | The `failure` trace event names the middleware and the exception type |
 | `retry_not_supported` | A `Retry` where it isn't honored | Return `Block` or `Escalate` there instead |
 
+## When a run fails
+
+A run that ends `failed` never got an answer to check. `RunResult.error` says why: its `code` (`provider_error` when the model couldn't be called) and its `message`, which names the provider and the error type, never what was sent (RULES R9). This is the usual first stumble when moving from the offline overlay to a real model.
+
+| `error.message` | Means | Fix |
+| --- | --- | --- |
+| `openai.chat needs $LITELLM_API_KEY`, or another variable | The variable that `models.api_key_env` names isn't set | Export it. Running offline needs no key: `HARNESSWEAVER_ENV=offline` |
+| `openai.chat: APIConnectionError` | Nothing answered at `models.base_url`: the gateway, or Ollama, isn't running there | Start it, correct `base_url`, or call a provider directly ([Quickstart](../learn/quickstart.md#9-call-a-real-model)) |
+| `openai.chat: AuthenticationError (HTTP 401)` | The endpoint refused the key | The key in that variable, and that it belongs to that endpoint |
+| `openai.chat: NotFoundError (HTTP 404)` | The endpoint doesn't serve the model an alias maps to, or `base_url` lacks its `/v1` | Map the alias in `models.aliases` to a model id the endpoint serves |
+| `openai.chat: RateLimitError (HTTP 429)` | The provider is limiting your requests | A gateway, which retries and falls back, or `max_retries` when calling a provider directly |
+| `anthropic.messages needs $ANTHROPIC_API_KEY` | The variable that `models.api_key_env` names isn't set | Export it |
+| `anthropic.messages found no credentials: ...` (from older versions of the plugin, `the model provider failed (TypeError)`) | With no `api_key_env`, the Anthropic SDK found no key, no token and no `ant auth login` profile | Set `ANTHROPIC_API_KEY`, run `ant auth login`, or name the key's variable with `models.api_key_env` |
+| `anthropic.messages: Config file not found at ...`, or another file or variable | `ANTHROPIC_PROFILE`, `ANTHROPIC_CONFIG_DIR` or the workload identity variables point at credentials that can't be loaded | The message names the file or variable to fix |
+| `openai.chat can't call out in test mode (R14)` | Test mode is on, as it is under `harnessweaver test` | Expected in tests: use the offline overlay or a scripted model ([Testing](../tutorial/testing.md)) |
+
+`anthropic.messages` reports connection, key, model and rate-limit errors the same way, under its own name. A `provider_error` is retryable: behind a gateway the gateway retries, and a provider called directly is retried by its SDK up to `max_retries` times.
+
 ## Other surprises
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
+| `harnessweaver: command not found` | The CLI is installed in your project's environment, not on your `PATH` | `uv run harnessweaver ...` inside the project; outside one, `uvx --from harnessweaver-cli harnessweaver ...` |
+| `uvx` says the current Python version doesn't satisfy `Python>=3.12` | Your default Python is older than 3.12 | `uvx --python 3.12 --from harnessweaver-cli harnessweaver ...`. Inside a project, `uv sync` finds a suitable Python on its own |
 | `ProviderError` from every model call in tests | Test mode: live providers refuse to call out | Use a scripted model or a cassette ([Testing](../tutorial/testing.md)) |
 | `RunResult.cost_known` is false; `max_usd` never trips | No cost report and no price for the model | Run behind a gateway that reports cost, or add `models.prices` |
 | No spans in your backend | No OpenTelemetry SDK is configured | Configure it in the app, or `observability.configure_sdk: true` with `harnessweaver-otel` and an `endpoint` |

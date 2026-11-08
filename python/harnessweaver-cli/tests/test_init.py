@@ -1,7 +1,9 @@
 """``harnessweaver init`` and ``harnessweaver test``, including T6: a template's own tests pass."""
 
+import importlib
 import sys
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 from typer.testing import CliRunner
@@ -9,7 +11,7 @@ from typer.testing import CliRunner
 import harnessweaver as hw
 from harnessweaver.core.registry import PluginCatalog, PluginSource
 from harnessweaver_cli.main import app
-from harnessweaver_cli.scaffold import BUILTIN_TEMPLATES
+from harnessweaver_cli.scaffold import BUILTIN_TEMPLATES, render_template
 
 runner = CliRunner()
 
@@ -40,7 +42,62 @@ def test_init_renders_the_extraction_template(tmp_path: Path) -> None:
     assert "__app_name__" not in "".join(
         (target / f).read_text(encoding="utf-8") for f in files(target)
     )
-    assert "harnessweaver spec validate --env offline" in result.output
+    # The next steps work right after `uvx ... init`, with nothing installed yet.
+    assert "  uv sync\n" in result.output
+    assert "  uv run harnessweaver spec validate --env offline\n" in result.output
+    assert "  uv run harnessweaver test\n" in result.output
+
+
+BROKEN = "models:\n  provider: scripted\n  replies: [{ fail: true }]\n"
+"""An overlay whose model fails every call, the way a missing key or gateway does."""
+
+
+def forget_app() -> None:
+    """Drop the ``app`` modules, so the next import reads the current template's code."""
+    for name in [m for m in sys.modules if m == "app" or m.startswith("app.")]:
+        del sys.modules[name]
+
+
+def broken_app(template: str, root: Path, monkeypatch: pytest.MonkeyPatch) -> ModuleType:
+    """Render ``template`` into ``root`` with a failing model, and import its ``app.main``."""
+    render_template(template, root, "demo")
+    (root / "harness.broken.yaml").write_text(BROKEN, encoding="utf-8")
+    monkeypatch.setenv("HARNESSWEAVER_ENV", "broken")
+    monkeypatch.syspath_prepend(str(root))
+    forget_app()
+    return importlib.import_module("app.main")
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("template", ["extraction", "rag", "agent", "workflow"])
+async def test_a_template_app_says_why_its_run_failed(
+    template: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A first run against a real model often fails (no key, no gateway): say why."""
+    try:
+        await broken_app(template, tmp_path / "demo", monkeypatch).main()
+    finally:
+        forget_app()
+    out = capsys.readouterr().out
+    assert "status: failed\n" in out
+    assert "error: provider_error: the script says this call fails\n" in out
+
+
+@pytest.mark.anyio
+async def test_the_chat_template_says_why_a_turn_failed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    try:
+        main = broken_app("chat", tmp_path / "demo", monkeypatch)
+        messages = iter(["hello", ""])
+        monkeypatch.setattr(main, "ask", lambda: next(messages))
+        await main.main()
+    finally:
+        forget_app()
+    assert "[failed: the script says this call fails]" in capsys.readouterr().out
 
 
 def test_init_never_overwrites_without_force(tmp_path: Path) -> None:

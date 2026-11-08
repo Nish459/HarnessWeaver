@@ -96,7 +96,7 @@ models:
 | `timeout` | `600s` | Per request |
 | `max_retries` | `2` | SDK retries. Set `0` behind a gateway, which then owns retries (R5) |
 | `cost_header` | `x-litellm-response-cost` | A gateway's reported cost, used before `models.prices` |
-| `base_url`, `api_key_env` | SDK defaults | Client settings. Credentials follow the SDK's own resolution unless `api_key_env` names a variable |
+| `base_url`, `api_key_env` | SDK defaults | Client settings. Credentials follow the SDK's own resolution (`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, an `ant auth login` profile, workload identity) unless `api_key_env` names a variable. When none is found, a call fails with a `provider_error` that says what to set |
 | `hold_stream` | `false` | Deliver a streamed answer's chunks only once it has finished, so nothing from a declined answer reaches the app. Output is no longer live |
 
 A request the model still declines after fallbacks ends the run `blocked` with the code `model_refusal`, and its tokens still count. Each answer's content blocks, thinking included, are replayed unchanged on the next request of a tool loop, so reasoning carries over.

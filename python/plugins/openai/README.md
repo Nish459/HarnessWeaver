@@ -1,6 +1,6 @@
 # harnessweaver-openai
 
-A first-party [HarnessWeaver](../../../README.md) plugin for OpenAI-compatible models. It is built on the same plugin contract any third-party plugin uses: one `hw.Plugin` object, published through the `harnessweaver.plugins` entry point under the namespace `openai` (see DESIGNS.md No. 13).
+A first-party [HarnessWeaver](https://github.com/Wise-DreamerZ/HarnessWeaver) plugin for OpenAI-compatible models. It is built on the same plugin contract any third-party plugin uses: one `hw.Plugin` object, published through the `harnessweaver.plugins` entry point under the namespace `openai` (see DESIGNS.md No. 13).
 
 ```bash
 uv add harnessweaver-openai        # or: uv add "harnessweaver[openai]"

@@ -26,7 +26,8 @@ async def main() -> None:
                 if event.type == "chunk" and event.chunk is not None:
                     print(event.chunk.delta, end="", flush=True)
             result = await harness.result(run_id)
-            print("" if result.ok else f"[{result.status.value}]")
+            why = f": {result.error.message}" if result.error is not None else ""
+            print("" if result.ok else f"[{result.status.value}{why}]")
 
 
 if __name__ == "__main__":

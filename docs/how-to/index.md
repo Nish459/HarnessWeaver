@@ -5,8 +5,9 @@ Short recipes for specific jobs. Each assumes you know the [Tutorial](../tutoria
 | Recipe | For |
 | --- | --- |
 | [Govern an existing client](wrap-a-client.md) | An app that already calls OpenAI or Anthropic: trace, cost, budget and guard every call in three lines |
+| [Serve it from a web app](web-app.md) | An HTTP API: one harness for every request, each run as its caller, safe retries, approvals and streaming |
 | [Write an org baseline](org-baseline.md) | Platform and security teams: the profile every app extends, its locks, bounds, versions and tests |
-| [Troubleshooting](troubleshooting.md) | A spec that doesn't load, a run that's blocked: every error and code, with what to do |
+| [Troubleshooting](troubleshooting.md) | A spec that doesn't load, a run that's blocked or fails: every error and code, with what to do |
 
 More recipes live with the topic they belong to:
 

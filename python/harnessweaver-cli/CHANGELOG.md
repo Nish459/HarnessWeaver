@@ -4,6 +4,14 @@ All notable changes to the `harnessweaver` command and its project templates. Th
 
 ## [Unreleased]
 
+### Changed
+
+- `harnessweaver init` ends with next steps that work right after `uvx --from harnessweaver-cli harnessweaver init`, with nothing installed yet: `uv sync`, then `uv run harnessweaver spec validate --env offline` and `uv run harnessweaver test`. The templates' READMEs run their commands the same way, and the package's README uses absolute links, which work on PyPI.
+
+### Fixed
+
+- A template's `app/main.py` now prints why a run didn't complete, as `error: <code>: <message>` (for example `error: provider_error: openai.chat needs $LITELLM_API_KEY`), and the `chat` template's terminal app shows the reason next to the status. A first run against a real model with no key or no gateway printed only `status: failed` and `output: None`.
+
 ## 0.7.1 - 2026-11-01
 
 The first version published to PyPI.

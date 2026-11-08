@@ -1,6 +1,6 @@
 # harnessweaver-cel
 
-A first-party [HarnessWeaver](../../../README.md) plugin for CEL policies. It contributes `cel.policy`, a `PolicyEngine` that evaluates `policy.rules` in full [CEL](https://cel.dev) through cel-python.
+A first-party [HarnessWeaver](https://github.com/Wise-DreamerZ/HarnessWeaver) plugin for CEL policies. It contributes `cel.policy`, a `PolicyEngine` that evaluates `policy.rules` in full [CEL](https://cel.dev) through cel-python.
 
 It is built on the same plugin contract any third-party plugin uses: one `hw.Plugin` object, published through the `harnessweaver.plugins` entry point under the namespace `cel` (see DESIGNS.md No. 13).
 

@@ -190,6 +190,7 @@ nav:
       - Recipes:
           - how-to/index.md
           - Govern an existing client: how-to/wrap-a-client.md
+          - Serve it from a web app: how-to/web-app.md
           - Write an org baseline: how-to/org-baseline.md
           - Troubleshooting: how-to/troubleshooting.md
   - Reference:

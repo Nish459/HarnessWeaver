@@ -1,6 +1,6 @@
 # harnessweaver-sidecar
 
-`harnessd`, the [HarnessWeaver](../../README.md) sidecar. It serves one `harness.yaml` over HTTP/JSON, so apps in any language get the same guards, routing, policy, tool governance, approvals and evals as a Python app, decided by the same core (DESIGNS No. 24, ADR-0038).
+`harnessd`, the [HarnessWeaver](https://github.com/Wise-DreamerZ/HarnessWeaver) sidecar. It serves one `harness.yaml` over HTTP/JSON, so apps in any language get the same guards, routing, policy, tool governance, approvals and evals as a Python app, decided by the same core (DESIGNS No. 24, ADR-0038).
 
 ```bash
 uv add harnessweaver-sidecar
@@ -8,11 +8,11 @@ export HARNESSD_TOKEN=...            # required: harnessd never runs without a t
 harnessd harness.yaml -e prod        # binds 127.0.0.1:7070 by default
 ```
 
-`harnessweaver sidecar harness.yaml` does the same from the CLI. The full guide, with request bodies and error statuses, is [docs/advanced/sidecar.md](../../docs/advanced/sidecar.md). Options: `-e/--env` (the overlay, default `$HARNESSWEAVER_ENV`), `--profile-dir`, `--host`, `--port`, `--token-env`, `--max-body-bytes`.
+`harnessweaver sidecar harness.yaml` does the same from the CLI. The full guide, with request bodies and error statuses, is [harnessd sidecar](https://harnessweaver.wisedreamerz.com/docs/advanced/sidecar/) in the docs. Options: `-e/--env` (the overlay, default `$HARNESSWEAVER_ENV`), `--profile-dir`, `--host`, `--port`, `--token-env`, `--max-body-bytes`.
 
 ## The API
 
-Every route except `GET /v1/health` needs `Authorization: Bearer <token>`. The full description is [contracts/openapi/harnessd.openapi.json](../../contracts/openapi/harnessd.openapi.json); [contracts/proto/harnessweaver/v1/harnessd.proto](../../contracts/proto/harnessweaver/v1/harnessd.proto) mirrors it for gRPC later.
+Every route except `GET /v1/health` needs `Authorization: Bearer <token>`. The full description is [contracts/openapi/harnessd.openapi.json](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/contracts/openapi/harnessd.openapi.json); [contracts/proto/harnessweaver/v1/harnessd.proto](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/contracts/proto/harnessweaver/v1/harnessd.proto) mirrors it for gRPC later.
 
 | Route | What it does | Answer |
 | --- | --- | --- |

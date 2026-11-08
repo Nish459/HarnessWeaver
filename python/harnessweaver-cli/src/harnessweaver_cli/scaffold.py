@@ -137,10 +137,13 @@ def init(
         raise fail(f"invalid project name {app_name!r}: use lowercase letters, digits and dashes")
     written = render_template(template, directory, app_name, force=force)
     typer.echo(f"created {len(written)} files in {directory} from the {template} template")
+    # The project installs its own CLI, so these steps work right after
+    # `uvx --from harnessweaver-cli harnessweaver init`, with nothing on PATH yet.
     typer.echo("next:")
     typer.echo(f"  cd {directory}")
-    typer.echo("  harnessweaver spec validate --env offline")
-    typer.echo("  harnessweaver test")
+    typer.echo("  uv sync")
+    typer.echo("  uv run harnessweaver spec validate --env offline")
+    typer.echo("  uv run harnessweaver test")
 
 
 def run_tests(

@@ -22,6 +22,9 @@ Below are the changes that belong to the repository rather than to one package: 
 
 ### Added
 
+- A recipe, *Serve it from a web app* (`docs/how-to/web-app.md`): the tutorial's support desk behind FastAPI, with the harness loaded once in the app's lifespan, each run acting for its caller, idempotency keys made per caller, run statuses mapped to HTTP statuses, approvals over HTTP, and answers streamed as server-sent events. Its app is `docs_src/web_app/app.py`, which `docs_src/tests/test_web_app.py` runs.
+- The docs show how to call a real model without a gateway: OpenAI, Claude or a local Ollama model directly, besides LiteLLM Proxy (the Quickstart's last step, and *First steps* in the tutorial). Troubleshooting has a section on failed runs (a missing key, nothing listening at `base_url`, a refused key, an unknown model, rate limits) and covers a CLI that isn't on the `PATH` and a default Python older than 3.12.
+- The Learn page lays out the path from zero to production, and the docs home links the Quickstart and says how to start a project.
 - `README.md` shows badges for CI, coverage, the PyPI and npm versions, the supported Python and Node versions, the license and the docs. A `Coverage` job in CI runs `make cov` on each push to `main`, after the Python jobs pass, and writes the total to `coverage.json` on the `badges` branch, which the coverage badge reads.
 - The website has a landing page at `/`, and the docs move under `/docs/` (ADR-0046). The page is plain HTML and CSS in `website/`; `make docs` builds the docs into `site/docs/` and copies the landing page to `site/`, which Vercel serves. The docs header's logo leads to the landing page, Vercel redirects `/docs` to `/docs/` and serves the landing page's `404.html` for a missing path, and a test checks the landing page's links into the docs. `make site-serve` builds the website and serves it as Vercel does, with the 404 page for a missing path (`scripts/serve_site.py`). `CONTRIBUTING.md` explains how to preview and publish the website.
 - The docs compare `openai.chat` and `anthropic.messages`: what Claude loses through Chat Completions, and that `instrument()` follows the client, not `models.provider` (`docs/reference/providers.md`).
@@ -29,6 +32,8 @@ Below are the changes that belong to the repository rather than to one package: 
 
 ### Changed
 
+- The Quickstart needs no clone: `uvx --from harnessweaver-cli harnessweaver init` creates the project, `uv sync` installs it from PyPI, and every step runs inside it with `uv run`, ending with a real model. The examples, which do need a clone, moved to its end. `README.md`'s *Try it* follows the same path.
+- `README.md`, `QUICKSTART.md` and the packages' READMEs link to the docs site rather than to GitHub's view of `docs/`, which doesn't show the code the pages include, and the packages' READMEs use absolute links, which work on PyPI.
 - `make release` publishes TypeScript packages with `npm publish` instead of `pnpm publish`, because pnpm only warns when trusted publishing fails. It needs an npm login, not a pnpm one.
 
 ### Fixed

@@ -117,6 +117,10 @@ extraPaths = [
     "examples/02_support_rag",
     "examples/03_refund_agent",
 ]
+# The web app recipe runs inside the tutorial's finished project and imports its code.
+executionEnvironments = [
+    { root = "docs_src/web_app", extraPaths = ["docs_src/tutorial/evals"] },
+]
 # RULES C1: strict on the contract-heavy core.
 strict = [
     "python/harnessweaver/src/harnessweaver/core",

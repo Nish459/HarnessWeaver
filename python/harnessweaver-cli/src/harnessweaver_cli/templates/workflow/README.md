@@ -7,10 +7,11 @@ A support-ticket pipeline: clean the ticket, then classify and summarize it in p
 - `harness.offline.yaml` swaps the model for a scripted one whose first draft misses the category, so the review loop shows offline.
 
 ```bash
-harnessweaver spec validate --env offline     # check the spec
-harnessweaver test                            # run the tests offline
-harnessweaver eval run --env offline          # grade evals/golden.yaml
-HARNESSWEAVER_ENV=offline python -m app.main  # triage one ticket
+uv sync                                              # install the project and its tools
+uv run harnessweaver spec validate --env offline     # check the spec
+uv run harnessweaver test                            # run the tests offline
+uv run harnessweaver eval run --env offline          # grade evals/golden.yaml
+HARNESSWEAVER_ENV=offline uv run python -m app.main  # triage one ticket
 ```
 
 Finished steps are checkpointed: after an approval, only the interrupted step runs again.

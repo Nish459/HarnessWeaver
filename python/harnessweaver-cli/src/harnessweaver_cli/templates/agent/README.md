@@ -8,11 +8,12 @@ A support agent that looks up orders and issues refunds. A Pydantic AI agent run
 - `evals/redteam.yaml` is the red-team set: injected instructions and over-the-limit refunds are blocked, and a large refund waits for a person.
 
 ```bash
-harnessweaver spec validate --env offline     # check the spec
-harnessweaver test                            # run the tests offline
-harnessweaver eval run --env offline          # grade the red-team set
-harnessweaver policy test                     # once you write policy_tests.yaml
-HARNESSWEAVER_ENV=offline python -m app.main  # ask the agent once
+uv sync                                              # install the project and its tools
+uv run harnessweaver spec validate --env offline     # check the spec
+uv run harnessweaver test                            # run the tests offline
+uv run harnessweaver eval run --env offline          # grade the red-team set
+uv run harnessweaver policy test                     # once you write policy_tests.yaml
+HARNESSWEAVER_ENV=offline uv run python -m app.main  # ask the agent once
 ```
 
 Approve a waiting refund with `harness.approve(run_id, approval_id, approver=...)`; the agent continues from where it stopped, and only the approved call runs. After changing a tool's description or schema, review it and run `harnessweaver tools pin`.

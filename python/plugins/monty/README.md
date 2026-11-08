@@ -1,6 +1,6 @@
 # harnessweaver-monty
 
-A first-party [HarnessWeaver](../../../README.md) plugin for the Monty sandbox. It contributes `monty.sandbox`, a `Sandbox` that runs code-executing tools in [pydantic-monty](https://github.com/pydantic/monty) worker processes, never in the host process (RULES S4).
+A first-party [HarnessWeaver](https://github.com/Wise-DreamerZ/HarnessWeaver) plugin for the Monty sandbox. It contributes `monty.sandbox`, a `Sandbox` that runs code-executing tools in [pydantic-monty](https://github.com/pydantic/monty) worker processes, never in the host process (RULES S4).
 
 It is built on the same plugin contract any third-party plugin uses: one `hw.Plugin` object, published through the `harnessweaver.plugins` entry point under the namespace `monty` (see DESIGNS.md No. 13).
 

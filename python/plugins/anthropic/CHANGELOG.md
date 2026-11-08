@@ -4,6 +4,10 @@ All notable changes to this plugin. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Fixed
+
+- With no `api_key_env` and no credentials for the SDK to find (no `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`, no `ant auth login` profile, no workload identity), a call failed with `the model provider failed (TypeError)`. It now fails with `anthropic.messages found no credentials`, saying what to set. A profile or identity token the SDK was pointed at but can't load fails with the SDK's own message, which names the file or variable, instead of `the model provider failed (CredentialsError)`.
+
 ## 0.2.0 - 2026-11-02
 
 The first version published to PyPI.

@@ -44,6 +44,8 @@ Python 3.12 or later. The core depends only on [Pydantic](https://docs.pydantic.
 $ uv add "harnessweaver[openai]"
 ```
 
+No project yet? Make one first with `uv init --python 3.12 support-desk && cd support-desk`. Or let the [Quickstart](learn/quickstart.md) create a whole project from a template, then run, trace, test and grade it offline and call a real model, in about ten minutes.
+
 ## Example
 
 ### Create it

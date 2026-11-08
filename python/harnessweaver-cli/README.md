@@ -1,20 +1,23 @@
 # harnessweaver-cli
 
-Developer tooling for [HarnessWeaver](../../README.md). Installs the `harnessweaver` command. The full reference, with every option and exit code, is [docs/cli.md](../../docs/cli.md).
+Developer tooling for [HarnessWeaver](https://github.com/Wise-DreamerZ/HarnessWeaver). Installs the `harnessweaver` command. The full reference, with every option and exit code, is [the CLI page](https://harnessweaver.wisedreamerz.com/docs/cli/) of the docs.
 
 ```bash
 uv add --dev harnessweaver-cli
-harnessweaver --help
+uv run harnessweaver --help
 ```
 
 ## Start a project
 
 ```bash
-harnessweaver init invoice-bot              # the extraction template; -t picks another
+uvx --from harnessweaver-cli harnessweaver init invoice-bot   # the extraction template; -t picks another
 cd invoice-bot
-harnessweaver spec validate --env offline   # load it the way the app will
-harnessweaver test                          # its tests, offline
+uv sync                                                        # the project's own dependencies, the CLI among them
+uv run harnessweaver spec validate --env offline               # load it the way the app will
+uv run harnessweaver test                                      # its tests, offline
 ```
+
+`uvx` runs the command once without installing it. A new project lists `harnessweaver-cli` among its development dependencies, so from then on `uv run harnessweaver` is the project's own copy.
 
 `init` copies a template and puts the project name in it; there is no template
 language. A plugin's templates are named `<namespace>.<template>`

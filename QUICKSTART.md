@@ -1,53 +1,38 @@
 # Quickstart
 
-This walk takes you from nothing to a governed, traced and tested task in about fifteen minutes. Everything runs offline: no API keys, no network calls to a model, no spend. At the end you will have your own project with a typed task, PII redaction, an output check, a budget, a golden eval set with a baseline, and a new guard in shadow mode.
+This walk takes you from nothing to a governed, traced and tested task of your own in about ten minutes, and then to a real model. Until that last step everything runs offline: no API keys, no network calls to a model, no spend. At the end you will have a project with a typed task, PII redaction, an output check, a budget, a golden eval set with a baseline, and a new guard in shadow mode.
 
-> This guide runs the repository's examples, so it installs HarnessWeaver from a clone and runs your project with that installation. To add it to a project of your own instead, use `uv add harnessweaver` ([Installation](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/deployment/index.md#install)).
+## 1. Install uv
 
-## 1. Install
-
-You need [git](https://git-scm.com/) and [uv](https://docs.astral.sh/uv/getting-started/installation/). uv installs a suitable Python (3.12 or later) on its own if you don't have one.
+HarnessWeaver is a set of Python packages on PyPI, and [uv](https://docs.astral.sh/uv/) installs them. If you don't have uv yet:
 
 ```bash
-git clone https://github.com/Wise-DreamerZ/HarnessWeaver.git
-cd HarnessWeaver
-uv sync --all-packages
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-`uv sync --all-packages` creates `.venv/` with the core (`harnessweaver`), the CLI (`harnessweaver`), the sidecar (`harnessd`), the first-party plugins and the development tools.
+On Windows, or to install it another way, see [uv's installation guide](https://docs.astral.sh/uv/getting-started/installation/). You don't need to install Python yourself: uv finds or downloads a suitable one (3.12 or later).
 
-## 2. See a governed run
-
-Example 01 turns the text of a supplier invoice into a typed `Invoice`:
+## 2. Create a project
 
 ```bash
-HARNESSWEAVER_ENV=offline uv run python examples/01_invoice_extraction/run.py
+uvx --from harnessweaver-cli harnessweaver init ticket-triage
+cd ticket-triage
+uv sync
 ```
 
 ```text
-status: completed
-invoice: INV-2026-0042 from Northwind Supplies Ltd
-total: 1860.00 EUR over 2 lines
-cost: $0.000510
+created 10 files in ticket-triage from the extraction template
 ```
 
-`HARNESSWEAVER_ENV=offline` applies the example's `harness.offline.yaml` overlay, which swaps the model gateway for a scripted model. That model's first answer is deliberately invalid, so this run already shows the harness asking for a repair. The app's own code is one `harness.run(...)` call: the redaction, the repair, the budget and the trace all come from its `harness.yaml`.
+`uvx` runs the `harnessweaver` command once without installing it, and `init` writes a project from a template. `uv sync` installs the project's dependencies into `ticket-triage/.venv/`: the core (`harnessweaver`), the plugin for OpenAI-compatible models (`harnessweaver-openai`) and, for development, the CLI and pytest. From here on, every command runs inside `ticket-triage/`, and `uv run harnessweaver` is the project's own copy of the CLI.
 
-## 3. Start your own project
+> If `uvx` says the current Python version doesn't satisfy `Python>=3.12`, your default Python is older: run `uvx --python 3.12 --from harnessweaver-cli harnessweaver init ticket-triage` instead.
 
-```bash
-uv run harnessweaver init ../ticket-triage
-```
-
-```text
-created 10 files in ../ticket-triage from the extraction template
-```
-
-The `extraction` template (the default; `-t rag`, `-t agent`, `-t workflow` and `-t chat` give the others) creates a support-ticket triage app:
+The `extraction` template (the default; `-t rag`, `-t agent`, `-t workflow` and `-t chat` give the [others](https://harnessweaver.wisedreamerz.com/docs/resources/templates/)) is a support-ticket triage app:
 
 | File | What it is |
 | --- | --- |
-| `harness.yaml` | The spec: it extends `profile://extraction` (PII redaction on input, a secrets check on output, one repair), names the model gateway, and defines the `extract` task with its input and output types, prompt and budget, a business rule and an eval suite |
+| `harness.yaml` | The spec: it extends `profile://extraction` (PII redaction on input, a secrets check on output, one repair), names the model, and defines the `extract` task with its input and output types, prompt and budget, a business rule and an eval suite |
 | `harness.offline.yaml` | The offline overlay: a scripted model with one answer per golden case |
 | `app/models.py` | `Message` (the input) and `TicketSummary` (the typed output the model must return) |
 | `app/main.py` | Runs the task once |
@@ -57,47 +42,10 @@ The `extraction` template (the default; `-t rag`, `-t agent`, `-t workflow` and 
 
 Open `harness.yaml`; it is short. Everything the harness does in the steps below comes from it and from the profile it extends.
 
-## 4. Check the spec
+## 3. Run the task
 
 ```bash
-uv run harnessweaver spec validate ../ticket-triage/harness.yaml -e offline
-```
-
-```text
-ok: ticket-triage is valid
-  adoption level L1 (required: L0)
-  layers: profile://defaults, profile://extraction, harness.yaml (../ticket-triage/harness.yaml), harness.offline.yaml (../ticket-triage/harness.offline.yaml)
-  tasks: extract
-```
-
-`spec validate` loads the spec exactly as the app will: every layer, every lock and bound, every plugin, provider and task. A spec that can't run never gets past this step. The output lists the layers that were merged, in order, and the [adoption level](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/concepts/adoption-levels.md) the spec reaches.
-
-```bash
-uv run harnessweaver doctor ../ticket-triage/harness.yaml -e offline
-```
-
-```text
-OK    level          adoption level L1; risk tier 'internal' requires L0
-OK    next level     to reach L2: policy.rules has at least one rule
-OK    hooks          task extract: runner direct reaches every hook it needs
-...
-```
-
-`doctor` adds advice: what the next level needs, retry owners, unpinned profiles, guards in shadow mode and content capture.
-
-```bash
-uv run harnessweaver hooks ../ticket-triage/harness.yaml -e offline --task extract
-```
-
-This prints the middleware on each of the 13 hook points, in the order it runs. For this project: the profile's PII guard on `input.before`, and the profile's secrets check and your business rule on `output.before`.
-
-## 5. Run the task
-
-Your project has its own `pyproject.toml`, but this guide runs it with the clone's installation, so pass `--project ../HarnessWeaver` to `uv run`:
-
-```bash
-cd ../ticket-triage
-HARNESSWEAVER_ENV=offline uv run --project ../HarnessWeaver python -m app.main
+HARNESSWEAVER_ENV=offline uv run python -m app.main
 ```
 
 ```text
@@ -105,9 +53,17 @@ status: completed
 output: {'category': 'billing', 'priority': 2, 'product': 'Pro plan', 'summary': 'The customer was charged twice for the Pro plan and wants a refund.'}
 ```
 
-## 6. See what the harness did
+`HARNESSWEAVER_ENV=offline` merges `harness.offline.yaml` over `harness.yaml`, which swaps the model gateway for a scripted model, so the run needs no network, no keys and no money. The app's own code, in `app/main.py`, is one call:
 
-Every run keeps a trace of every hook that fired and every decision made. Save this as `show_trace.py` in `ticket-triage/`:
+```python
+result = await harness.run("extract", Message(text=SAMPLE), principal="demo")
+```
+
+There is no retry loop, no error handling around the model and no tracing setup. The redaction, the output check, the budget and the trace all come from `harness.yaml`.
+
+## 4. See what the harness did
+
+Every run keeps a trace of every hook that fired and every decision made. Save this as `show_trace.py`:
 
 ```python
 """Run the task once and print what the harness did at each hook point."""
@@ -131,7 +87,7 @@ asyncio.run(main())
 ```
 
 ```bash
-HARNESSWEAVER_ENV=offline uv run --project ../HarnessWeaver python show_trace.py
+HARNESSWEAVER_ENV=offline uv run python show_trace.py
 ```
 
 ```text
@@ -148,41 +104,77 @@ HARNESSWEAVER_ENV=offline uv run --project ../HarnessWeaver python show_trace.py
   10 hook    run.end           harness -> continue
 ```
 
-Read it top to bottom. The PII guard found the e-mail address and redacted it before the model saw anything (events 1 to 3), so the model only received `[EMAIL]`. The budget recorded the call's usage (event 5). The secrets check and your `summary-length` rule passed the output (events 7 and 8). The trace never holds the content itself, only ids, codes and reasons (RULES R9). The same events become OpenTelemetry spans when you turn [observability](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/tutorial/observability.md) on.
+Read it top to bottom. The PII guard found the e-mail address and redacted it before the model saw anything (events 1 to 3), so the model only received `[EMAIL]`. The budget recorded the call's usage (event 5). The secrets check and your `summary-length` rule passed the output (events 7 and 8). The trace never holds the content itself, only ids, codes and reasons (RULES R9). The same events become OpenTelemetry spans when you turn on [observability](https://harnessweaver.wisedreamerz.com/docs/tutorial/observability/).
 
-## 7. Test it
-
-Go back to the clone and run the project's tests. `harnessweaver test` sets test mode (live providers refuse to call out) and applies the offline overlay, then runs pytest:
+## 5. Check the spec
 
 ```bash
-cd ../HarnessWeaver
-uv run harnessweaver test ../ticket-triage
+uv run harnessweaver spec validate -e offline
 ```
 
 ```text
-../ticket-triage/tests/test_extract.py .....                                     [100%]
-5 passed
+ok: ticket-triage is valid
+  adoption level L1 (required: L0)
+  layers: profile://defaults, profile://extraction, harness.yaml (harness.yaml), harness.offline.yaml (harness.offline.yaml)
+  tasks: extract
 ```
 
-## 8. Grade it
+`spec validate` loads the spec exactly as the app will: every layer, every lock and bound, every plugin, provider and task. A spec that can't run never gets past this step. The output lists the layers that were merged, in order, and the [adoption level](https://harnessweaver.wisedreamerz.com/docs/concepts/adoption-levels/) the spec reaches. With no path, the CLI reads `harness.yaml` in the current directory.
 
 ```bash
-uv run harnessweaver eval run ../ticket-triage/harness.yaml -e offline --update-baseline
+uv run harnessweaver doctor -e offline
+```
+
+```text
+OK    level          adoption level L1; risk tier 'internal' requires L0
+OK    next level     to reach L2: policy.rules has at least one rule
+OK    hooks          task extract: runner direct reaches every hook it needs
+...
+```
+
+`doctor` adds advice: what the next level needs, retry owners, unpinned profiles, guards in shadow mode and content capture.
+
+```bash
+uv run harnessweaver hooks -e offline --task extract
+```
+
+This prints the middleware on each of the 13 hook points, in the order it runs. For this project: the profile's PII guard on `input.before`, and the profile's secrets check and your business rule on `output.before`.
+
+## 6. Test it
+
+```bash
+uv run harnessweaver test
+```
+
+```text
+collected 5 items
+
+tests/test_extract.py .....                                              [100%]
+
+============================== 5 passed in 0.05s ===============================
+```
+
+`harnessweaver test` runs pytest in test mode (live providers refuse to call out) with the offline overlay applied, so tests can never reach a real model by accident.
+
+## 7. Grade it
+
+```bash
+uv run harnessweaver eval run -e offline --update-baseline
 ```
 
 ```text
 ok: golden (extract): 2/2 passed, pass rate 1.0 (threshold 0.9)
-  baseline written to ../ticket-triage/.harness/baselines/extract.golden.json
+  baseline written to .harness/baselines/extract.golden.json
 ```
 
 `eval run` runs every case in `evals/golden.yaml` through the task and grades it. With `--update-baseline` it saves the results; from then on, a case that passed in the baseline and fails now is a regression, and `eval run` exits 1. Commit the baseline and run `eval run` in CI.
 
-## 9. Add a guard, safely
+## 8. Add a guard, safely
 
 New guards start in shadow mode: they record what they would have done and change nothing (RULES R8).
 
 ```bash
-uv run harnessweaver add guard injection.heuristic ../ticket-triage/harness.yaml
+uv run harnessweaver add guard injection.heuristic
 ```
 
 ```text
@@ -193,7 +185,7 @@ added guardrails.input[injection-heuristic] (injection.heuristic) in shadow mode
 The command edits `harness.yaml` (comments are kept, and an edit that doesn't load is taken back). Run the evals again and they report how often the new guard would fire:
 
 ```bash
-uv run harnessweaver eval run ../ticket-triage/harness.yaml -e offline
+uv run harnessweaver eval run -e offline
 ```
 
 ```text
@@ -203,20 +195,60 @@ ok: golden (extract): 2/2 passed, pass rate 1.0 (threshold 0.9)
 
 When the evidence backs it, promote the guard with a reviewed one-line change: `mode: log_only` becomes `mode: enforce`.
 
-## 10. Call a real model
+## 9. Call a real model
 
-The template points at a [LiteLLM Proxy](https://docs.litellm.ai/docs/simple_proxy) gateway, which holds the provider keys and owns retries and fallbacks:
+So far a scripted model has answered. To call a real one, replace the `models` section of `harness.yaml` with the one for your provider, set its key, and run without `HARNESSWEAVER_ENV=offline`. Tests and evals keep using the offline overlay, so they stay offline and free.
+
+**OpenAI**, called directly:
+
+```yaml
+models:
+  provider: openai.chat                  # no base_url: the OpenAI API itself
+  api_key_env: OPENAI_API_KEY
+  max_retries: 2                         # with no gateway, the SDK retries
+  default: fast
+  aliases: { fast: your-openai-model }   # a model id your account can use
+```
+
+**Claude**, called directly. Add its plugin first, with `uv add "harnessweaver[anthropic]"`:
+
+```yaml
+models:
+  provider: anthropic.messages
+  api_key_env: ANTHROPIC_API_KEY
+  default: fast
+  aliases: { fast: claude-haiku-5-5 }
+```
+
+**A local model** with [Ollama](https://ollama.com), which costs nothing and keeps everything on your machine:
 
 ```yaml
 models:
   provider: openai.chat
-  base_url: http://localhost:4000
-  api_key_env: LITELLM_API_KEY
+  base_url: http://localhost:11434/v1    # Ollama's OpenAI-compatible API
+  api_key_env: OLLAMA_API_KEY            # Ollama ignores the key, but one must be set
   default: fast
-  aliases: { fast: your-fast-model }
+  aliases: { fast: your-local-model }    # one you pulled with `ollama pull`
 ```
 
-Run a gateway (or `uv run harnessweaver dev ../ticket-triage/harness.yaml --up` for a local stack with LiteLLM, an OpenTelemetry collector and Langfuse), map the `fast` alias to a model it serves, set `LITELLM_API_KEY`, and run without `HARNESSWEAVER_ENV=offline`. Any OpenAI-compatible endpoint works the same way, and `provider: anthropic.messages` calls Claude directly. See [Models](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/tutorial/models.md).
+**A gateway**, the template's own setting and the one for production: [LiteLLM Proxy](https://docs.litellm.ai/docs/simple_proxy) holds the provider keys, owns retries and fallbacks, and reports what each call cost. Keep the template's `models` section, map the `fast` alias to a model the gateway serves, and set `LITELLM_API_KEY`. With Docker, `uv run harnessweaver dev --up` starts one locally, with an OpenTelemetry collector and Langfuse ([Gateways and the dev stack](https://harnessweaver.wisedreamerz.com/docs/deployment/gateways/)).
+
+Then set the key named by `api_key_env` and run the task:
+
+```bash
+export OPENAI_API_KEY=...                # or ANTHROPIC_API_KEY, OLLAMA_API_KEY=ollama, LITELLM_API_KEY
+uv run python -m app.main
+```
+
+If the run doesn't complete, the app prints why:
+
+```text
+status: failed
+output: None
+error: provider_error: openai.chat needs $OPENAI_API_KEY
+```
+
+A provider called directly doesn't report what a call cost, so the run's cost is marked unknown (it is never guessed) and a `max_usd` budget can't count it. Add your models' prices under `models.prices` to fix that ([Models and environments](https://harnessweaver.wisedreamerz.com/docs/tutorial/models/#cost)). When the app reaches production, keep each environment's model settings in an overlay such as `harness.prod.yaml`, picked with `HARNESSWEAVER_ENV=prod`.
 
 ## Already have an app?
 
@@ -230,12 +262,26 @@ client = harness.instrument(AsyncOpenAI(base_url=GATEWAY))    # 3
 # The rest of the app uses `client` exactly as before.
 ```
 
-[`examples/01_invoice_extraction/l0_instrument.py`](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/examples/01_invoice_extraction/l0_instrument.py) runs this offline.
+See [Govern an existing client](https://harnessweaver.wisedreamerz.com/docs/how-to/wrap-a-client/).
+
+## Run the examples
+
+The repository has four complete examples: invoice extraction, a support assistant with retrieval, a refund agent with tools and approvals, and one spec served to TypeScript and over HTTP. They run offline from a clone:
+
+```bash
+git clone https://github.com/Wise-DreamerZ/HarnessWeaver.git
+cd HarnessWeaver
+uv sync --all-packages
+HARNESSWEAVER_ENV=offline uv run python examples/01_invoice_extraction/run.py
+```
+
+[Examples](https://harnessweaver.wisedreamerz.com/docs/resources/examples/) describes each one.
 
 ## Where next
 
-- [Tutorial](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/tutorial/index.md): one app built chapter by chapter, with every feature.
-- [Concepts](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/concepts/index.md): hook points, the hook bus, outcomes, the envelope and the integration styles.
-- [The spec](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/concepts/spec.md): every section of `harness.yaml`, layering, locks and bounds.
-- [Examples](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/resources/examples.md): a RAG support assistant, a tool-using agent with approvals, and the same spec from TypeScript and over HTTP.
-- [Advanced guide](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/docs/advanced/index.md): your own guards, middleware and plugins.
+- [Tutorial](https://harnessweaver.wisedreamerz.com/docs/tutorial/): one app, a support desk, built chapter by chapter with every feature.
+- [Serve it from a web app](https://harnessweaver.wisedreamerz.com/docs/how-to/web-app/): one harness for every request, each run as the user who made it, approvals over HTTP.
+- [Concepts](https://harnessweaver.wisedreamerz.com/docs/concepts/): hook points, the hook bus, outcomes, the envelope and the integration styles.
+- [The spec](https://harnessweaver.wisedreamerz.com/docs/concepts/spec/): every section of `harness.yaml`, layering, locks and bounds.
+- [Deployment](https://harnessweaver.wisedreamerz.com/docs/deployment/): gateways, overlays, state, telemetry, CI and a production checklist.
+- [Troubleshooting](https://harnessweaver.wisedreamerz.com/docs/how-to/troubleshooting/): what each load error and blocked run means, and how to fix it.
