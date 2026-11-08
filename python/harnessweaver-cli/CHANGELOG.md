@@ -4,6 +4,8 @@ All notable changes to the `harnessweaver` command and its project templates. Th
 
 ## [Unreleased]
 
+## 0.7.2 - 2026-11-08
+
 ### Changed
 
 - `harnessweaver init` ends with next steps that work right after `uvx --from harnessweaver-cli harnessweaver init`, with nothing installed yet: `uv sync`, then `uv run harnessweaver spec validate --env offline` and `uv run harnessweaver test`. The templates' READMEs run their commands the same way, and the package's README uses absolute links, which work on PyPI.

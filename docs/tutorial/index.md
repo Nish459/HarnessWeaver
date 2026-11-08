@@ -56,7 +56,7 @@ Then, inside `support-desk/`:
 ```console
 $ uv sync
 $ uv run harnessweaver --version
-harnessweaver-cli 0.7.1 (harnessweaver 0.18.0)
+harnessweaver-cli 0.7.2 (harnessweaver 0.18.0)
 ```
 
 !!! tip
