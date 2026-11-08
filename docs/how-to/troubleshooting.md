@@ -109,8 +109,8 @@ A run that ends `failed` never got an answer to check. `RunResult.error` says wh
 | `openai.chat: AuthenticationError (HTTP 401)` | The endpoint refused the key | The key in that variable, and that it belongs to that endpoint |
 | `openai.chat: NotFoundError (HTTP 404)` | The endpoint doesn't serve the model an alias maps to, or `base_url` lacks its `/v1` | Map the alias in `models.aliases` to a model id the endpoint serves |
 | `openai.chat: RateLimitError (HTTP 429)` | The provider is limiting your requests | A gateway, which retries and falls back, or `max_retries` when calling a provider directly |
-| `anthropic.messages needs $ANTHROPIC_API_KEY` | The variable that `models.api_key_env` names isn't set | Export it |
-| `anthropic.messages found no credentials: ...` (from older versions of the plugin, `the model provider failed (TypeError)`) | With no `api_key_env`, the Anthropic SDK found no key, no token and no `ant auth login` profile | Set `ANTHROPIC_API_KEY`, run `ant auth login`, or name the key's variable with `models.api_key_env` |
+| `anthropic.messages needs $ANTHROPIC_API_KEY`, or another variable | The variable that `models.api_key_env` names isn't set | Export it |
+| `anthropic.messages found no credentials: ...` | With no `api_key_env`, the Anthropic SDK found no key, no token and no `ant auth login` profile | Set `ANTHROPIC_API_KEY`, run `ant auth login`, or name the key's variable with `models.api_key_env` |
 | `anthropic.messages: Config file not found at ...`, or another file or variable | `ANTHROPIC_PROFILE`, `ANTHROPIC_CONFIG_DIR` or the workload identity variables point at credentials that can't be loaded | The message names the file or variable to fix |
 | `openai.chat can't call out in test mode (R14)` | Test mode is on, as it is under `harnessweaver test` | Expected in tests: use the offline overlay or a scripted model ([Testing](../tutorial/testing.md)) |
 

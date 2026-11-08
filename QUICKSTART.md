@@ -214,8 +214,7 @@ models:
 
 ```yaml
 models:
-  provider: anthropic.messages
-  api_key_env: ANTHROPIC_API_KEY
+  provider: anthropic.messages           # the key comes from ANTHROPIC_API_KEY, or `ant auth login`
   default: fast
   aliases: { fast: claude-haiku-5-5 }
 ```
@@ -233,7 +232,7 @@ models:
 
 **A gateway**, the template's own setting and the one for production: [LiteLLM Proxy](https://docs.litellm.ai/docs/simple_proxy) holds the provider keys, owns retries and fallbacks, and reports what each call cost. Keep the template's `models` section, map the `fast` alias to a model the gateway serves, and set `LITELLM_API_KEY`. With Docker, `uv run harnessweaver dev --up` starts one locally, with an OpenTelemetry collector and Langfuse ([Gateways and the dev stack](https://harnessweaver.wisedreamerz.com/docs/deployment/gateways/)).
 
-Then set the key named by `api_key_env` and run the task:
+Then set your key and run the task:
 
 ```bash
 export OPENAI_API_KEY=...                # or ANTHROPIC_API_KEY, OLLAMA_API_KEY=ollama, LITELLM_API_KEY

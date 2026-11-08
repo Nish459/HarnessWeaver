@@ -160,8 +160,7 @@ The spec calls a gateway, but you don't need one to try a real model: `models` c
 
     ```yaml
     models:
-      provider: anthropic.messages
-      api_key_env: ANTHROPIC_API_KEY
+      provider: anthropic.messages           # the key comes from ANTHROPIC_API_KEY, or `ant auth login`
       default: fast
       aliases: { fast: claude-haiku-5-5 }
     ```
