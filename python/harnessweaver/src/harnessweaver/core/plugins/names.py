@@ -43,6 +43,7 @@ RESERVED_NAMESPACES: Final = frozenset(
         "callback",
         "console",
         "webhook",
+        "email",
         "passthrough",
         # policy, routing, validation
         "cel_lite",

@@ -88,8 +88,9 @@ An approval covers one execution of the call: if the model asks for the same cal
 | `callback` | Calls your function with each `ApprovalRequest` |
 | `console` | Prints one line per request, for local development |
 | `webhook` | POSTs each request as JSON to a URL |
+| `email` | Sends each request by e-mail via SMTP (standard library only) |
 
-Slack, e-mail and an approval page are *planned*. [Providers](../reference/providers.md#approval-channels) has each channel's settings.
+Slack and an approval page are *planned*. [Providers](../reference/providers.md#approval-channels) has each channel's settings.
 
 !!! info "Only harness-driven runs can wait"
     `harness.run` and the runners suspend and resume. In a standalone session, a wrapped agent, or TypeScript, a request for approval **escalates** instead, because the harness can't re-enter your app's code later.

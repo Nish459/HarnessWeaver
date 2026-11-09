@@ -4,6 +4,10 @@ All notable changes to the core package. The format follows [Keep a Changelog](h
 
 ## [Unreleased]
 
+### Added
+
+- `email` approval channel: sends each approval request by e-mail via SMTP, using only the standard library. Credentials come from environment variables (S1). Refuses the network in test mode (R14). A failed send is traced as `approval_notify_failed`, like any channel.
+
 ## 0.18.0 - 2026-11-02
 
 The first version published to PyPI.

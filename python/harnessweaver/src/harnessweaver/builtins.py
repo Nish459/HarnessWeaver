@@ -11,6 +11,7 @@ from harnessweaver.core.plugins import BUILTIN_NAMESPACE, Plugin
 from harnessweaver.modules.approvals import (
     CallbackChannel,
     ConsoleChannel,
+    EmailChannel,
     MemoryChannel,
     WebhookChannel,
 )
@@ -71,6 +72,7 @@ plugin = Plugin(
         CallbackChannel,
         ConsoleChannel,
         WebhookChannel,
+        EmailChannel,
         RulesDecider,
         LexicalDecider,
         SemanticDecider,
