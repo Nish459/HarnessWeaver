@@ -4,7 +4,7 @@ An org baseline is the profile your platform or security team publishes for ever
 
 ## 1. Start from a complete one
 
-[`examples/_org/acme-baseline.yaml`](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/examples/_org/acme-baseline.yaml) is the baseline the repository's examples extend, and its tests run in CI:
+To write one from choices in a form, use the [Spec generator](../learn/spec-generator.md) and pick *Profile*. [`examples/_org/acme-baseline.yaml`](https://github.com/Wise-DreamerZ/HarnessWeaver/blob/main/examples/_org/acme-baseline.yaml) is the baseline the repository's examples extend, and its tests run in CI:
 
 ```yaml title="acme-baseline.yaml"
 --8<-- "examples/_org/acme-baseline.yaml"

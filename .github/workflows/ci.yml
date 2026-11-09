@@ -104,6 +104,13 @@ jobs:
       # The tests read the shared fixtures in contracts/ and the examples (R11, T4).
       - name: Types, tests, build
         run: pnpm typecheck && pnpm test && pnpm build
+      # The docs' spec generator writes app specs for TypeScript too: load them with the core
+      # just built, which make check doesn't have, so there these tests are skipped.
+      - name: Spec generator, in TypeScript
+        working-directory: .
+        env:
+          REQUIRE_TS_CORE: "1"
+        run: uv run --locked pytest docs_src/tests/test_spec_generator.py -q -k typescript_core
 
   docs:
     name: Docs site

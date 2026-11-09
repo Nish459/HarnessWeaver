@@ -16,7 +16,7 @@ When something doesn't work, [Troubleshooting](../how-to/troubleshooting.md) exp
 | If you | Read |
 | --- | --- |
 | Have ten minutes and want to see it work | The [Quickstart](quickstart.md): a governed, traced and tested project from a template, offline, then a real model |
-| Want a spec for your own app now | The [Spec generator](spec-generator.md): pick the model, the task, the guards and the rules, and copy the `harness.yaml` it writes |
+| Want a spec for your own app now | The [Spec generator](spec-generator.md): pick what you need, and copy the `harness.yaml`, profile, overlay, tool manifest or eval suite it writes |
 | Want to learn it properly | The [Tutorial](../tutorial/index.md): one app, built chapter by chapter, every feature, tested code |
 | Want the mental model first | [Concepts](../concepts/index.md), then [Lifecycle and hook points](../concepts/lifecycle.md) |
 | Already have an app calling a model | [Govern an existing client](../how-to/wrap-a-client.md): three lines |

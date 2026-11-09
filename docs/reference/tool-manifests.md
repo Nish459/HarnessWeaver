@@ -92,7 +92,7 @@ spec:
 
 ## Writing a manifest
 
-`harnessweaver add tool app.tools:refund_payment --risk high --side-effect write_external` writes a manifest from the function: the name is the function's, the description its docstring summary, and the input schema comes from its parameters. It adds the directory to `tools.manifests`. Review the result, fill in `egress`, `data_access`, `approval` and `rate_limit`, then pin it.
+`harnessweaver add tool app.tools:refund_payment --risk high --side-effect write_external` writes a manifest from the function: the name is the function's, the description its docstring summary, and the input schema comes from its parameters. It adds the directory to `tools.manifests`. Review the result, fill in `egress`, `data_access`, `approval` and `rate_limit`, then pin it. The [Spec generator](../learn/spec-generator.md) (*Tool manifest*) writes one from choices in a form instead.
 
 ## Tools given in code
 

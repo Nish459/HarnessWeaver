@@ -2,7 +2,7 @@
 
 Every section of a `Harness` or `Profile` document, with each field's type, default and meaning. Defaults are what applies when no layer sets the field; the framework's `defaults` profile sets a few of them explicitly (noted below). Unknown keys fail loading, except in blocks that pick a provider, where extra keys are the provider's settings and are validated by the provider.
 
-To start a spec by picking choices in a form, use the [Spec generator](../learn/spec-generator.md).
+To start an app spec, a profile or an overlay by picking choices in a form, use the [Spec generator](../learn/spec-generator.md).
 
 Types: *duration* is a string such as `30s`, `5m` or `1h30m`, or a number of seconds ([Durations](../concepts/envelope.md#durations)). *expression* is a [cel-lite](expressions.md) string. *import path* is `package.module:attribute`.
 

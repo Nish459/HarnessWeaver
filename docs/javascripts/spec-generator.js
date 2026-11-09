@@ -1,17 +1,21 @@
 /*
- * The spec generator (docs/learn/spec-generator.md): writes a harness.yaml from the
- * choices in the page's form, as the reader makes them.
+ * The spec generator's writers (docs/learn/spec-generator.md). Each turns the values of one
+ * of the page's forms into one of the framework's YAML documents: an app spec (kind:
+ * Harness), a profile (kind: Profile), an environment overlay (kind: Overlay), a tool
+ * manifest (kind: Tool) or an eval suite.
  *
- * buildSpec turns the form's values (what FormData gives: strings, and "on" for a checked
- * box) into the spec, as a plain object, then into YAML. It also lists the files the spec
- * refers to, which `harnessweaver spec validate` needs to find, and the install commands
- * for the plugins it uses. It touches no page, so docs_src/tests runs it under Node.js and
- * checks that each spec it writes loads. Everything runs in the browser: nothing typed
- * into the form leaves the page.
+ * buildSpec takes what FormData gives (strings, and "on" for a checked box), with `doc`
+ * naming the document, and returns {file, yaml, files, install, check, use}: where to save
+ * the document, its text, the files it refers to, the commands that install what it uses
+ * and check it, and a snippet that shows how it is used. The writers touch no page, so
+ * docs_src/tests runs them under Node.js and checks that every document they write loads.
+ * spec-generator-page.js wires them to the page. Nothing typed into the form leaves it.
  */
 
 (function () {
   "use strict";
+
+  var API_VERSION = "harnessweaver/v1";
 
   /* What each model provider's aliases default to. */
   var MODELS = {
@@ -20,7 +24,7 @@
     scripted: { fast: "", strong: "" },
   };
 
-  /* The guards the form offers: its checkbox, the stage, and the guard. */
+  /* The guards the forms offer: its checkbox, the stage, and the guard (its id a suffix). */
   var GUARDS = [
     ["guard_pii", "input", { id: "pii", use: "pii.regex", action: "redact" }],
     ["guard_injection", "input", { id: "injection", use: "injection.heuristic", action: "block" }],
@@ -31,6 +35,8 @@
     ["guard_citations", "output", { id: "citations", use: "grounded.citations", action: "repair" }],
     ["guard_stream", "stream", { id: "stream-secrets", use: "secrets.scan", action: "block" }],
   ];
+
+  /* ---- YAML ---- */
 
   function isObject(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -75,14 +81,18 @@
 
   /*
    * The lines of a map or a list, in block style, each starting with `indent`. A map's
-   * maps and its lists of maps go on the lines below their key; a list of scalars stays
-   * on the key's line, as [a, b]. A list item that is a map starts with "- " and its
-   * other keys line up under its first.
+   * maps and its lists of maps go on the lines below their key, as does a list of scalars
+   * too long for one line; a shorter one stays on the key's line, as [a, b]. A list item
+   * that is a map starts with "- " and its other keys line up under its first.
    */
   function lines(value, indent) {
     var out = [];
     if (Array.isArray(value)) {
       value.forEach(function (item) {
+        if (!isObject(item)) {
+          out.push(indent + "- " + scalar(item));
+          return;
+        }
         var inner = lines(item, indent + "  ");
         out.push(indent + "- " + inner[0].slice(indent.length + 2));
         out.push.apply(out, inner.slice(1));
@@ -91,12 +101,13 @@
     }
     Object.keys(value).forEach(function (key) {
       var item = value[key];
-      var nested = isObject(item) || (Array.isArray(item) && item.some(isObject));
-      if (nested) {
+      var flow = Array.isArray(item) && !item.some(isObject) &&
+        indent + scalar(key) + ": [" + item.map(flowScalar).join(", ") + "]";
+      if (flow && flow.length <= 80) {
+        out.push(flow);
+      } else if (isObject(item) || Array.isArray(item)) {
         out.push(indent + scalar(key) + ":");
         out.push.apply(out, lines(item, indent + "  "));
-      } else if (Array.isArray(item)) {
-        out.push(indent + scalar(key) + ": [" + item.map(flowScalar).join(", ") + "]");
       } else {
         out.push(indent + scalar(key) + ": " + scalar(item));
       }
@@ -104,284 +115,613 @@
     return out;
   }
 
-  /* A spec, as the YAML text of a harness.yaml. */
-  function toYaml(spec) {
-    return [
-      "# harness.yaml, written by the HarnessWeaver spec generator.",
-      "# Check it with: harnessweaver spec validate harness.yaml",
-    ].concat(lines(spec, "")).join("\n") + "\n";
+  /* ---- Reading a form ---- */
+
+  /*
+   * Readers for one form's values, and the list of files the document refers to. `need`
+   * records one as {path, kind, name}: kind says what goes in it (a prompt, a Pydantic
+   * model, a function, a Pydantic AI agent, a tool manifest, the documents to retrieve
+   * from, an eval dataset, a plugin or a middleware), and name what it holds: the attribute
+   * imported from it, the tool, the task, the plugin's namespace or the middleware.
+   */
+  function reader(values) {
+    var files = [];
+    var r = {
+      files: files,
+      text: function (key) {
+        return String(values[key] || "").trim();
+      },
+      /* Comma-separated items. */
+      list: function (key) {
+        return r.text(key).split(",").map(function (item) { return item.trim(); }).filter(Boolean);
+      },
+      /* The lines of a text area. */
+      lines: function (key) {
+        return r.text(key).split("\n").map(function (line) { return line.trim(); }).filter(Boolean);
+      },
+      number: function (key) {
+        return r.text(key) === "" || isNaN(Number(r.text(key))) ? undefined : Number(r.text(key));
+      },
+      on: function (key) {
+        return values[key] === "on";
+      },
+      need: function (path, kind, name) {
+        var file = name ? { path: path, kind: kind, name: name } : { path: path, kind: kind };
+        var known = files.some(function (f) {
+          return f.path === path && f.kind === kind && f.name === file.name;
+        });
+        if (!known) files.push(file);
+      },
+      /* An import path, package.module:attribute, is a file next to the spec. */
+      imports: function (ref, kind) {
+        if (!ref) return undefined;
+        var parts = ref.split(":");
+        r.need(parts[0].replace(/\./g, "/") + ".py", kind, parts[1]);
+        return ref;
+      },
+    };
+    return r;
+  }
+
+  /* Typed text as a value: what it means as JSON, when it is JSON, else the text itself. */
+  function typed(text) {
+    if (text === "") return undefined;
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      return text;
+    }
+  }
+
+  /* `uv add` for the core with the extras a document's plugins need, if any. */
+  function addCore(extras, always) {
+    var wanted = extras.filter(function (extra, i) {
+      return extra && extras.indexOf(extra) === i;
+    }).sort();
+    if (wanted.length) return ['uv add "harnessweaver[' + wanted.join(",") + ']"'];
+    return always ? ["uv add harnessweaver"] : [];
+  }
+
+  /* The extra for a model provider's plugin. */
+  function providerExtra(provider) {
+    return { "openai.chat": "openai", "anthropic.messages": "anthropic" }[provider] || "";
+  }
+
+  /* ---- Sections that several documents share ---- */
+
+  /*
+   * models, for a provider: scripted canned answers, or a provider with its own settings
+   * next to it, the aliases and the fast model's price. An overlay leaves the default
+   * alias, and any alias the reader didn't name, to the spec it changes.
+   */
+  function models(r, provider, overlay) {
+    if (provider === "scripted") {
+      return { provider: provider, replies: [{ text: r.text("reply") || "Hello." }] };
+    }
+    var fallback = overlay ? "" : MODELS[provider].fast;
+    var fast = r.text("fast_model") || fallback;
+    var prices = {};
+    if (r.number("price_in") !== undefined && r.number("price_out") !== undefined) {
+      prices[fast] = { input_per_mtok: r.number("price_in"), output_per_mtok: r.number("price_out") };
+    }
+    return {
+      provider: provider,
+      base_url: provider === "openai.chat" ? r.text("base_url") : undefined,
+      api_key_env: provider === "openai.chat" ? r.text("api_key_env") : undefined,
+      effort: provider === "anthropic.messages" ? r.text("effort") : undefined,
+      default: overlay ? undefined : "fast",
+      aliases: { fast: fast, strong: r.text("strong_model") },
+      prices: prices,
+    };
   }
 
   /*
-   * The spec for a set of form values, with the files it refers to and the commands that
-   * install what it uses.
-   *
-   * Returns {yaml, files, install}. Each file is {path, kind, name}: kind says what goes
-   * in it (a prompt, a Pydantic model, a function, a Pydantic AI agent, a tool manifest,
-   * the documents to retrieve from, or an eval dataset), and name the attribute a spec
-   * imports from it, or the tool a manifest describes.
+   * guardrails: the guards ticked, by stage, each with an id (`prefix` and its short name),
+   * so a later layer can change it, or a profile lock it. New guards start in shadow mode
+   * (RULES R8), unless the reader asks to enforce them.
    */
-  function buildSpec(values) {
-    function text(key) {
-      return String(values[key] || "").trim();
-    }
-    function list(key) {
-      return text(key).split(",").map(function (item) { return item.trim(); }).filter(Boolean);
-    }
-    function number(key) {
-      return text(key) === "" || isNaN(Number(text(key))) ? undefined : Number(text(key));
-    }
-    function on(key) {
-      return values[key] === "on";
-    }
-
-    var files = [];
-    function need(path, kind, name) {
-      var file = name ? { path: path, kind: kind, name: name } : { path: path, kind: kind };
-      var known = files.some(function (f) { return f.path === path && f.name === file.name; });
-      if (!known) files.push(file);
-    }
-    /* An import path, package.module:attribute, is a file next to the spec. */
-    function imports(ref, kind) {
-      var parts = ref.split(":");
-      need(parts[0].replace(/\./g, "/") + ".py", kind, parts[1]);
-      return ref;
-    }
-
-    var provider = text("provider");
-    var runner = text("runner");
-    var name = text("task") || "main";
-    var spec = {
-      apiVersion: "harnessweaver/v1",
-      kind: "Harness",
-      metadata: { name: text("name"), owner: text("owner"), risk_tier: text("risk_tier") },
-      extends: [text("baseline"), text("profile") === "none" ? "" : "profile://" + text("profile")],
-    };
-
-    if (provider === "scripted") {
-      spec.models = { provider: provider, replies: [{ text: text("reply") || "Hello." }] };
-    } else {
-      spec.models = {
-        provider: provider,
-        base_url: provider === "openai.chat" ? text("base_url") : undefined,
-        api_key_env: provider === "openai.chat" ? text("api_key_env") : undefined,
-        effort: provider === "anthropic.messages" ? text("effort") : undefined,
-        default: "fast",
-        aliases: { fast: text("fast_model") || MODELS[provider].fast, strong: text("strong_model") },
-      };
-    }
-
-    // Retrieval is for code that fetches, so only your own steps get a knowledge base.
-    if (text("kb_file") && (runner === "session" || runner === "workflow")) {
-      need(text("kb_file"), "documents");
-      spec.context = { kb: { use: "memory", file: text("kb_file"), max_items: 3 } };
-    }
-
-    // New guards start in shadow mode (RULES R8), unless the reader asks to enforce them.
-    spec.guardrails = {};
+  function guardrails(r, prefix) {
+    var stages = {};
     GUARDS.forEach(function (offered) {
-      if (!on(offered[0])) return;
-      var guard = Object.assign({}, offered[2]);
+      if (!r.on(offered[0])) return;
+      var guard = Object.assign({}, offered[2], { id: prefix + offered[2].id });
       if (guard.use === "topic.deny") {
-        if (!list("topics").length) return;
-        guard.topics = { denied: list("topics") };
+        if (!r.list("topics").length) return;
+        guard.topics = { denied: r.list("topics") };
       }
-      if (guard.use === "size.limit") guard.max_chars = number("max_chars") || 4000;
-      if (text("guard_mode") !== "enforce") guard.mode = "log_only";
-      (spec.guardrails[offered[1]] = spec.guardrails[offered[1]] || []).push(guard);
+      if (guard.use === "size.limit") guard.max_chars = r.number("max_chars") || 4000;
+      if (r.text("guard_mode") !== "enforce") guard.mode = "log_only";
+      if (r.on("guard_sidecar")) guard.where = "sidecar";
+      (stages[offered[1]] = stages[offered[1]] || []).push(guard);
     });
+    return stages;
+  }
 
-    spec.validation = {
-      max_repairs: number("max_repairs"),
-      on_failure: text("on_failure"),
-      rules: text("check_when") ? [{
+  /* policy: what a call no rule matches gets, and one rule, with this id. */
+  function policy(r, id) {
+    return {
+      default_effect: r.text("default_effect"),
+      rules: r.text("rule_when") ? [{
+        id: id,
+        when: r.text("rule_when"),
+        effect: r.text("rule_effect"),
+        reason: r.text("rule_reason"),
+      }] : [],
+    };
+  }
+
+  /* validation: the repairs, what follows the last, and one business rule. */
+  function validation(r) {
+    return {
+      max_repairs: r.number("max_repairs"),
+      on_failure: r.text("on_failure"),
+      rules: r.text("check_when") ? [{
         id: "app-check",
-        when: text("check_when"),
-        message: text("check_message") || "the output breaks a business rule",
+        when: r.text("check_when"),
+        message: r.text("check_message") || "the output breaks a business rule",
       }] : [],
     };
+  }
 
-    var offersTools = runner === "direct" || runner === "pydantic_ai.agent";
-    var tools = offersTools ? list("tools") : [];
-    tools.forEach(function (tool) { need("tools/" + tool + ".tool.yaml", "manifest", tool); });
-    spec.tools = {
-      manifests: tools.length ? ["tools/*.tool.yaml"] : [],
-      approval_by_risk: on("approve_risky") ? { high: "required", critical: "required" } : {},
+  /* The budget limits a form sets, for a task or for each run. */
+  function budget(r) {
+    return {
+      max_model_calls: r.number("max_model_calls"),
+      max_tool_calls: r.number("max_tool_calls"),
+      max_usd: r.number("max_usd"),
+      deadline: r.text("deadline"),
     };
+  }
 
-    spec.policy = {
-      default_effect: text("default_effect"),
-      rules: text("rule_when") ? [{
-        id: "app-rule",
-        when: text("rule_when"),
-        effect: text("rule_effect"),
-        reason: text("rule_reason"),
-      }] : [],
-    };
-
-    var channel = text("approvals");
+  /* approvals, state and observability, onto the spec. */
+  function runtime(r, spec) {
+    var channel = r.text("approvals");
     spec.approvals = {
       use: channel,
-      url: channel === "webhook" ? text("webhook_url") : undefined,
-      handler: channel === "callback" ? imports(text("callback_handler"), "function") : undefined,
-      timeout: text("approval_timeout"),
+      url: channel === "webhook" ? r.text("webhook_url") : undefined,
+      handler: channel === "callback" ? r.imports(r.text("callback_handler"), "function") : undefined,
+      timeout: r.text("approval_timeout"),
     };
-
     spec.state = {
-      use: text("state"),
-      path: text("state") === "sqlite" ? text("state_path") : undefined,
-      record: on("record") || undefined,
+      use: r.text("state"),
+      path: r.text("state") === "sqlite" ? r.text("state_path") : undefined,
+      record: r.on("record") || undefined,
     };
-
-    var exporter = text("exporter");
+    var exporter = r.text("exporter");
+    // An exporter needs the harness to set up the OpenTelemetry SDK (RULES R5).
     spec.observability = exporter ? {
       configure_sdk: true,
       exporter: exporter,
-      endpoint: exporter === "otlp" ? text("endpoint") : undefined,
+      endpoint: exporter === "otlp" ? r.text("endpoint") : undefined,
+      service_name: r.text("service_name"),
     } : {};
+  }
 
-    var task = { version: "1.0.0" };
-    if (runner === "session") {
-      task.runner = { use: "session", handler: imports(text("handler"), "function") };
-    } else if (runner === "workflow") {
-      // Each step needs the one before it; a step's id is its function's name.
-      var previous;
-      task.runner = { use: "workflow", steps: list("steps").map(function (ref) {
-        var step = { id: ref.split(":")[1].replace(/^[^A-Za-z]+/, ""), handler: imports(ref, "function") };
-        if (previous) step.needs = [previous];
-        previous = step.id;
-        return step;
-      }) };
-    } else if (runner === "pydantic_ai.agent") {
-      task.runner = { use: "pydantic_ai.agent", agent: imports(text("agent"), "agent") };
-    } else {
-      task.runner = "direct";
-    }
-    if (offersTools && text("prompt")) {
-      need("prompts/" + text("prompt") + ".md", "prompt");
-      task.prompt = text("prompt");
-    }
-    task.input = text("input") ? imports(text("input"), "model") : undefined;
-    task.output = text("output") && text("output") !== "str" ? imports(text("output"), "model") : "str";
-    task.tools = tools;
-    task.budget = {
-      max_model_calls: number("max_model_calls"),
-      max_tool_calls: number("max_tool_calls"),
-      max_usd: number("max_usd"),
-      deadline: text("deadline"),
-    };
-    spec.tasks = {};
-    spec.tasks[name] = task;
-
-    if (on("evals")) {
-      need("evals/golden.yaml", "dataset");
-      spec.evals = {};
-      spec.evals[name] = ["evals/golden.yaml"];
-    }
-
-    var extras = [
-      provider === "openai.chat" ? "openai" : "",
-      provider === "anthropic.messages" ? "anthropic" : "",
-      exporter ? "otel" : "",
-      runner === "pydantic_ai.agent" ? "pydantic-ai" : "",
-    ].filter(Boolean).sort();
+  /* A document as the result buildSpec returns. */
+  function result(file, document, r, install, check, use) {
+    var header = [
+      "# " + file + ", written by the HarnessWeaver spec generator.",
+      "# Check it with: " + check.join(" && "),
+    ];
     return {
-      yaml: toYaml(prune(spec)),
-      files: files,
-      install: [
-        extras.length ? 'uv add "harnessweaver[' + extras.join(",") + ']"' : "uv add harnessweaver",
-        "uv add --dev harnessweaver-cli",
-      ],
+      file: file,
+      yaml: header.concat(lines(prune(document), "")).join("\n") + "\n",
+      files: r.files,
+      install: install,
+      check: check,
+      use: use,
     };
   }
 
-  /* What each kind of file holds, for the page's list. */
-  var KINDS = {
-    prompt: function () { return "the task's prompt"; },
-    model: function (name) { return "the Pydantic model " + name; },
-    function: function (name) { return "the function " + name; },
-    agent: function (name) { return "the Pydantic AI agent " + name; },
-    manifest: function (name) { return "the manifest of the tool " + name; },
-    documents: function () { return "the documents to retrieve from"; },
-    dataset: function () { return "the eval cases, which eval run reads"; },
-  };
+  /* ---- The app spec ---- */
 
-  /* Wire the form to the spec beside it, if this page has the generator. */
-  function setUp() {
-    var form = document.getElementById("hw-gen-form");
-    if (!form) return;
-    var output = document.getElementById("hw-gen-yaml");
-    var install = document.getElementById("hw-gen-install");
-    var fileList = document.getElementById("hw-gen-files");
-    var provider = form.elements.provider.value;
+  /*
+   * harness.yaml. The integration style decides its shape: a task the harness runs, a
+   * session your code opens with no task, or a client or agent the app already has, which
+   * the harness wraps. With no task, the budget is each run's (each call's, when wrapped).
+   * In TypeScript, the app's code is always the session, which governs its own AI SDK
+   * model; the model provider stays for Python, which runs the task in harnessd and loads
+   * the spec in `spec validate`. Runners, approvals, state and telemetry are Python's and
+   * are left out, as are evals, which Python runs.
+   */
+  function harnessSpec(r) {
+    var ts = r.text("language") === "typescript";
+    var style = r.text("style") || "task";
+    if (ts && style === "wrap") style = "session";
+    var task = style === "task";
+    var wraps = style === "wrap" ? r.text("wraps") : "";
+    var runner = task && !ts ? r.text("runner") : "";
+    var name = r.text("task") || "main";
+    // Your own code calls s.context, s.decide and s.memory: a session, or a task's
+    // session or workflow runner, and always in TypeScript.
+    var yourCode = ts || style === "session" || runner === "session" || runner === "workflow";
+    var offersTools = task && (ts || runner === "direct" || runner === "pydantic_ai.agent");
+    var provider = r.text("provider");
 
-    function valueOf(field) {
-      var element = form.elements[field];
-      return element.type === "checkbox" ? (element.checked ? "on" : "") : element.value;
+    var spec = {
+      apiVersion: API_VERSION,
+      kind: "Harness",
+      metadata: { name: r.text("name"), owner: r.text("owner"), risk_tier: r.text("risk_tier") },
+      extends: [r.text("baseline"), r.text("profile") === "none" ? "" : "profile://" + r.text("profile")],
+    };
+
+    spec.plugins = { local: ts || !r.text("plugin_local") ? [] : [r.text("plugin_local")] };
+    // A client or agent the harness wraps calls its own model.
+    if (!wraps) spec.models = models(r, provider, false);
+
+    var routes = r.lines("router_options");
+    if (yourCode && routes.length) {
+      // One option a line, with its examples after a colon: the lexical stage picks the
+      // option whose examples are closest to the text.
+      var options = [];
+      var utterances = {};
+      routes.forEach(function (line) {
+        var option = line.split(":")[0].trim();
+        var examples = line.split(":").slice(1).join(":").split(",").map(function (example) {
+          return example.trim();
+        }).filter(Boolean);
+        options.push(option);
+        if (examples.length) utterances[option] = examples;
+      });
+      spec.routing = {};
+      spec.routing[r.text("router") || "intent"] = {
+        options: options,
+        cascade: Object.keys(utterances).length ? [{ id: "examples", use: "lexical", utterances: utterances }] : [],
+        default: r.text("router_default") || options[options.length - 1],
+      };
     }
 
-    function render() {
-      // A new provider's model defaults replace the last one's, unless the reader typed others.
-      var chosen = form.elements.provider.value;
-      if (chosen !== provider) {
-        ["fast", "strong"].forEach(function (alias) {
-          var input = form.elements[alias + "_model"];
-          if (input.value === MODELS[provider][alias]) input.value = MODELS[chosen][alias];
-        });
-        provider = chosen;
+    if (yourCode && r.text("kb_file")) {
+      r.need(r.text("kb_file"), "documents");
+      spec.context = { kb: { use: "memory", file: r.text("kb_file"), max_items: 3 } };
+    }
+    if (yourCode && r.on("memory")) spec.memory = { use: "memory", default_ttl: r.text("memory_ttl") };
+
+    spec.guardrails = guardrails(r, "");
+    spec.validation = validation(r);
+
+    var tools = offersTools ? r.list("tools") : [];
+    tools.forEach(function (tool) { r.need("tools/" + tool + ".tool.yaml", "manifest", tool); });
+    spec.tools = {
+      manifests: tools.length ? ["tools/*.tool.yaml"] : [],
+      approval_by_risk: r.on("approve_risky") ? { high: "required", critical: "required" } : {},
+    };
+    spec.policy = policy(r, "app-rule");
+    if (!ts) runtime(r, spec);
+
+    var middleware = r.list("middleware");
+    if (middleware.length && spec.plugins.local.length) {
+      // The in-repo plugin holds the middleware, in the namespace of the first one.
+      var pluginFile = r.text("plugin_local").replace(/\./g, "/") + ".py";
+      middleware.forEach(function (use) { r.need(pluginFile, "middleware", use); });
+      r.need(pluginFile, "plugin", middleware[0].split(".")[0]);
+    }
+    spec.middleware = middleware.map(function (use) {
+      return { id: use.split(".").slice(1).join(".") || use, use: use };
+    });
+    if (r.on("guard_sidecar")) spec.sidecar = { url: r.text("sidecar_url") };
+
+    if (task) {
+      var item = { version: "1.0.0" };
+      if (runner === "session") {
+        item.runner = { use: "session", handler: r.imports(r.text("handler"), "function") };
+      } else if (runner === "workflow") {
+        // Each step needs the one before it; a step's id is its function's name.
+        var previous;
+        item.runner = { use: "workflow", steps: r.list("steps").map(function (ref) {
+          var step = { id: ref.split(":")[1].replace(/^[^A-Za-z]+/, ""), handler: r.imports(ref, "function") };
+          if (previous) step.needs = [previous];
+          previous = step.id;
+          return step;
+        }) };
+      } else if (runner === "pydantic_ai.agent") {
+        item.runner = { use: "pydantic_ai.agent", agent: r.imports(r.text("agent"), "agent") };
+      } else if (runner) {
+        item.runner = runner;
       }
-      // data-when="field=a|b" shows a part of the form only for those values of the field.
-      form.querySelectorAll("[data-when]").forEach(function (part) {
-        var rule = part.getAttribute("data-when").split("=");
-        part.hidden = rule[1].split("|").indexOf(valueOf(rule[0])) < 0;
-      });
-
-      var result = buildSpec(Object.fromEntries(new FormData(form)));
-      output.textContent = result.yaml;
-      install.textContent = result.install.join("\n");
-      var byPath = {};
-      result.files.forEach(function (file) {
-        (byPath[file.path] = byPath[file.path] || []).push(KINDS[file.kind](file.name));
-      });
-      fileList.replaceChildren.apply(fileList, Object.keys(byPath).map(function (path) {
-        var item = document.createElement("li");
-        var code = document.createElement("code");
-        code.textContent = path;
-        item.append(code, ": " + byPath[path].join(", "));
-        return item;
-      }));
-      fileList.parentElement.hidden = result.files.length === 0;
+      if (!ts && (runner === "direct" || runner === "pydantic_ai.agent") && r.text("prompt")) {
+        r.need("prompts/" + r.text("prompt") + ".md", "prompt");
+        item.prompt = r.text("prompt");
+      }
+      item.input = r.text("input") ? r.imports(r.text("input"), "model") : undefined;
+      item.output = r.text("output") && r.text("output") !== "str" ? r.imports(r.text("output"), "model") : "str";
+      item.tools = tools;
+      item.budget = budget(r);
+      spec.tasks = {};
+      spec.tasks[name] = item;
+      // Evals run tasks, in Python.
+      if (!ts && r.on("evals")) {
+        r.need("evals/golden.yaml", "dataset", name);
+        spec.evals = {};
+        spec.evals[name] = ["evals/golden.yaml"];
+      }
+    } else {
+      spec.budgets = { per_run: budget(r) };
     }
 
-    form.addEventListener("input", render);
-    form.addEventListener("change", render);
-    // The reset event comes before the form's values are reset.
-    form.addEventListener("reset", function () { setTimeout(render); });
+    var install;
+    if (ts) {
+      // The CLI checks the spec in Python, with the plugin of its model provider.
+      var extra = providerExtra(provider);
+      install = [
+        "npm install @harnessweaver/core @harnessweaver/ai-sdk ai @ai-sdk/provider",
+        "uv tool install harnessweaver-cli" + (extra ? ' --with "harnessweaver[' + extra + ']"' : ""),
+      ];
+    } else {
+      install = addCore([
+        spec.models ? providerExtra(spec.models.provider) : "",
+        spec.observability.exporter ? "otel" : "",
+        runner === "pydantic_ai.agent" ? "pydantic-ai" : "",
+        { openai: "openai", anthropic: "anthropic", pydantic_ai: "pydantic-ai" }[wraps] || "",
+      ], true).concat(["uv add --dev harnessweaver-cli"]);
+    }
+    if (r.on("guard_sidecar")) install.push("uv tool install harnessweaver-sidecar");
+    if (middleware.length && !spec.plugins.local.length) {
+      install.push("uv add <the package of the plugin " + middleware[0].split(".")[0] + ">");
+    }
 
-    document.getElementById("hw-gen-copy").addEventListener("click", function (event) {
-      var button = event.currentTarget;
-      navigator.clipboard.writeText(output.textContent).then(function () {
-        button.textContent = "Copied";
-        setTimeout(function () { button.textContent = "Copy"; }, 1500);
-      });
-    });
-    document.getElementById("hw-gen-download").addEventListener("click", function () {
-      var link = document.createElement("a");
-      link.href = URL.createObjectURL(new Blob([output.textContent], { type: "application/yaml" }));
-      link.download = "harness.yaml";
-      link.click();
-      URL.revokeObjectURL(link.href);
-    });
-    render();
+    return result("harness.yaml", spec, r, install, ["harnessweaver spec validate harness.yaml"],
+      harnessUse(ts, style, wraps, name));
   }
 
+  /* How the app's code uses its spec, by language and integration style. */
+  function harnessUse(ts, style, wraps, name) {
+    var quoted = JSON.stringify(name);
+    if (ts) {
+      return [
+        'import { load } from "@harnessweaver/core";',
+        'import { wrapModel } from "@harnessweaver/ai-sdk";',
+        "",
+        'const harness = load("harness.yaml");',
+        "const answer = await harness.session(",
+        "  { " + (style === "task" ? "task: " + quoted + ", " : "") + "principal: user.id },",
+        '  async (s) => (await generateText({ model: wrapModel(s, model, { alias: "fast" }), prompt })).text,',
+        ");",
+      ].join("\n");
+    }
+    var load = ["import harnessweaver as hw", "", 'harness = hw.load("harness.yaml")'];
+    var body = {
+      task: ["result = await harness.run(" + quoted + ", request, principal=user)"],
+      session: [
+        "async with harness.session(principal=user) as s:",
+        '    question = await s.guard("input", question)',
+        '    answer = await s.generate(messages=[{"role": "user", "content": question}])',
+      ],
+      openai: ["client = harness.instrument(AsyncOpenAI(base_url=GATEWAY))"],
+      anthropic: ["client = harness.instrument(AsyncAnthropic())"],
+      pydantic_ai: ["agent = harness.wrap(agent)"],
+    }[style === "wrap" ? wraps : style];
+    return load.concat(body).join("\n");
+  }
+
+  /* ---- The profile ---- */
+
+  /*
+   * A profile: an org baseline the platform team publishes, a profile the app's own team
+   * shares between its apps, or one a plugin ships. Its guards and rule get ids that start
+   * with its name, so they don't collide with an app's, and are locked by those ids. Locks
+   * stop later layers changing a value (RULES R1); bounds keep numbers in range (R10).
+   */
+  function profileSpec(r) {
+    var name = r.text("name");
+    var spec = {
+      apiVersion: API_VERSION,
+      kind: "Profile",
+      metadata: { name: name, version: r.text("version"), owner: r.text("owner"), description: r.text("description") },
+      extends: r.list("extends"),
+    };
+    var locks = [];
+    function lock(key, path, value) {
+      if (r.on(key) && present(prune(value))) locks.push(path);
+    }
+
+    // A plugin's profile is loaded from its plugin, which its allow-list must therefore name.
+    var where = r.text("profile_kind");
+    var allow = r.list("allow");
+    if (where === "plugin" && allow.length && allow.indexOf(r.text("plugin_ns")) < 0) {
+      allow.push(r.text("plugin_ns"));
+    }
+    spec.plugins = { allow: allow };
+    lock("lock_allow", "plugins.allow", spec.plugins.allow);
+
+    var gateway = r.text("provider");
+    spec.models = gateway ? models(r, gateway, false) : {};
+    spec.models.allowed_aliases = r.list("allowed_aliases");
+    if (gateway) {
+      lock("lock_gateway", "models.provider", gateway);
+      lock("lock_gateway", "models.base_url", spec.models.base_url);
+    }
+
+    spec.guardrails = guardrails(r, name + "-");
+    Object.keys(spec.guardrails).forEach(function (stage) {
+      spec.guardrails[stage].forEach(function (guard) {
+        lock("lock_guards", "guardrails." + stage + "[" + guard.id + "]", guard);
+      });
+    });
+    spec.validation = { max_repairs: r.number("max_repairs"), on_failure: r.text("on_failure") };
+
+    spec.tools = {
+      require_manifest: r.on("lock_manifest") || undefined,
+      trifecta: r.text("trifecta"),
+      approval_by_risk: r.on("approve_risky") ? { high: "required", critical: "required" } : {},
+    };
+    lock("lock_manifest", "tools.require_manifest", spec.tools.require_manifest);
+    lock("lock_risk", "tools.approval_by_risk", spec.tools.approval_by_risk);
+
+    spec.policy = policy(r, name + "-rule");
+    lock("lock_rule", "policy.rules[" + name + "-rule]", spec.policy.rules);
+
+    spec.budgets = { per_run: budget(r) };
+    // capture_content is already false (RULES R9); the profile restates it to lock it.
+    spec.observability = { capture_content: r.on("lock_capture") ? false : undefined };
+    lock("lock_capture", "observability.capture_content", "false");
+
+    var tiers = {};
+    ["internal", "customer_facing", "takes_actions"].forEach(function (tier) {
+      tiers[tier] = r.text("level_" + tier);
+    });
+    var level = r.text("level_default");
+    spec.require_level = { default: level === "L0" ? undefined : level, tiers: tiers };
+
+    spec.locks = locks.concat(r.list("locks"));
+    spec.bounds = {};
+    [
+      ["bound_run_usd", "budgets.per_run.max_usd"],
+      ["bound_run_deadline", "budgets.per_run.deadline"],
+      ["bound_task_usd", "tasks.*.budget.max_usd"],
+      ["bound_task_tool_calls", "tasks.*.budget.max_tool_calls"],
+      ["bound_repairs", "validation.max_repairs"],
+    ].forEach(function (bound) {
+      var value = r.number(bound[0]) === undefined ? r.text(bound[0]) : r.number(bound[0]);
+      if (present(value)) spec.bounds[bound[1]] = { max: value };
+    });
+
+    // Apps pin a range: the same major version, or the same minor one below 1.0.
+    var version = r.text("version") || "1.0.0";
+    var range = "^" + (version.split(".")[0] === "0" ? version : version.split(".")[0]);
+    var file = (where === "team" ? ".harness/profiles/" : "profiles/") + name + ".yaml";
+    var ref = where === "plugin" ? "profile://" + r.text("plugin_ns") + "." + name : "org://" + name;
+    var use = [];
+    if (where === "plugin") {
+      use.push("# In the plugin package, next to its __init__.py:");
+      use.push("plugin = hw.Plugin(namespace=" + JSON.stringify(r.text("plugin_ns")) +
+        ", ..., profiles={" + JSON.stringify(name) + ": " + JSON.stringify(file) + "})");
+      use.push("");
+    }
+    use.push("# In each app's harness.yaml:");
+    use.push("extends: [" + JSON.stringify(ref + "@" + range) + "]");
+    var check = "harnessweaver spec validate harness.yaml" + (where === "org" ? " --profile-dir profiles" : "");
+    return result(file, spec, r, [], [check], use.join("\n"));
+  }
+
+  /* ---- The environment overlay ---- */
+
+  /*
+   * harness.<env>.yaml: sections only, merged over harness.yaml when HARNESSWEAVER_ENV
+   * names the environment. Usually a scripted model for tests and demos, or the gateway,
+   * model names, telemetry, state and approvals of a deployment.
+   */
+  function overlaySpec(r) {
+    var env = r.text("env") || "offline";
+    var provider = r.text("provider");
+    var spec = { apiVersion: API_VERSION, kind: "Overlay" };
+    spec.models = provider ? models(r, provider, true) : {};
+    runtime(r, spec);
+    spec.sidecar = { url: r.text("sidecar_url") };
+    var install = addCore([providerExtra(provider), spec.observability.exporter ? "otel" : ""], false);
+    return result("harness." + env + ".yaml", spec, r, install,
+      ["harnessweaver spec validate harness.yaml -e " + env],
+      "HARNESSWEAVER_ENV=" + env + " uv run python app.py\n# or, in code: hw.load(\"harness.yaml\", env=" +
+        JSON.stringify(env) + ")");
+  }
+
+  /* ---- The tool manifest ---- */
+
+  /*
+   * A tool's manifest (RULES S2): how it is reached, its arguments, what it may touch,
+   * and when a person must approve a call. `tools pin` then writes the digest that pins
+   * its definition, so a tool changed without review can't run.
+   */
+  function toolSpec(r) {
+    var name = r.text("name");
+    var transport = r.text("transport");
+    var properties = {};
+    var required = [];
+    // One argument a line, `name: type`, with "?" after an optional one's name.
+    r.lines("arguments").forEach(function (line) {
+      var arg = line.split(":")[0].trim();
+      var optional = arg.endsWith("?");
+      arg = arg.replace(/\?$/, "").trim();
+      properties[arg] = { type: line.split(":").slice(1).join(":").trim() || "string" };
+      if (!optional) required.push(arg);
+    });
+    var headers = {};
+    r.list("headers_env").forEach(function (item) {
+      headers[item.split("=")[0].trim()] = item.split("=").slice(1).join("=").trim();
+    });
+    var spec = {
+      apiVersion: API_VERSION,
+      kind: "Tool",
+      metadata: { name: name, version: r.text("version"), owner: r.text("owner") },
+      spec: {
+        transport: transport,
+        handler: transport === "native" ? r.imports(r.text("handler") || "app.tools:" + name, "function") : undefined,
+        url: transport === "http" ? r.text("url") : undefined,
+        headers_env: transport === "http" ? headers : {},
+        sandbox: transport === "code" ? "monty" : undefined,
+        code_arg: transport === "code" && r.text("code_arg") !== "code" ? r.text("code_arg") : undefined,
+        description: r.text("description"),
+        input_schema: { type: "object", properties: properties, required: required },
+        timeout: r.text("timeout"),
+        side_effect: r.text("side_effect"),
+        risk: r.text("risk"),
+        data_access: r.list("data_access"),
+        egress: r.list("egress"),
+        scopes: r.list("scopes"),
+        tenants: r.list("tenants"),
+        rate_limit: { per_principal: r.text("rate_principal"), per_tenant: r.text("rate_tenant") },
+        approval: r.text("approval_when") ? {
+          when: r.text("approval_when"),
+          approver_role: r.text("approver_role"),
+        } : {},
+        output: {
+          max_bytes: r.number("max_bytes"),
+          sanitize: [r.on("sanitize_pii") ? "pii_redact" : "", r.on("sanitize_instructions") ? "strip_instructions" : ""],
+          label: r.text("label") === "trusted" ? "trusted" : undefined,
+        },
+      },
+    };
+    return result("tools/" + name + ".tool.yaml", spec, r, addCore([transport === "code" ? "monty" : ""], false),
+      ["harnessweaver tools pin harness.yaml", "harnessweaver doctor harness.yaml"],
+      ["# In harness.yaml:", "tools:", '  manifests: ["tools/*.tool.yaml"]', "tasks:", "  support:",
+        "    tools: [" + name + "]"].join("\n"));
+  }
+
+  /* ---- The eval suite ---- */
+
+  /*
+   * An eval dataset: the graders every case gets, the share of cases that must pass, and
+   * a first case. A case's input and expected output are JSON values when they parse as
+   * JSON, else text.
+   */
+  function evalSpec(r) {
+    var suite = r.text("suite") || "golden";
+    var graders = [r.on("grade_schema") ? "schema_valid" : "", r.on("grade_exact") ? "exact" : ""];
+    r.list("field_equals").forEach(function (field) { graders.push({ field_equals: field }); });
+    var contains = r.list("contains");
+    if (contains.length) graders.push({ contains: contains.length === 1 ? contains[0] : contains });
+    if (r.text("status")) graders.push({ status: r.text("status") });
+    var fired = r.list("guard_fired");
+    if (fired.length) graders.push({ guard_fired: fired.length === 1 ? fired[0] : fired });
+    if (r.text("rubric")) graders.push({ llm_judge: r.text("rubric") });
+    var spec = {
+      suite: suite,
+      task: r.text("task"),
+      graders: graders,
+      thresholds: { pass_rate: r.number("pass_rate") },
+      cases: [{
+        id: r.text("case_id") || "first",
+        input: typed(r.text("case_input")),
+        expect: typed(r.text("case_expect")),
+      }],
+    };
+    var file = "evals/" + suite + ".yaml";
+    return result(file, spec, r, [], ["harnessweaver eval run harness.yaml -e offline"],
+      ["# In harness.yaml:", "evals:", "  " + scalar(r.text("task")) + ": [" + file + "]"].join("\n"));
+  }
+
+  var WRITERS = { harness: harnessSpec, profile: profileSpec, overlay: overlaySpec, tool: toolSpec, eval: evalSpec };
+
+  /* The document for one form's values; `doc` picks it, and an app spec is the default. */
+  function buildSpec(values) {
+    return WRITERS[values.doc || "harness"](reader(values));
+  }
+
+  var api = { buildSpec: buildSpec, MODELS: MODELS };
   if (typeof module !== "undefined" && module.exports) {
     // Node.js, for the tests in docs_src/tests.
-    module.exports = { buildSpec: buildSpec, toYaml: toYaml };
-  } else if (typeof document$ !== "undefined") {
-    // Material's document$ fires on every page load, including instant navigation.
-    document$.subscribe(setUp);
+    module.exports = api;
   } else {
-    document.addEventListener("DOMContentLoaded", setUp);
+    globalThis.hwSpecGenerator = api;
   }
 })();

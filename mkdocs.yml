@@ -66,6 +66,7 @@ extra_javascript:
   - javascripts/termynal.js
   - javascripts/terminals.js
   - javascripts/spec-generator.js
+  - javascripts/spec-generator-page.js
 
 extra:
   # The header's logo leads to the landing page, one level above the docs.
