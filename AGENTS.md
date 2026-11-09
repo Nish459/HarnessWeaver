@@ -22,7 +22,7 @@ This file is for AI coding agents (and humans) working **on** the HarnessWeaver 
 |-- CHANGELOG.md                    # an index, plus repository-wide changes; each package has its own
 |-- AGENTS.md  CLAUDE.md  RULES.md  DESIGNS.md
 |-- pyproject.toml                  # uv workspace root (virtual): members, dev and docs groups, tool config
-|-- Makefile                        # make check | test | lint | fmt | typecheck | conformance | schemas | docs | build | release
+|-- Makefile                        # make check | test | lint | fmt | typecheck | conformance | schemas | docs | build | release | smoke
 |-- mkdocs.yml                      # the docs site (ADR-0041), built into site/docs/
 |-- vercel.json                     # deploys the website on Vercel, built from the docs group alone
 |-- website/                        # the landing page at the website's root, plain HTML and CSS (ADR-0046)
@@ -52,7 +52,7 @@ This file is for AI coding agents (and humans) working **on** the HarnessWeaver 
 |-- examples/                       # _org baseline + 01..04, each runnable offline and tested
 |-- deploy/harnessd/                # sidecar Dockerfile
 |-- scripts/                        # check_ascii.py (RULES D5), docs_hooks.py (the docs site's MkDocs hooks), release.py,
-|                                   #   serve_site.py (`make site-serve`)
+|                                   #   serve_site.py (`make site-serve`), smoke.py (`make smoke`, after each release)
 |-- .github/                        # CI and release workflows, pull request template
 |-- docs_src/                       # the code the docs show, run by docs_src/tests (ADR-0042): tutorial/<chapter>/
 |                                   #   is the tutorial's project at the end of each chapter, home/ the home page example
@@ -91,6 +91,7 @@ uv sync --all-packages          # install every workspace package + dev tools in
 | TypeScript (see [typescript/README.md](typescript/README.md)) | `pnpm -C typescript install && pnpm -C typescript test && pnpm -C typescript typecheck && pnpm -C typescript build`; the tests include Example 04, which starts harnessd, so run `uv sync --all-packages` first |
 | Docs site | `make docs` (`mkdocs build --strict`): the docs in `site/docs/`, the landing page from `website/` in `site/`; `make site-serve` to build and serve the whole website as Vercel does, `make docs-serve` for the docs alone |
 | Release (tags `<package>@<version>` on HEAD, versions matching the manifests) | `make build` checks the tags and builds the tagged packages into `dist/release/`; `make release` also publishes them to PyPI and npm; `PACKAGE=<name>` limits either to the named packages. The `Release` workflow does this on CI, with SBOMs and attestations (S5), and is the preferred route. See CONTRIBUTING.md, *Releasing* |
+| Smoke-test the published packages | `make smoke` installs each package from PyPI or npm into a fresh environment and tries it offline: at its release tag's version on HEAD, else the latest; `PACKAGE=<name>` limits it. The `Release` workflow runs it after publishing |
 | Remove caches and build output | `make clean` (keeps `.venv`, `node_modules`, local run state and `.claude/`; rebuild the TypeScript `dist/` with `pnpm -C typescript build` before Example 04); `make distclean` also removes `.venv` and `node_modules` (reinstall with `make sync` and `pnpm -C typescript install`) |
 
 Never `pip install` into the workspace. Add dependencies with `uv add --package <member> <dep>`, and only after an ADR if it's a new third-party dependency (C10). The core package may not gain dependencies at all (R6).

@@ -1,7 +1,7 @@
 # Common development tasks. `make check` is what CI runs (RULES G5).
 UV ?= uv
 
-.PHONY: sync check ascii lint fmt fmt-check typecheck test conformance cov schemas schemas-check docs docs-serve site-serve build release clean distclean
+.PHONY: sync check ascii lint fmt fmt-check typecheck test conformance cov schemas schemas-check docs docs-serve site-serve build release smoke clean distclean
 
 sync:
 	$(UV) sync --all-packages
@@ -74,6 +74,12 @@ build:
 
 release:
 	$(UV) run python scripts/release.py publish $(PACKAGE)
+
+# Installs each package from PyPI and npm into a fresh environment, as a user would, and
+# tries it offline: at the version its release tag on HEAD names, else the latest. The
+# Release workflow runs it after publishing. PACKAGE="name ..." tries just those.
+smoke:
+	$(UV) run python scripts/smoke.py $(PACKAGE)
 
 # Removes caches and build output: the .gitignore entries for them, anywhere in the
 # tree. Installed dependencies (.venv, node_modules), local run state, secrets and

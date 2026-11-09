@@ -146,3 +146,29 @@ jobs:
         run: |
           if [ -n "$PYPI_TOKEN" ]; then export UV_PUBLISH_TOKEN="$PYPI_TOKEN"; fi
           uv run --locked --package harnessweaver python scripts/release.py upload $PACKAGES
+
+  # Installs the packages from PyPI and npm, as a user would, each into a fresh environment,
+  # and tries each one offline (scripts/smoke.py): the released ones at their new version, the
+  # rest at their latest, so a new core is tried with the plugins already published. Installs
+  # are retried while a registry catches up. A failure means a published package is broken:
+  # fix it in a new release, since a published version can't be replaced.
+  smoke:
+    name: Smoke test
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.6"
+      # The oldest Node the TypeScript packages support; the Python packages are tried on 3.12.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - name: Install and try the published packages
+        env:
+          PACKAGES: ${{ inputs.packages }}
+        run: uv run --locked --package harnessweaver python scripts/smoke.py $PACKAGES

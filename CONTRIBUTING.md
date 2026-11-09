@@ -118,6 +118,8 @@ gh workflow run release.yml --ref harnessweaver@0.2.0 -f packages="harnessweaver
 
 It runs the checks, builds, attests the artifacts and their SBOMs, then uploads those same files. If an upload fails partway, run it again naming the packages it hadn't reached.
 
+Once the upload is done, its `Smoke test` job installs the packages from PyPI and npm as a user would, each into a fresh environment on Python 3.12 or Node 22, and tries each one offline (`scripts/smoke.py`): the conformance suite for the core and each plugin, a template's project checked and evaluated with the CLI, a running harnessd, and a guarded session in TypeScript. The packages it released are installed at their new version and every other package at its latest, so a new core is tried with the plugins already published; with `packages` set, only those are tried. A registry can take a few minutes to serve a new version, so each install is retried for about five minutes. A failure there means a published package is broken for its users: a registry won't take the same version twice, so fix it in a new release. To try the published packages yourself, run `make smoke`, or `make smoke PACKAGE=harnessweaver-cli` for one.
+
 The setup only the repository's owner can do, once:
 
 1. Make the repository public. GitHub only offers attestations to private repositories on Enterprise Cloud, and npm refuses provenance from a private one.
