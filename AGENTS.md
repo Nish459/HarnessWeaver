@@ -58,13 +58,14 @@ This file is for AI coding agents (and humans) working **on** the HarnessWeaver 
 |                                   #   is the tutorial's project at the end of each chapter, home/ the home page example
 `-- docs/                           # the docs site (ADR-0042): tutorial/, advanced/, concepts/, reference/ (with
                                     #   python/, the generated API), deployment/, how-to/, resources/, about/; its theme
-                                    #   (stylesheets/, javascripts/ with the vendored termynal, assets/logo.svg) and assets.
+                                    #   (stylesheets/, javascripts/ with the vendored termynal and the spec generator,
+                                    #   assets/logo.svg) and assets.
                                     #   Also adr/ (one file per ADR) and the design guide, both left out of the site
 ```
 
 ## Setup and commands
 
-Prerequisites: [uv](https://docs.astral.sh/uv/) (Python 3.12+; the repo pins 3.14 in `.python-version`), and Node 22+ with pnpm for `typescript/`.
+Prerequisites: [uv](https://docs.astral.sh/uv/) (Python 3.12+; the repo pins 3.14 in `.python-version`), and Node 22+ with pnpm for `typescript/`. `make check` needs `node` too: it runs the docs' spec generator.
 
 ```bash
 uv sync --all-packages          # install every workspace package + dev tools into .venv

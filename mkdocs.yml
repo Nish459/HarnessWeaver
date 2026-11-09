@@ -61,9 +61,11 @@ extra_css:
 
 # `console` code blocks play as typed terminal sessions (ADR-0042): termynal is
 # vendored with its license, and terminals.js turns each block into one.
+# spec-generator.js runs the spec generator page, and does nothing on other pages.
 extra_javascript:
   - javascripts/termynal.js
   - javascripts/terminals.js
+  - javascripts/spec-generator.js
 
 extra:
   # The header's logo leads to the landing page, one level above the docs.
@@ -139,6 +141,7 @@ nav:
   - Learn:
       - learn/index.md
       - Quickstart: learn/quickstart.md
+      - Spec generator: learn/spec-generator.md
       - Concepts: concepts/index.md
       - The spec: concepts/spec.md
       - Lifecycle and hook points: concepts/lifecycle.md

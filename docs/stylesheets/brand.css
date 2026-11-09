@@ -157,3 +157,123 @@
   font-size: 1.1em;
 }
 
+
+/*
+ * The spec generator (learn/spec-generator.md, spec-generator.js): the form beside the
+ * spec it writes, which stays in view below the header and tabs while the form scrolls.
+ * On a narrow screen the spec follows the form. Fields use the code background and the
+ * scheme's own colors, and the dark scheme draws the browser's controls dark too.
+ */
+.hw-gen {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+[data-md-color-scheme="slate"] .hw-gen {
+  color-scheme: dark;
+}
+
+.hw-gen [hidden] {
+  display: none !important;
+}
+
+.hw-gen fieldset {
+  margin: 0 0 1rem;
+  padding: 0.2rem 1rem 0.9rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.5rem;
+}
+
+.hw-gen legend {
+  padding: 0 0.4rem;
+  font-weight: 700;
+}
+
+.hw-gen label {
+  display: block;
+  margin-top: 0.7rem;
+  font-weight: 600;
+}
+
+.hw-gen input:not([type="checkbox"]),
+.hw-gen select {
+  display: block;
+  width: 100%;
+  margin-top: 0.2rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 0.35rem;
+  background: var(--md-code-bg-color);
+  color: var(--md-default-fg-color);
+  font: inherit;
+  font-weight: 400;
+}
+
+.hw-gen input:focus-visible,
+.hw-gen select:focus-visible {
+  outline: 2px solid var(--md-accent-fg-color);
+  outline-offset: 1px;
+}
+
+.hw-gen input:invalid {
+  border-color: #e5484d;
+}
+
+.hw-gen small {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--md-default-fg-color--light);
+  font-weight: 400;
+}
+
+.hw-gen .hw-gen__check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-weight: 400;
+}
+
+.hw-gen__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0 0.8rem;
+}
+
+.hw-gen__out {
+  position: sticky;
+  top: 5rem;
+}
+
+.hw-gen__out pre {
+  margin-top: 0.5rem;
+}
+
+.hw-gen__out pre > code {
+  max-height: 60vh;
+}
+
+.hw-gen__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.md-typeset .hw-gen .md-button {
+  margin: 0;
+  padding: 0.3em 1em;
+  cursor: pointer;
+}
+
+@media screen and (max-width: 60em) {
+  .hw-gen {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hw-gen__out {
+    position: static;
+  }
+}
