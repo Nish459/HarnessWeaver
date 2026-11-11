@@ -41,7 +41,7 @@ function argumentsOf(input: unknown): JsonObject {
 function resultText(output: LanguageModelV4ToolResultOutput): string | undefined {
   if (output.type === "text" || output.type === "error-text") return output.value;
   if (output.type === "json" || output.type === "error-json") return JSON.stringify(output.value);
-  return undefined; // ponytail: denials and multi-part content aren't checked; add when a guard needs them
+  return undefined; // Denials and multi-part content aren't checked; add when a guard needs them
 }
 
 /** The neutral messages for one AI SDK prompt message, with where each came from. */

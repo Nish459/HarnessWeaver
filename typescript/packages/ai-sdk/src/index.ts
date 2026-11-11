@@ -52,7 +52,7 @@ export function harnessMiddleware(session: Session, options: WrapOptions = {}): 
     async wrapGenerate({ params, model }) {
       const [request, where] = toRequest(params, model, alias, false);
       let answer: Awaited<ReturnType<LanguageModelV4["doGenerate"]>> | undefined;
-      // ponytail: the model's own errors pass through unchanged, so the AI SDK's retries
+      // The model's own errors pass through unchanged, so the AI SDK's retries
       // (which look for its own error types) keep working; run.end records the failure.
       const response = await session.generate(request, async (sent) => {
         answer = await model.doGenerate(applyRequest(params, where, request, sent));

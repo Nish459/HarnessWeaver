@@ -164,7 +164,7 @@ async def check_provider(name: str, body: ProviderCheck, request: Request) -> Gu
     harness: Harness = request.app.state.harness
     cache: dict[str, Guardrail] = request.app.state.providers
     key = json.dumps([name, body.settings, body.stage], sort_keys=True)
-    # ponytail: unbounded, but keyed by spec settings, which a fleet of specs keeps small.
+    # Unbounded, but keyed by spec settings, which a fleet of specs keeps small.
     provider = cache.get(key)
     if provider is None:
         info = harness.registry.provider("Guardrail", name)

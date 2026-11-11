@@ -149,7 +149,7 @@ class WorkflowRunner:
             inputs: dict[str, Any] = {"input": input, **{n: completed[n] for n in step.needs}}
             output = await self._step(ctx, step, inputs)
             completed[step.id] = to_json(output)
-            # ponytail: run-wide settle, so a parallel step still running may ask a human
+            # Run-wide settle, so a parallel step still running may ask a human
             # again about a call it repeats; per-step grants if that ever matters.
             ctx.settle_grants()
             ctx.set_resume_point({"completed": dict(completed)})

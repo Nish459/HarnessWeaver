@@ -96,7 +96,7 @@ class _RequestGate:
     handlers; the answer is an ``ErrorInfo`` like any other.
     """
 
-    # ponytail: no early refusal from Content-Length; an honest oversized upload from a
+    # No early refusal from Content-Length; an honest oversized upload from a
     # token holder costs up to the cap before its 413. Add one if that ever matters.
 
     def __init__(self, app: ASGIApp) -> None:

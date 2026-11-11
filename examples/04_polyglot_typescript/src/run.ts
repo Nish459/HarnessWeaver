@@ -32,7 +32,7 @@ export function modelFor(harness: Harness, live?: LanguageModelV4): LanguageMode
   const models = harness.spec.data.models as unknown as Script & { provider?: string };
   if (models.provider === "scripted") return scriptedModel(models);
   if (live !== undefined) return live;
-  // ponytail: no live provider package here; an app passes its own, for example
+  // No live provider package here; an app passes its own, for example
   // createOpenAI({ baseURL: "http://localhost:4000/v1" })("fast") for the LiteLLM gateway.
   throw new SpecError("set HARNESSWEAVER_ENV=offline, or pass the live AI SDK model for models.base_url");
 }

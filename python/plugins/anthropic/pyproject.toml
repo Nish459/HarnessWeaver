@@ -12,7 +12,7 @@ authors = [{ name = "Muthu Kumaran R", email = "rsmk7new@gmail.com" }]
 requires-python = ">=3.12"
 keywords = ["ai", "llm", "harness", "guardrails", "agents", "governance", "observability"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",

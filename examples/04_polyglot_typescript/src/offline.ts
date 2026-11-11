@@ -43,7 +43,7 @@ function lastText(prompt: LanguageModelV4Prompt): string {
  *
  * @throws SpecError for a script that uses fields this port doesn't read.
  */
-// ponytail: only what Example 02's overlay uses (contains, text); port the rest of
+// Only what Example 02's overlay uses (contains, text); port the rest of
 // Python's ScriptedModel into @harnessweaver/ai-sdk when a second app needs it.
 export function scriptedModel(script: Script): LanguageModelV4 {
   const rules = script.rules ?? [];

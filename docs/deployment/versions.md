@@ -22,7 +22,7 @@ Each package is released on its own, and its Git tag is `<package>@<version>`, s
 
 Every provider, runner, adapter and plugin declares the contract range it supports (`contract=">=1.0,<2"`), and the loader refuses an incompatible combination with `IncompatibleContract` (V5). So a plugin built against `harnessweaver/v1` keeps working with any core release that implements v1, whatever the packages' own version numbers. `harnessweaver plugin list` shows each installed plugin's range and whether it is compatible.
 
-Deprecations warn for at least one minor release before removal, and are listed in the package's [changelog](../release-notes/index.md) (V4). Before 1.0, a minor version may still change the public API; the changelog says so when it does.
+Deprecations warn for at least one minor release before removal, and are listed in the package's [changelog](../release-notes/index.md) (V4).
 
 ## Profiles
 
