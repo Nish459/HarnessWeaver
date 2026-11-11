@@ -37,7 +37,7 @@ tests/test_desk.py .....                                                 [100%]
 ============================== 5 passed in 0.27s ===============================
 ```
 
-`harnessweaver test` runs pytest in **test mode** (`HARNESSWEAVER_TEST_MODE=1`), where every live provider refuses to call out: model providers, `http` tools, webhook approval channels and the OTLP exporter. A test that reaches a real model by accident fails instead of spending money. It also applies the offline overlay. Plain `uv run pytest` works too, if you set test mode yourself.
+`harnessweaver test` runs pytest in **test mode** (`HARNESSWEAVER_TEST_MODE=1`), where every live provider refuses to call out: model providers, `http` tools, webhook and email approval channels and the OTLP exporter. A test that reaches a real model by accident fails instead of spending money. It also applies the offline overlay. Plain `uv run pytest` works too, if you set test mode yourself.
 
 !!! tip
     Async tests use the anyio pytest plugin: `pytestmark = pytest.mark.anyio`. Time comes from an injected clock, so tests never sleep.

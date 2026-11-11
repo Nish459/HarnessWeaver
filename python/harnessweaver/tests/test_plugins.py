@@ -394,6 +394,7 @@ def test_built_in_names_are_reserved() -> None:
         "callback",
         "console",
         "webhook",
+        "email",
         "rules",
         "lexical",
         "semantic",

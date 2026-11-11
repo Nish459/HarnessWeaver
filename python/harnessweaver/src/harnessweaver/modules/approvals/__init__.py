@@ -14,6 +14,7 @@ from harnessweaver.modules.approvals.channels import (
     EmailChannel,
     EmailConfig,
     MemoryChannel,
+    SmtpTransport,
     WebhookChannel,
     WebhookConfig,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "EmailChannel",
     "EmailConfig",
     "MemoryChannel",
+    "SmtpTransport",
     "WebhookChannel",
     "WebhookConfig",
 ]

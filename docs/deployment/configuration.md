@@ -8,12 +8,14 @@ Almost everything is configured in the spec and its overlays. The environment su
 | --- | --- | --- |
 | `HARNESSWEAVER_ENV` | the loader, the CLI, harnessd, `@harnessweaver/core` | The overlay to apply: `prod` applies `harness.prod.yaml` next to the spec. A missing overlay file is not an error. `-e`/`--env` and `load(env=...)` override it |
 | `HARNESSWEAVER_PROFILE_PATH` | the loader | Directories searched for `org://` profiles, separated like `PATH` (`:` on Linux and macOS, `;` on Windows). Searched before `.harness/profiles` next to the spec, and the first directory holding a name owns it. `--profile-dir` and `profile_dirs=` add more |
-| `HARNESSWEAVER_TEST_MODE` | live providers | `1` makes every live provider refuse to call out: model providers, `http` tools, webhooks, remote guards, the OTLP exporter, `SidecarClient` (R14). Set by `harnessweaver test` |
+| `HARNESSWEAVER_TEST_MODE` | live providers | `1` makes every live provider refuse to call out: model providers, `http` tools, webhooks, the email channel, remote guards, the OTLP exporter, `SidecarClient` (R14). Set by `harnessweaver test` |
 | `HARNESSD_TOKEN` | harnessd; clients through `sidecar.token_env` | The bearer token. harnessd refuses to start without it; `--token-env` names another variable |
 | `HARNESSD_IMAGE` | the dev stack's Compose file | The harnessd image (default `harnessd:dev`) |
 | `HARNESSWEAVER_UPSTREAM_<NAME>` | the generated LiteLLM config | The provider model behind gateway model `<NAME>`, in the gateway's environment |
 | The variable in `models.api_key_env` | `openai.chat`, `anthropic.messages` | The API key (default `OPENAI_API_KEY` for `openai.chat`; the Anthropic SDK's own resolution otherwise). Never put keys in a spec (S1) |
 | The variables in `headers_env` | `http` tools, the `webhook` approval channel | Header values, such as an `Authorization` token |
+| `HARNESSWEAVER_EMAIL_LOGIN` | the `email` approval channel | SMTP login (default variable name; override with `login_env`) |
+| `HARNESSWEAVER_EMAIL_PASSWORD` | the `email` approval channel | SMTP password (default variable name; override with `password_env`) |
 | `OTEL_EXPORTER_OTLP_*` | `otel.sdk`'s exporters | The standard OpenTelemetry exporter settings |
 | `LITELLM_MASTER_KEY`, provider keys | the LiteLLM gateway | Set in the gateway's environment, not the app's |
 

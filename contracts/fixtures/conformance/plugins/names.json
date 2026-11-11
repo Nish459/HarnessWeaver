@@ -8,6 +8,7 @@
     { "name": "bare built-in names belong to the built-in plugin", "owner_of": "direct", "expect": "harnessweaver" },
     { "name": "memory is a built-in name", "owner_of": "memory", "expect": "harnessweaver" },
     { "name": "cel_lite is a built-in name", "owner_of": "cel_lite", "expect": "harnessweaver" },
+    { "name": "email is a built-in name", "owner_of": "email", "expect": "harnessweaver" },
     { "name": "a bare unknown name is its own namespace", "owner_of": "acme", "expect": "acme" },
     { "name": "first-party plugins are not reserved", "owner_of": "openai.chat", "expect": "openai" },
 

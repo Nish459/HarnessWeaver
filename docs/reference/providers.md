@@ -244,7 +244,7 @@ The channel `approvals.use` names is notified of each request once it and the ru
 | `callback` | Calls your function, sync or async, with each `ApprovalRequest`. It must not answer in-line | `handler`: `package.module:function` |
 | `console` | Writes one line per request, for local development | `stream`: `stderr` (default) or `stdout` |
 | `webhook` | POSTs each request as JSON | `url`; `timeout` (default `10s`); `headers_env`: header name to environment variable (S1). Refuses the network in test mode |
-| `email` | Sends each request by e-mail via SMTP (standard library only) | `sender`: From address; `recipients`: list of To addresses; `host_env` (default `HARNESSWEAVER_EMAIL_HOST`), `login_env` (default `HARNESSWEAVER_EMAIL_LOGIN`), `password_env` (default `HARNESSWEAVER_EMAIL_PASSWORD`): environment variables for SMTP credentials (S1); `port` (default `587`); `starttls` (default `true`). Refuses the network in test mode |
+| `email` | Sends each request by e-mail via SMTP (standard library only) | `host`: SMTP host (required); `sender`: From address (required); `recipients`: list of To addresses (required, at least one); `port` (default `587`, range 1-65535); `starttls` (default `true`, uses verified TLS via `ssl.create_default_context`); `timeout` (default `30s`); `login_env` (default `HARNESSWEAVER_EMAIL_LOGIN`), `password_env` (default `HARNESSWEAVER_EMAIL_PASSWORD`): environment variables for SMTP credentials (S1); set both to `null` for unauthenticated relays. Refuses the network in test mode |
 
 A channel that fails is traced (`approval_notify_failed`) and the run keeps waiting: the request is already saved. Slack and an approval page are *planned*.
 

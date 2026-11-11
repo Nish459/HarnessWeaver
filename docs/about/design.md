@@ -39,7 +39,7 @@ These are planned, and marked *planned* where the docs mention them:
 - **Retrieval:** pgvector, OpenSearch and Qdrant context sources.
 - **Tools:** the MCP transport. The `http`, `code` and `mcp` transports in TypeScript.
 - **Policy:** Cedar, OPA and OpenFGA engines.
-- **Approvals:** Slack, e-mail and an approval page.
+- **Approvals:** Slack and an approval page.
 - **State:** Postgres and Redis stores, and durable runners on Temporal or DBOS.
 - **Observability:** Langfuse, Phoenix and Logfire exporters, and OpenTelemetry export from TypeScript.
 - **Evals:** promptfoo, DeepEval and Ragas adapters.

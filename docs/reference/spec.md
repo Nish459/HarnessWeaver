@@ -173,7 +173,7 @@ The approval channel and the defaults for every approval. Extra keys are the cha
 
 | Field | Type | Default | Meaning |
 | --- | --- | --- | --- |
-| `use` | name | `memory` | The `ApprovalChannel`: `memory`, `callback`, `console`, `webhook`, or a plugin's |
+| `use` | name | `memory` | The `ApprovalChannel`: `memory`, `callback`, `console`, `webhook`, `email`, or a plugin's |
 | `timeout` | duration | none (the defaults profile sets `24h`) | How long a request stays open |
 | `on_timeout` | `escalate` or `reject` | `escalate` | What an answer after expiry does to the run |
 | `approver_role` | string | none | The role that may approve, when the step that asked names none |

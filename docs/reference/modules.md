@@ -11,7 +11,7 @@ Every capability in HarnessWeaver is a **module**: a port (a typed interface), a
 | [Validation](../tutorial/validation.md) | `validation`, `tasks.*.output` | - | Pydantic parsing with bounded repair, cel-lite business rules | groundedness scorers | `output.before` |
 | [Tools](../tutorial/tools.md) | `tools`, manifests | `ToolBackend`, `ToolGovernor`, `Sandbox` | Manifest registry, the nine-step governor, `native`, `http` and `code` transports; plugin: `monty.sandbox` | MCP transport | `tool.before`, `tool.after` |
 | [Policy](../tutorial/policy.md) | `policy` | `PolicyEngine` | `cel_lite`; plugin: `cel.policy` | Cedar, OPA, OpenFGA | `tool.before`, `run.start` |
-| [Approvals](../tutorial/approvals.md) | `approvals`, `tasks.*.approvals` | `ApprovalChannel` | `memory`, `callback`, `console`, `webhook` | Slack, e-mail, an approval page | `tool.before`, `output.before`, `approval.resolved` |
+| [Approvals](../tutorial/approvals.md) | `approvals`, `tasks.*.approvals` | `ApprovalChannel` | `memory`, `callback`, `console`, `webhook`, `email` | Slack, an approval page | `tool.before`, `output.before`, `approval.resolved` |
 | [State and replay](../tutorial/state.md) | `state` | `StateStore` | `memory`, `sqlite` | Postgres, Redis | `run.*`, `approval.resolved` |
 | [Observability](../tutorial/observability.md) | `observability` | `Telemetry` | OpenTelemetry API spans and metrics, the in-memory `RunTrace`; plugin: `otel.sdk` | Langfuse, Phoenix, Logfire exporters | all |
 | [Evals](../tutorial/evals.md) | `evals` | `Evaluator` | `exact`, `field_equals`, `numeric_close`, `contains`, `regex`, `schema_valid`, `citation_present`, `guard_fired`, `status`, `llm_judge` | promptfoo, DeepEval, Ragas | `run.end` |

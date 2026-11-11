@@ -1,10 +1,10 @@
-"""The built-in approval channels: ``memory``, ``callback``, ``console``, ``webhook`` and ``email``."""
+"""The built-in approval channels (DESIGNS No. 18)."""
 
 import inspect
 import os
 import smtplib
+import ssl
 import sys
-from collections.abc import Callable
 from datetime import timedelta
 from email.message import EmailMessage
 from typing import Any, Literal
@@ -17,7 +17,6 @@ from harnessweaver.core.durations import Duration
 from harnessweaver.core.envelope import Envelope
 from harnessweaver.core.errors import ProviderError, SpecError
 from harnessweaver.core.plugins import provider
-from harnessweaver.core.ports import network_allowed
 from harnessweaver.core.runs import ApprovalRequest
 from harnessweaver.modules.tools.transports import HttpSender, send_http
 
@@ -29,6 +28,7 @@ __all__ = [
     "EmailChannel",
     "EmailConfig",
     "MemoryChannel",
+    "SmtpTransport",
     "WebhookChannel",
     "WebhookConfig",
 ]
@@ -129,9 +129,7 @@ class WebhookChannel:
     async def notify(self, request: ApprovalRequest, env: Envelope) -> None:
         headers = {"Content-Type": "application/json"}
         for header, variable in self.config.headers_env.items():
-            value = os.environ.get(variable)
-            if value is None:
-                raise ProviderError(f"approvals: environment variable {variable} isn't set")
+            value = _required_env(variable)
             headers[header] = value
         body = request.model_dump_json().encode("utf-8")
         seconds = self.config.timeout.total_seconds()
@@ -140,36 +138,72 @@ class WebhookChannel:
             raise ProviderError(f"approvals: the webhook answered HTTP {status}")
 
 
-type SmtpSender = Callable[[EmailMessage, str, int, bool, str, str], None]
-"""Sends one e-mail: ``(msg, host, port, starttls, login_env, password_env) -> None``."""
+# -- helpers shared by webhook and email -------------------------------------
+
+
+def _required_env(name: str) -> str:
+    """Read a required, non-empty environment variable (S1).
+
+    Raises:
+        ProviderError: If the variable isn't set or is empty.
+    """
+    value = os.environ.get(name)
+    if not value:
+        raise ProviderError(f"approvals: environment variable {name} isn't set")
+    return value
+
+
+# -- email channel -----------------------------------------------------------
+
+
+type SmtpTransport = smtplib.SMTP
+"""The SMTP class used by ``_send_smtp``; injectable for testing."""
 
 
 class EmailConfig(_Config):
     """SMTP settings for the ``email`` approval channel.
 
-    Credentials come from the environment (S1): ``login_env`` and ``password_env``
-    name the variables that hold the SMTP username and password.
+    ``host``, ``port`` and ``starttls`` identify the server. Credentials
+    come from environment variables named by ``login_env`` and
+    ``password_env`` (S1); when both are absent, no authentication is
+    attempted (for relay servers that use IP allowlisting).
     """
 
-    host_env: str = Field(
-        default="HARNESSWEAVER_EMAIL_HOST",
-        description="Environment variable holding the SMTP host.",
+    host: str = Field(
+        description="SMTP host to connect to.",
     )
-    port: int = Field(default=587, description="SMTP port (587 for STARTTLS).")
-    starttls: bool = Field(default=True, description="Upgrade to TLS with STARTTLS.")
-    login_env: str = Field(
+    port: int = Field(
+        default=587,
+        ge=1,
+        le=65535,
+        description="SMTP port (587 for STARTTLS).",
+    )
+    starttls: bool = Field(
+        default=True,
+        description="Upgrade to TLS with STARTTLS.",
+    )
+    timeout: Duration = Field(
+        default=timedelta(seconds=30),
+        description="Connection and send timeout.",
+    )
+    login_env: str | None = Field(
         default="HARNESSWEAVER_EMAIL_LOGIN",
-        description="Environment variable holding the SMTP login (S1).",
+        description=(
+            "Environment variable holding the SMTP login (S1). Set to null to skip authentication."
+        ),
     )
-    password_env: str = Field(
+    password_env: str | None = Field(
         default="HARNESSWEAVER_EMAIL_PASSWORD",
-        description="Environment variable holding the SMTP password (S1).",
+        description=(
+            "Environment variable holding the SMTP password (S1). "
+            "Set to null to skip authentication."
+        ),
     )
     sender: str = Field(
-        default="harnessweaver@example.com",
         description="The From address on outgoing approval mails.",
     )
-    recipients: list[str] = Field(
+    recipients: tuple[str, ...] = Field(
+        min_length=1,
         description="The To addresses that receive approval requests.",
     )
 
@@ -179,15 +213,27 @@ def _send_smtp(
     host: str,
     port: int,
     starttls: bool,
-    login: str,
-    password: str,
-) -> None:
-    """Connect, optionally STARTTLS, authenticate, send, quit -- all blocking (C3 wrapper)."""
-    with smtplib.SMTP(host, port) as server:
+    timeout: float,
+    login: str | None,
+    password: str | None,
+    smtp_class: type[smtplib.SMTP] = smtplib.SMTP,
+) -> dict[str, tuple[int, bytes]]:
+    """Connect, optionally STARTTLS, authenticate, send and quit.
+
+    All blocking; the caller wraps this in ``anyio.to_thread`` (C3).
+    Returns the dict of refused recipients from ``send_message``.
+
+    Raises:
+        OSError: On connection, TLS or send failures.
+        smtplib.SMTPException: On protocol-level SMTP errors.
+    """
+    with smtp_class(host, port, timeout=timeout) as server:
         if starttls:
-            server.starttls()
-        server.login(login, password)
-        server.send_message(msg)
+            ctx = ssl.create_default_context()
+            server.starttls(context=ctx)
+        if login is not None and password is not None:
+            server.login(login, password)
+        return server.send_message(msg)
 
 
 @provider(
@@ -196,80 +242,110 @@ def _send_smtp(
     config=EmailConfig,
     latency_class="slow",
     sample={
+        "host": "smtp.example.com",
         "sender": "harness@example.com",
         "recipients": ["approver@example.com"],
     },
 )
 class EmailChannel:
-    """Sends each approval request as an e-mail via SMTP, using only the standard library.
+    """Sends each approval request by e-mail via SMTP (standard library only).
 
-    The message names the task, the tool or output, the reason and how to answer;
-    it never includes raw content (R9). In test mode it refuses the network (R14).
-    A failed send is traced as ``approval_notify_failed``, like any channel.
+    The message names the task, the tool or output, the reason and how
+    to answer; it never includes raw content (R9). The real transport
+    refuses the network in test mode (R14). A failed send is traced as
+    ``approval_notify_failed``, like any channel.
+
+    Args:
+        config: Validated ``EmailConfig``.
+        transport: Injectable SMTP class for testing; defaults to
+            ``smtplib.SMTP``. The class is instantiated inside a worker
+            thread.
     """
 
     def __init__(
         self,
         config: EmailConfig,
-        sender: SmtpSender | None = None,
+        transport: type[smtplib.SMTP] | None = None,
     ) -> None:
         self.config = config
-        self._send = sender or _send_smtp
+        self._smtp_class = transport or smtplib.SMTP
 
-    def _build_message(self, request: ApprovalRequest) -> EmailMessage:
-        """Build a plain-text e-mail describing the approval request without raw content (R9)."""
-        role = f" (role: {request.approver_role})" if request.approver_role else ""
-        tool_line = f"Tool: {request.tool.name}\n" if request.tool is not None else ""
-        expires = (
+    def _build_message(
+        self,
+        request: ApprovalRequest,
+        env: Envelope,
+    ) -> EmailMessage:
+        """Build a plain-text e-mail without raw content (R9).
+
+        The message names the task, the tool (or notes an output
+        approval), the reason and how to answer.
+        """
+        role_part = f" (role: {request.approver_role})" if request.approver_role else ""
+        task_line = f"Task: {env.task}\n" if env.task else ""
+        if request.tool is not None:
+            what_line = f"Tool: {request.tool.name}\n"
+        elif request.call is None:
+            what_line = "Kind: output approval\n"
+        else:
+            what_line = ""
+        expires_line = (
             f"Expires at: {request.expires_at.isoformat()}\n"
             if request.expires_at is not None
             else ""
         )
+        # Sanitise reason for the Subject header (no CR/LF).
+        safe_reason = request.reason.replace("\r", " ").replace("\n", " ")
         body = (
-            f"Run {request.run_id} needs approval{role}.\n"
+            f"Run {request.run_id} needs approval{role_part}.\n"
             f"\n"
             f"Approval ID: {request.approval_id}\n"
-            f"{tool_line}"
-            f"Reason: {request.reason}\n"
-            f"{expires}"
+            f"{task_line}"
+            f"{what_line}"
+            f"Reason: {safe_reason}\n"
+            f"{expires_line}"
             f"\n"
-            f"To answer, call harness.approve(run_id={request.run_id!r}, "
-            f"approval_id={request.approval_id!r}, decision=..., approver=...).\n"
+            f"To answer, call harness.approve("
+            f"run_id={request.run_id!r}, "
+            f"approval_id={request.approval_id!r}, "
+            f"decision=..., approver=...).\n"
         )
         msg = EmailMessage()
-        msg["Subject"] = f"Approval needed: {request.reason}"
+        msg["Subject"] = f"Approval needed: {safe_reason}"
         msg["From"] = self.config.sender
         msg["To"] = ", ".join(self.config.recipients)
         msg.set_content(body)
         return msg
 
-    def _env(self, name: str) -> str:
-        """Read a required environment variable (S1).
-
-        Raises:
-            ProviderError: If the variable isn't set.
-        """
-        value = os.environ.get(name)
-        if value is None:
-            raise ProviderError(f"approvals: environment variable {name} isn't set")
-        return value
-
     async def notify(self, request: ApprovalRequest, env: Envelope) -> None:
         """Send the approval request by e-mail in a worker thread (C3).
 
         Raises:
-            ProviderError: In test mode (R14), or when a required env var is missing,
-                or when the SMTP send fails.
+            ProviderError: When a required env var is missing, the SMTP
+                send fails, or some recipients were refused (R13).
         """
-        if not network_allowed():
-            raise ProviderError("test mode: the email channel doesn't send mail (R14)")
-        host = self._env(self.config.host_env)
-        login = self._env(self.config.login_env)
-        password = self._env(self.config.password_env)
-        msg = self._build_message(request)
+        login: str | None = None
+        password: str | None = None
+        if self.config.login_env is not None:
+            login = _required_env(self.config.login_env)
+        if self.config.password_env is not None:
+            password = _required_env(self.config.password_env)
+        msg = self._build_message(request, env)
+        timeout = self.config.timeout.total_seconds()
         try:
-            await anyio.to_thread.run_sync(
-                self._send, msg, host, self.config.port, self.config.starttls, login, password
+            refused = await anyio.to_thread.run_sync(
+                _send_smtp,
+                msg,
+                self.config.host,
+                self.config.port,
+                self.config.starttls,
+                timeout,
+                login,
+                password,
+                self._smtp_class,
             )
-        except smtplib.SMTPException as exc:
-            raise ProviderError(f"approvals: email send failed ({exc})") from exc
+        except OSError as exc:
+            raise ProviderError(
+                f"approvals: email send failed ({type(exc).__name__}: {exc})"
+            ) from exc
+        if refused:
+            raise ProviderError(f"approvals: {len(refused)} recipient(s) refused")

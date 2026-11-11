@@ -125,7 +125,7 @@ def test_the_pytest_option_runs_the_suite(
     passing = pytester.runpytest_subprocess(
         "--harnessweaver-conformance=harnessweaver", "-q", "-p", "no:cacheprovider"
     )
-    passing.assert_outcomes(passed=141)
+    passing.assert_outcomes(passed=143)
     failing = pytester.runpytest_subprocess(
         "--harnessweaver-conformance=hw_badkit:plugin", "-q", "-p", "no:cacheprovider"
     )

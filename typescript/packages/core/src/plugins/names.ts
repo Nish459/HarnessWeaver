@@ -17,7 +17,7 @@ export const RESERVED_NAMESPACES = new Set([
   // runners
   "direct", "session", "workflow",
   // models, state, approvals, context
-  "scripted", "memory", "sqlite", "callback", "console", "webhook", "passthrough",
+  "scripted", "memory", "sqlite", "callback", "console", "webhook", "email", "passthrough",
   // policy, routing, validation
   "cel_lite", "rules", "lexical", "semantic", "llm", "pydantic", "json_schema",
   // guardrails
